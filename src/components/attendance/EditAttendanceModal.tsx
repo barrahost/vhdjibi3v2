@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { Modal } from '../ui/Modal';
-import { Input } from '../ui/Input';
+import { Input } from '../ui/input';
 import toast from 'react-hot-toast';
 
 interface EditAttendanceModalProps {
@@ -83,7 +83,7 @@ export default function EditAttendanceModal({ attendance, isOpen, onClose }: Edi
           type="date"
           required
           value={formData.date}
-          onChange={(e) => setFormData(prev => ({ ...prev, date: e.target.value }))}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData(prev => ({ ...prev, date: e.target.value }))}
         />
 
         <div>

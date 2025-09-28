@@ -78,7 +78,7 @@ export default function RolePermissionManagement() {
     setExpandedRole(expandedRole === role ? null : role);
   };
 
-  const getPermissionsByRole = (role: string) => {
+  const getPermissionsByRole = (role: string): string[] => {
     const permissions = ROLE_PERMISSIONS[role as keyof typeof ROLE_PERMISSIONS];
     return Array.isArray(permissions) ? permissions : [];
   };
@@ -166,7 +166,7 @@ export default function RolePermissionManagement() {
                       </div>
                     ) : (
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                        {permissions.map((permission) => (
+                        {permissions.map((permission: string) => (
                           <div
                             key={permission}
                             className="flex items-center space-x-2 p-2 bg-gray-50 rounded-lg"

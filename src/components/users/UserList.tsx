@@ -152,7 +152,7 @@ export default function UserList({ filter, statusFilter, selectedUserIds = [], o
 
         if (filter !== 'all') {
           if (filter === 'admins') {
-            filteredUsers = filteredUsers.filter(user => ['admin', 'super_admin'].includes(user.role));
+            filteredUsers = filteredUsers.filter(user => ['admin', 'super_admin'].includes(user.role || ''));
           } else if (filter === 'shepherds') {
             filteredUsers = filteredUsers.filter(user => user.role === 'shepherd');
           } else if (filter === 'adn') {

@@ -1,10 +1,10 @@
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../../lib/firebase';
-import { Input } from '../../ui/Input';
+import { Input } from '../../ui/input';
 import { LocationField } from '../form/LocationField';
 import { GenderRadioGroup } from '../../ui/GenderRadioGroup';
 import ShepherdSelect from '../ShepherdSelect';
-import { Switch } from '../../ui/Switch';
+import { Switch } from '../../ui/switch';
 import { AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useState, useEffect } from 'react';
@@ -83,7 +83,7 @@ export function GeneralInfoTab({ data, onChange, isShepherd, currentShepherdId }
         required
         placeholder="ex: Patrice Tano"
         value={data.fullName}
-        onChange={(e) => onChange({ ...data, fullName: e.target.value })}
+        onChange={(e: React.ChangeEvent<HTMLInputElement>) => onChange({ ...data, fullName: e.target.value })}
       />
 
       <Input
@@ -92,7 +92,7 @@ export function GeneralInfoTab({ data, onChange, isShepherd, currentShepherdId }
         type="text"
         placeholder="ex: Pat"
         value={data.nickname}
-        onChange={(e) => onChange({ ...data, nickname: e.target.value })}
+        onChange={(e: React.ChangeEvent<HTMLInputElement>) => onChange({ ...data, nickname: e.target.value })}
       />
 
       <div>
@@ -132,7 +132,7 @@ export function GeneralInfoTab({ data, onChange, isShepherd, currentShepherdId }
       <div className="space-y-2">
         <Switch
           checked={data.isUndecided || false}
-          onCheckedChange={(checked) => {
+          onCheckedChange={(checked: boolean) => {
             onChange({
               ...data,
               isUndecided: checked === true,
@@ -175,7 +175,7 @@ export function GeneralInfoTab({ data, onChange, isShepherd, currentShepherdId }
         type="date"
         required
         value={data.firstVisitDate}
-        onChange={(e) => onChange({ ...data, firstVisitDate: e.target.value })}
+        onChange={(e: React.ChangeEvent<HTMLInputElement>) => onChange({ ...data, firstVisitDate: e.target.value })}
       />
 
       <div>

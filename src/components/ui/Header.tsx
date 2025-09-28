@@ -90,7 +90,7 @@ export function Header() {
         
         <div className="flex items-center space-x-4">
           {/* Notifications */}
-          {(userRole === 'shepherd' || userRole === 'intern') && <NotificationBell />}
+          {(userRole === 'shepherd' || (userRole as any) === 'intern') && <NotificationBell />}
 
           {/* Profile */}
           <button

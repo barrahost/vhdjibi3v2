@@ -57,8 +57,6 @@ export default function Reminders() {
             date: doc.data().date.toDate()
           } as Interaction));
           setInteractions(interactionsData);
-        } else {
-          additionalMenus = userDoc.additionalMenus || [];
         }
       } catch (error) {
         console.error('Error loading data:', error);

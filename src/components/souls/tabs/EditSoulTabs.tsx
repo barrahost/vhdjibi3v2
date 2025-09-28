@@ -15,6 +15,8 @@ interface EditSoulTabsProps {
       coordinates: { latitude: number; longitude: number; } | null;
       firstVisitDate: string;
       shepherdId: string | undefined;
+      status: 'active' | 'inactive';
+      photo: File | null;
     };
     spiritual: Soul['spiritualProfile'];
   };

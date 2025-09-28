@@ -21,6 +21,7 @@ export default function SoulForm() {
       shepherdId: undefined as string | undefined,
       isUndecided: false,
       photo: null as File | null,
+      status: 'active' as 'active' | 'inactive',
     },
     spiritual: {
       isBornAgain: false,
@@ -132,16 +133,18 @@ export default function SoulForm() {
           
           // Reset form
           setFormData({
-            general: {
-              gender: '',
-              fullName: '',
-              nickname: '',
-              phone: '',
-              location: '',
-              coordinates: null,
-              firstVisitDate: new Date().toISOString().split('T')[0],
-          shepherdId: undefined,
-              isUndecided: false
+          general: {
+            gender: '',
+            fullName: '',
+            nickname: '',
+            phone: '',
+            location: '',
+            coordinates: null,
+            firstVisitDate: new Date().toISOString().split('T')[0],
+            shepherdId: undefined,
+            isUndecided: false,
+            photo: null,
+            status: 'active' as 'active' | 'inactive'
             },
             spiritual: {
               isBornAgain: false,
@@ -193,7 +196,8 @@ export default function SoulForm() {
           firstVisitDate: new Date().toISOString().split('T')[0],
           shepherdId: undefined,
           isUndecided: false,
-          photo: null
+          photo: null,
+          status: 'active' as 'active' | 'inactive'
         },
         spiritual: {
           isBornAgain: false,

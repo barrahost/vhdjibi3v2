@@ -2,7 +2,7 @@
 
 import { Role } from './permission.types'; // garde si utile ailleurs
 
-export type UserRoles = 'admin' | 'shepherd' | 'adn';
+export type UserRoles = 'admin' | 'shepherd' | 'adn' | 'intern';
 
 export type UserType = UserRoles | null;
 

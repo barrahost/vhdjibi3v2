@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { addDoc, collection, doc, getDoc, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
-import { Input } from '../ui/Input';
+import { Input } from '../ui/input';
 import { useAuth } from '../../contexts/AuthContext';
 import { SMSService } from '../../services/sms.service';
 import { SMSTemplate } from '../../types/sms.types';
@@ -307,7 +307,7 @@ export default function InteractionForm({ soulId, shepherdId, onSuccess, onClose
           type="date"
           required
           value={formData.date}
-          onChange={(e) => setFormData(prev => ({ ...prev, date: e.target.value }))}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData(prev => ({ ...prev, date: e.target.value }))}
         />
 
         <Input
@@ -316,7 +316,7 @@ export default function InteractionForm({ soulId, shepherdId, onSuccess, onClose
           type="time"
           required
           value={formData.time}
-          onChange={(e) => setFormData(prev => ({ ...prev, time: e.target.value }))}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData(prev => ({ ...prev, time: e.target.value }))}
         />
       </div>
 
