@@ -1,27 +1,49 @@
-import * as React from "react";
-import * as SwitchPrimitives from "@radix-ui/react-switch";
+import React from 'react';
 
-import { cn } from "@/lib/utils";
+interface SwitchProps {
+  checked: boolean;
+  onCheckedChange: (checked: boolean) => void;
+  label?: string;
+  description?: string;
+  disabled?: boolean;
+}
 
-const Switch = React.forwardRef<
-  React.ElementRef<typeof SwitchPrimitives.Root>,
-  React.ComponentPropsWithoutRef<typeof SwitchPrimitives.Root>
->(({ className, ...props }, ref) => (
-  <SwitchPrimitives.Root
-    className={cn(
-      "peer inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors data-[state=checked]:bg-primary data-[state=unchecked]:bg-input focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50",
-      className,
-    )}
-    {...props}
-    ref={ref}
-  >
-    <SwitchPrimitives.Thumb
-      className={cn(
-        "pointer-events-none block h-5 w-5 rounded-full bg-background shadow-lg ring-0 transition-transform data-[state=checked]:translate-x-5 data-[state=unchecked]:translate-x-0",
+export function Switch({ checked, onCheckedChange, label, description, disabled = false }: SwitchProps) {
+  return (
+    <label className="relative inline-flex items-start">
+      <div className="flex items-center h-6 cursor-pointer">
+        <input
+          type="checkbox"
+          checked={checked || false}
+          onChange={(e) => onCheckedChange(e.target.checked)}
+          disabled={disabled}
+          className="sr-only peer"
+        />
+        <div className={`
+          relative w-11 h-6 bg-gray-200 rounded-full peer 
+          peer-focus:ring-4 peer-focus:ring-[#00665C]/20
+          peer-checked:after:translate-x-full peer-checked:after:border-white 
+          after:content-[''] after:absolute after:top-0.5 after:left-[2px] 
+          after:bg-white after:border-gray-300 after:border after:rounded-full 
+          after:h-5 after:w-5 after:transition-all
+          peer-checked:bg-[#00665C]
+          ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
+        `} />
+      </div>
+      {(label || description) && (
+        <div className="ml-3 cursor-pointer">
+          {label && (
+            <span className={`text-sm font-medium ${disabled ? 'text-gray-500' : 'text-gray-900'}`}>
+              {label}
+            </span>
+          )}
+          {description && (
+            <p className={`text-sm ${disabled ? 'text-gray-400' : 'text-gray-500'}`}>
+              {description}
+            </p>
+          )}
+        </div>
       )}
-    />
-  </SwitchPrimitives.Root>
-));
-Switch.displayName = SwitchPrimitives.Root.displayName;
-
-export { Switch };
+    </label>
+  );
+}

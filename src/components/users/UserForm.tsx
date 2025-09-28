@@ -1,0 +1,323 @@
+
+import { useState } from 'react';
+import { collection, addDoc, query, where, getDocs } from 'firebase/firestore';
+import { db } from '../../lib/firebase';
+import { ServantService } from '../../services/servant.service';
+import toast from 'react-hot-toast';
+import { PhotoUpload } from '../ui/PhotoUpload';
+import { MenuAssignment } from './MenuAssignment';
+import { ROLES } from '../../constants/roles';
+import { validatePhoneNumber } from '../../utils/phoneValidation';
+import { LocationField } from '../souls/form/LocationField';
+import { StorageService } from '../../services/storage.service';
+
+const DEFAULT_PASSWORDS = {
+  ADMIN: '@123456',
+  SHEPHERD: '@123456',
+  ADN: '@123456'
+};
+
+interface UserFormProps {
+  onSuccess?: () => void;
+}
+
+export default function UserForm({ onSuccess }: UserFormProps) {
+  const [formData, setFormData] = useState({
+    fullName: '',
+    nickname: '',
+    phone: '',
+    email: '',
+    role: '',
+    password: DEFAULT_PASSWORDS.ADMIN, // Default password
+    additionalMenus: [] as string[],
+    location: '',
+    coordinates: null as { latitude: number; longitude: number; } | null,
+    photo: null as File | null
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Définir les rôles disponibles
+  const availableRoles = [
+    { value: 'admin', label: 'Administrateur' },
+    { value: 'shepherd', label: 'Berger(e)' },
+    { value: 'adn', label: 'ADN' }
+  ];
+
+  // Mettre à jour le mot de passe par défaut en fonction du rôle
+  const updatePasswordForRole = (role: string) => {
+    let password = DEFAULT_PASSWORDS.ADMIN;
+    
+    if (role === 'shepherd') {
+      password = DEFAULT_PASSWORDS.SHEPHERD;
+    } else if (role === 'adn') {
+      password = DEFAULT_PASSWORDS.ADN;
+    }
+    
+    setFormData(prev => ({ ...prev, password }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      setIsSubmitting(true);
+      let docRef = null;
+      let photoURL = null;
+
+      // Validation du numéro de téléphone
+      const phoneValidation = validatePhoneNumber(formData.phone);
+      if (!phoneValidation.isValid) {
+        toast.error(phoneValidation.error || 'Numéro de téléphone invalide');
+        return;
+      }
+
+      // Vérifier si le numéro existe déjà
+      const phoneQuery = query(
+        collection(db, 'users'),
+        where('phone', '==', phoneValidation.formattedNumber)
+      );
+      const phoneSnapshot = await getDocs(phoneQuery);
+      
+      if (!phoneSnapshot.empty) {
+        toast.error('Ce numéro de téléphone est déjà utilisé');
+        return;
+      }
+
+      // Vérifier si l'email existe déjà
+      const emailQuery = query(
+        collection(db, 'users'),
+        where('email', '==', formData.email)
+      );
+      const emailSnapshot = await getDocs(emailQuery);
+      
+      if (!emailSnapshot.empty) {
+        toast.error('Cet email est déjà utilisé');
+        return;
+      }
+
+      // Générer un ID unique pour l'utilisateur
+      const uid = `user_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+
+      // Upload de la photo si elle existe
+      if (formData.photo) {
+        try {
+          photoURL = await StorageService.uploadProfilePhoto(uid, formData.photo);
+        } catch (error) {
+          console.error('Error uploading photo:', error);
+          toast.error('Erreur lors du téléchargement de la photo');
+        }
+      }
+
+      // Créer l'utilisateur dans Firestore
+      docRef = await addDoc(collection(db, 'users'), {
+        uid: uid,
+        fullName: formData.fullName.trim(),
+        nickname: formData.nickname?.trim() || null,
+        email: formData.email,
+        role: formData.role,
+        password: formData.password, // Stockage du mot de passe par défaut
+        additionalMenus: formData.role === 'shepherd' ? formData.additionalMenus : [],
+        phone: phoneValidation.formattedNumber,
+        location: formData.location?.trim() || null,
+        coordinates: formData.coordinates,
+        photoURL,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        status: 'active'
+      });
+
+      // Check if docRef is valid
+      if (!docRef || !docRef.id) {
+        throw new Error('Failed to create user document');
+      }
+
+      setFormData({
+        fullName: '',
+        nickname: '',
+        phone: '',
+        email: '',
+        additionalMenus: [],
+        role: '',
+        password: DEFAULT_PASSWORDS.ADMIN,
+        location: '',
+        coordinates: null,
+        photo: null
+      });
+
+      // If the user is a shepherd or intern, also create a servant entry
+      if (formData.role === 'shepherd') {
+        try {
+          await ServantService.createServant({
+            fullName: formData.fullName.trim(),
+            nickname: formData.nickname?.trim() || undefined,
+            gender: 'male', // Default to male since we don't collect gender in the user form
+            phone: phoneValidation.formattedNumber || '',
+            email: formData.email,
+            departmentId: '', // Empty string as it will be assigned later
+            isHead: false,
+            isShepherd: true,
+            shepherdId: docRef.id // Link to the newly created user
+          });
+          
+          toast.success('Utilisateur et serviteur ajoutés avec succès. Un mot de passe par défaut a été attribué.');
+        } catch (servantError) {
+          console.error('Error creating servant entry:', servantError);
+          toast.error('Utilisateur ajouté, mais erreur lors de la création du serviteur correspondant.');
+        }
+      } else {
+        toast.success('Utilisateur ajouté avec succès. Un mot de passe par défaut a été attribué.');
+      }
+      
+      if (onSuccess) {
+        onSuccess();
+      }
+    } catch (error: any) {
+      toast.error(error.message || 'Erreur lors de l\'ajout');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="space-y-4">
+        <PhotoUpload
+          onChange={(file) => setFormData(prev => ({ ...prev, photo: file }))}
+        />
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Nom et Prénoms
+          </label>
+          <input
+            type="text"
+            required
+            placeholder="ex: Jean Kouassi"
+            value={formData.fullName}
+            onChange={(e) => setFormData(prev => ({ ...prev, fullName: e.target.value }))}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-[#00665C] focus:border-[#00665C]"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Surnom
+          </label>
+          <input
+            type="text"
+            placeholder="ex: Pat"
+            value={formData.nickname}
+            onChange={(e) => setFormData(prev => ({ ...prev, nickname: e.target.value }))}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-[#00665C] focus:border-[#00665C]"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Numéro de téléphone
+          </label>
+          <div className="relative">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
+              +225
+            </span>
+            <input
+              type="tel"
+              required
+              placeholder="0757000203"
+              value={formData.phone}
+              onChange={(e) => {
+                const value = e.target.value.replace(/\D/g, '');
+                const truncated = value.slice(0, 10);
+                setFormData(prev => ({ ...prev, phone: truncated }));
+              }}
+              className="w-full pl-16 pr-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-[#00665C] focus:border-[#00665C]"
+              maxLength={10}
+            />
+          </div>
+        </div>
+
+        <LocationField
+          location={formData.location}
+          coordinates={formData.coordinates}
+          onLocationChange={(location) => setFormData(prev => ({ ...prev, location }))}
+          onCoordinatesChange={(coordinates) => setFormData(prev => ({ ...prev, coordinates }))}
+        />
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Email
+          </label>
+          <input
+            type="email"
+            required
+            placeholder="ex: jean.kouassi@example.com"
+            value={formData.email}
+            onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-[#00665C] focus:border-[#00665C]"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Rôle
+          </label>
+          <select
+            required
+            value={formData.role}
+            onChange={(e) => {
+              const role = e.target.value;
+              setFormData(prev => ({ ...prev, role }));
+              updatePasswordForRole(role);
+            }}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-[#00665C] focus:border-[#00665C]"
+          >
+            <option value="">Sélectionner un rôle</option>
+            {availableRoles.map(role => (
+              <option key={role.value} value={role.value}>
+                {role.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Mot de passe par défaut
+          </label>
+          <input
+            type="text"
+            value={formData.password}
+            readOnly
+            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-50"
+          />
+          <p className="mt-1 text-sm text-gray-500">
+            Mot de passe par défaut qui sera attribué à l'utilisateur selon son rôle
+          </p>
+        </div>
+
+        {/* Additional Menus - Only show for shepherds */}
+        {formData.role === 'shepherd' && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Menus Additionnels
+            </label>
+            <MenuAssignment 
+              selectedMenus={formData.additionalMenus}
+              onChange={(menus) => setFormData(prev => ({ ...prev, additionalMenus: menus }))}
+            />
+            <p className="mt-1 text-sm text-gray-500">
+              Sélectionnez les menus additionnels à attribuer à ce berger
+            </p>
+          </div>
+        )}
+
+        <button
+          type="submit"
+          disabled={isSubmitting}
+          className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-[#00665C] hover:bg-[#00665C]/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#00665C] disabled:opacity-50"
+        >
+          {isSubmitting ? 'Ajout en cours...' : 'Ajouter l\'utilisateur'}
+        </button>
+      </div>
+    </form>
+  );
+}

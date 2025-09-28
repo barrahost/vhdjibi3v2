@@ -1,0 +1,360 @@
+import { collection, query, where, getDocs, doc, getDoc, addDoc, updateDoc, deleteDoc, writeBatch } from 'firebase/firestore';
+import { db } from '../lib/firebase';
+import { Servant, ServantFormData } from '../types/servant.types';
+import { validatePhoneNumber } from '../utils/phoneValidation';
+import toast from 'react-hot-toast';
+
+export class ServantService {
+  /**
+   * Create a new servant
+   */
+  static async createServant(data: ServantFormData): Promise<string> {
+    try {
+      // Validate phone number
+      // Check if phone already exists (assuming it's already validated and formatted)
+      const phoneQuery = query(
+        collection(db, 'servants'),
+        where('phone', '==', data.phone)
+      );
+      const phoneSnapshot = await getDocs(phoneQuery);
+      if (!phoneSnapshot.empty) {
+        throw new Error('Ce numéro de téléphone est déjà utilisé');
+      }
+
+      // Check if email already exists (if provided)
+      if (data.email) {
+        const emailQuery = query(
+          collection(db, 'servants'),
+          where('email', '==', data.email.trim())
+        );
+        const emailSnapshot = await getDocs(emailQuery);
+        if (!emailSnapshot.empty) {
+          throw new Error('Cet email est déjà utilisé');
+        }
+      }
+
+      // If this servant will be a department head, check if there's already a head
+      if (data.isHead) {
+        const headQuery = query(
+          collection(db, 'servants'),
+          where('departmentId', '==', data.departmentId),
+          where('isHead', '==', true),
+          where('status', '==', 'active')
+        );
+        const headSnapshot = await getDocs(headQuery);
+        if (!headSnapshot.empty) {
+          throw new Error('Ce département a déjà un responsable');
+        }
+      }
+
+      // Create the servant document
+      const servantData = {
+        fullName: data.fullName.trim(),
+        nickname: data.nickname?.trim() || null,
+        gender: data.gender,
+       phone: data.phone, // Use the already validated and formatted phone
+        email: data.email?.trim() || null,
+        departmentId: data.departmentId,
+        isHead: data.isHead,
+        isShepherd: data.isShepherd || false,
+        shepherdId: data.shepherdId || null,
+        status: 'active',
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+
+      const docRef = await addDoc(collection(db, 'servants'), servantData);
+      return docRef.id;
+    } catch (error) {
+      console.error('Error creating servant:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get a servant by ID
+   */
+  static async getServant(id: string): Promise<Servant | null> {
+    try {
+      const docRef = doc(db, 'servants', id);
+      const docSnap = await getDoc(docRef);
+      
+      if (docSnap.exists()) {
+        return {
+          id: docSnap.id,
+          ...docSnap.data()
+        } as Servant;
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('Error getting servant:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update a servant
+   */
+  static async updateServant(id: string, data: Partial<ServantFormData>): Promise<void> {
+    try {
+      const servantRef = doc(db, 'servants', id);
+      const servantSnap = await getDoc(servantRef);
+      
+      if (!servantSnap.exists()) {
+        throw new Error('Serviteur non trouvé');
+      }
+      
+      const currentServant = servantSnap.data() as Servant;
+      
+      // Validate phone number if it's being updated
+      let formattedPhone = currentServant.phone;
+      if (data.phone) {
+        const phoneValidation = validatePhoneNumber(data.phone);
+        if (!phoneValidation.isValid) {
+          throw new Error(phoneValidation.error);
+        }
+        formattedPhone = phoneValidation.formattedNumber || '';
+        
+        // Check if the new phone number is already used by another servant
+        if (formattedPhone !== currentServant.phone) {
+          const phoneQuery = query(
+            collection(db, 'servants'),
+            where('phone', '==', formattedPhone)
+          );
+          const phoneSnapshot = await getDocs(phoneQuery);
+          if (!phoneSnapshot.empty && phoneSnapshot.docs[0].id !== id) {
+            throw new Error('Ce numéro de téléphone est déjà utilisé');
+          }
+        }
+      }
+      
+      // Check email uniqueness if it's being updated
+      let formattedEmail = currentServant.email;
+      if (data.email !== undefined) {
+        formattedEmail = data.email?.trim() || '';
+        
+        if (formattedEmail && formattedEmail !== currentServant.email) {
+          const emailQuery = query(
+            collection(db, 'servants'),
+            where('email', '==', formattedEmail)
+          );
+          const emailSnapshot = await getDocs(emailQuery);
+          if (!emailSnapshot.empty && emailSnapshot.docs[0].id !== id) {
+            throw new Error('Cet email est déjà utilisé');
+          }
+        }
+      }
+      
+      // If changing department or head status, check for existing department head
+      if ((data.departmentId && data.departmentId !== currentServant.departmentId) || 
+          (data.isHead !== undefined && data.isHead !== currentServant.isHead)) {
+        
+        const newDepartmentId = data.departmentId || currentServant.departmentId;
+        const newIsHead = data.isHead !== undefined ? data.isHead : currentServant.isHead;
+        
+        if (newIsHead) {
+          const headQuery = query(
+            collection(db, 'servants'),
+            where('departmentId', '==', newDepartmentId),
+            where('isHead', '==', true),
+            where('status', '==', 'active')
+          );
+          const headSnapshot = await getDocs(headQuery);
+          
+          if (!headSnapshot.empty && headSnapshot.docs[0].id !== id) {
+            throw new Error('Ce département a déjà un responsable');
+          }
+        }
+      }
+      
+      // Prepare update data
+      const updateData: Record<string, any> = {
+        updatedAt: new Date()
+      };
+      
+      if (data.fullName) updateData.fullName = data.fullName.trim();
+      if (data.nickname !== undefined) updateData.nickname = data.nickname?.trim() || null;
+      if (data.gender) updateData.gender = data.gender;
+      if (data.phone) updateData.phone = formattedPhone;
+      if (data.email !== undefined) updateData.email = formattedEmail;
+      if (data.departmentId) updateData.departmentId = data.departmentId;
+      if (data.isHead !== undefined) updateData.isHead = data.isHead;
+      if (data.isShepherd !== undefined) updateData.isShepherd = data.isShepherd;
+      if (data.shepherdId !== undefined) updateData.shepherdId = data.shepherdId;
+      if (data.status !== undefined) updateData.status = data.status;
+      
+      // Update the servant
+      await updateDoc(servantRef, updateData);
+    } catch (error) {
+      console.error('Error updating servant:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Delete a servant
+   */
+  static async deleteServant(id: string): Promise<void> {
+    try {
+      const servantRef = doc(db, 'servants', id);
+      const servantSnap = await getDoc(servantRef);
+      
+      if (!servantSnap.exists()) {
+        throw new Error('Serviteur non trouvé');
+      }
+      
+      const servant = servantSnap.data() as Servant;
+      
+      // If the servant is a department head, we should handle this carefully
+      if (servant.isHead) {
+        // Option 1: Prevent deletion and suggest making someone else the head first
+        throw new Error('Ce serviteur est responsable de département. Veuillez désigner un autre responsable avant de le supprimer.');
+        
+        // Option 2: Set status to inactive instead of deleting
+        // await updateDoc(servantRef, {
+        //   status: 'inactive',
+        //   updatedAt: new Date()
+        // });
+        // return;
+      }
+      
+      // Delete the servant
+      await deleteDoc(servantRef);
+    } catch (error) {
+      console.error('Error deleting servant:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get all servants
+   */
+  static async getAllServants(): Promise<Servant[]> {
+    try {
+      const q = query(
+        collection(db, 'servants'),
+        where('status', '==', 'active')
+      );
+      
+      const snapshot = await getDocs(q);
+      return snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      } as Servant));
+    } catch (error) {
+      console.error('Error getting all servants:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get servants by department
+   */
+  static async getServantsByDepartment(departmentId: string): Promise<Servant[]> {
+    try {
+      const q = query(
+        collection(db, 'servants'),
+        where('departmentId', '==', departmentId),
+        where('status', '==', 'active')
+      );
+      
+      const snapshot = await getDocs(q);
+      return snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      } as Servant));
+    } catch (error) {
+      console.error('Error getting servants by department:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get department head
+   */
+  static async getDepartmentHead(departmentId: string): Promise<Servant | null> {
+    try {
+      const q = query(
+        collection(db, 'servants'),
+        where('departmentId', '==', departmentId),
+        where('isHead', '==', true),
+        where('status', '==', 'active')
+      );
+      
+      const snapshot = await getDocs(q);
+      if (snapshot.empty) {
+        return null;
+      }
+      
+      return {
+        id: snapshot.docs[0].id,
+        ...snapshot.docs[0].data()
+      } as Servant;
+    } catch (error) {
+      console.error('Error getting department head:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Assign a servant as department head
+   */
+  static async assignDepartmentHead(servantId: string, departmentId: string): Promise<void> {
+    try {
+      const batch = writeBatch(db);
+      
+      // First, remove any existing department head
+      const currentHeadQuery = query(
+        collection(db, 'servants'),
+        where('departmentId', '==', departmentId),
+        where('isHead', '==', true),
+        where('status', '==', 'active')
+      );
+      
+      const currentHeadSnapshot = await getDocs(currentHeadQuery);
+      if (!currentHeadSnapshot.empty) {
+        const currentHeadRef = doc(db, 'servants', currentHeadSnapshot.docs[0].id);
+        batch.update(currentHeadRef, {
+          isHead: false,
+          updatedAt: new Date()
+        });
+      }
+      
+      // Then, assign the new head
+      const servantRef = doc(db, 'servants', servantId);
+      batch.update(servantRef, {
+        departmentId,
+        isHead: true,
+        updatedAt: new Date()
+      });
+      
+      await batch.commit();
+    } catch (error) {
+      console.error('Error assigning department head:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get all servants who are also shepherds
+   */
+  static async getServantShepherds(): Promise<Servant[]> {
+    try {
+      const q = query(
+        collection(db, 'servants'),
+        where('isShepherd', '==', true),
+        where('status', '==', 'active')
+      );
+      
+      const snapshot = await getDocs(q);
+      return snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      } as Servant));
+    } catch (error) {
+      console.error('Error getting servant shepherds:', error);
+      throw error;
+    }
+  }
+}
