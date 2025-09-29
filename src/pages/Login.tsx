@@ -25,23 +25,6 @@ export default function Login() {
     }
   }, [user, navigate]);
 
-  // Mettre à jour le mot de passe en fonction du type d'utilisateur
-  useEffect(() => {
-    switch (userType) {
-      case 'shepherd':
-      case 'intern':
-        setPassword(DEFAULT_PASSWORDS.SHEPHERD);
-        break;
-      case 'adn':
-        setPassword(DEFAULT_PASSWORDS.ADN);
-        break;
-      case 'admin':
-        setPassword(DEFAULT_PASSWORDS.ADMIN);
-        break;
-      default:
-        setPassword('');
-    }
-  }, [userType]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -93,10 +76,8 @@ export default function Login() {
                     onChange={(e) => setPassword(e.target.value)}
                     autoComplete="current-password"
                     required
-                    className={`appearance-none block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-[#00665C] focus:border-[#00665C] text-base ${
-                      userType === 'shepherd' || userType === 'adn' || userType === 'intern' ? 'bg-gray-50' : ''
-                    }`}
-                    readOnly={userType === 'shepherd' || userType === 'adn' || userType === 'intern'}
+                    placeholder="Saisissez votre mot de passe"
+                    className="appearance-none block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-[#00665C] focus:border-[#00665C] text-base"
                   />
                   <button
                     type="button"
@@ -110,21 +91,6 @@ export default function Login() {
                     )}
                   </button>
                 </div>
-                {userType === 'shepherd' && (
-                  <p className="mt-2 text-sm text-gray-500">
-                    Mot de passe par défaut pour les bergers
-                  </p>
-                )}
-                {userType === 'adn' && (
-                  <p className="mt-2 text-sm text-gray-500">
-                    Mot de passe par défaut pour les ADN
-                  </p>
-                )}
-                {userType === 'intern' && (
-                  <p className="mt-2 text-sm text-gray-500">
-                    Mot de passe par défaut pour les stagiaires
-                  </p>
-                )}
               </div>
 
               <div className="pt-2">
