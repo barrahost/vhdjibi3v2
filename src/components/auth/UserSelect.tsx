@@ -129,7 +129,20 @@ export default function UserSelect({ value, onChange }: UserSelectProps) {
         }];
       });
 
-      const allUsers = [...usersData, ...adminsData].sort((a, b) => 
+      // Déduplication des utilisateurs basée sur le numéro de téléphone
+      const userMap = new Map<string, User>();
+      
+      // Ajouter d'abord les utilisateurs réguliers
+      usersData.forEach(user => {
+        userMap.set(user.phone, user);
+      });
+      
+      // Ajouter les admins (remplacera les doublons avec priorité aux admins)
+      adminsData.forEach(user => {
+        userMap.set(user.phone, user);
+      });
+      
+      const allUsers = Array.from(userMap.values()).sort((a, b) => 
         a.fullName.localeCompare(b.fullName)
       );
       
