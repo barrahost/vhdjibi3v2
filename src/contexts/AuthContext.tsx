@@ -185,27 +185,47 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const userData = userDoc.data();
       console.log('User found:', userData.role);
       
-      // Verify password based on role
+      // Verify password based on role - support both old role system and new business profiles
       let isPasswordValid = false;
       
-      // For shepherds, ADN, and interns, use default password
-      if (['shepherd', 'adn'].includes(userData.role)) {
-        const defaultPassword = userData.role === 'shepherd'
-          ? DEFAULT_PASSWORDS.SHEPHERD
-          : DEFAULT_PASSWORDS.ADN;
+      // Check business profiles first (new system)
+      if (userData.businessProfiles && userData.businessProfiles.length > 0) {
+        // Check if any business profile matches the password
+        for (const profile of userData.businessProfiles) {
+          if (profile.type === 'shepherd' || profile.type === 'department_leader') {
+            isPasswordValid = password === DEFAULT_PASSWORDS.SHEPHERD;
+          } else if (profile.type === 'adn') {
+            isPasswordValid = password === DEFAULT_PASSWORDS.ADN;
+          } else if (profile.type === 'admin') {
+            isPasswordValid = password === DEFAULT_PASSWORDS.ADMIN;
+          }
           
-        isPasswordValid = password === defaultPassword;
-        console.log('Checking default password:', { role: userData.role, isValid: isPasswordValid });
-      } 
-      // For admins, use admin password
-      else if (userData.role === 'admin') {
-        isPasswordValid = password === DEFAULT_PASSWORDS.ADMIN;
-        console.log('Checking admin password:', { isValid: isPasswordValid });
+          if (isPasswordValid) {
+            console.log('Password validated with business profile:', profile.type);
+            break;
+          }
+        }
       }
-      // For super_admin, use admin password
-      else if (userData.role === 'super_admin') {
-        isPasswordValid = password === DEFAULT_PASSWORDS.ADMIN;
-        console.log('Checking super_admin password:', { isValid: isPasswordValid });
+      // Fallback to old role system for backward compatibility
+      else if (userData.role) {
+        if (['shepherd', 'adn', 'department_leader'].includes(userData.role)) {
+          const defaultPassword = userData.role === 'adn' 
+            ? DEFAULT_PASSWORDS.ADN 
+            : DEFAULT_PASSWORDS.SHEPHERD;
+            
+          isPasswordValid = password === defaultPassword;
+          console.log('Checking default password (legacy):', { role: userData.role, isValid: isPasswordValid });
+        } 
+        // For admins, use admin password
+        else if (userData.role === 'admin') {
+          isPasswordValid = password === DEFAULT_PASSWORDS.ADMIN;
+          console.log('Checking admin password (legacy):', { isValid: isPasswordValid });
+        }
+        // For super_admin, use admin password
+        else if (userData.role === 'super_admin') {
+          isPasswordValid = password === DEFAULT_PASSWORDS.ADMIN;
+          console.log('Checking super_admin password (legacy):', { isValid: isPasswordValid });
+        }
       }
       
       if (!isPasswordValid) {

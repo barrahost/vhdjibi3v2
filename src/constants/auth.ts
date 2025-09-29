@@ -1,5 +1,6 @@
 export const DEFAULT_PASSWORDS = {
   ADMIN: '@123456',
   ADN: '123456',
-  SHEPHERD: '123456'
+  SHEPHERD: '123456',
+  DEPARTMENT_LEADER: '123456'
 } as const;
