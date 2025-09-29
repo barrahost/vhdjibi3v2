@@ -216,6 +216,8 @@ export default function EditSoulModal({ soul, isOpen, onClose, onUpdate }: EditS
             onChange={setFormData}
             isShepherd={userRole === 'shepherd'}
             currentShepherdId={currentShepherdId}
+            soul={soul}
+            onSoulUpdate={onUpdate}
           />
         </div>
 

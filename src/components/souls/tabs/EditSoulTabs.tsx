@@ -23,9 +23,11 @@ interface EditSoulTabsProps {
   onChange: (data: any) => void;
   isShepherd?: boolean;
   currentShepherdId?: string | undefined;
+  soul?: Soul;
+  onSoulUpdate?: () => void;
 }
 
-export function EditSoulTabs({ data, onChange, isShepherd, currentShepherdId }: EditSoulTabsProps) {
+export function EditSoulTabs({ data, onChange, isShepherd, currentShepherdId, soul, onSoulUpdate }: EditSoulTabsProps) {
   const [activeTab, setActiveTab] = useState<'general' | 'spiritual'>('general');
 
   const handleTabChange = (tab: 'general' | 'spiritual', e: React.MouseEvent) => {
@@ -73,6 +75,8 @@ export function EditSoulTabs({ data, onChange, isShepherd, currentShepherdId }: 
         <SpiritualTab
           data={data.spiritual}
           onChange={(spiritualData) => onChange({ ...data, spiritual: spiritualData })}
+          soul={soul}
+          onSoulUpdate={onSoulUpdate}
         />
       )}
     </div>
