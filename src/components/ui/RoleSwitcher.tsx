@@ -18,6 +18,7 @@ export function RoleSwitcher() {
       case 'admin': return 'Administrateur';
       case 'shepherd': return 'Berger(e)';
       case 'adn': return 'ADN';
+      case 'department_leader': return 'Responsable Département';
       default: return 'Utilisateur';
     }
   };
@@ -28,6 +29,7 @@ export function RoleSwitcher() {
       case 'admin': return '⚙️';
       case 'shepherd': return '🐑';
       case 'adn': return '📊';
+      case 'department_leader': return '👨‍💼';
       default: return '👤';
     }
   };

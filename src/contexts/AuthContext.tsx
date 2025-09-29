@@ -86,9 +86,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
         }
         
-        // Determine available roles - for now, each user has their primary role + any additional roles they might have
-        const availableRoles = [userData.role as BaseRole];
-        const activeRole = userData.role as BaseRole;
+        // Determine available roles - check for multiple roles
+        const availableRoles = userData.roles && Array.isArray(userData.roles) 
+          ? userData.roles as BaseRole[]
+          : [userData.role as BaseRole];
+        const activeRole = userData.activeRole || userData.role as BaseRole;
         const activePermissions = getUserPermissions(activeRole as Role);
         
         setState(prev => ({
@@ -222,8 +224,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       localStorage.setItem('user', JSON.stringify(userToStore));
       
-      // Determine available roles - for now, each user has their primary role
-      const availableRoles = [userToStore.role as BaseRole];
+      // Determine available roles - check for multiple roles
+      const availableRoles = userData.roles && Array.isArray(userData.roles) 
+        ? userData.roles as BaseRole[]
+        : [userToStore.role as BaseRole];
       const activeRole = userToStore.role as BaseRole;
       
       // Update state
@@ -296,6 +300,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       case 'admin': return 'Administrateur';
       case 'shepherd': return 'Berger(e)';
       case 'adn': return 'ADN';
+      case 'department_leader': return 'Responsable Département';
       default: return 'Utilisateur';
     }
   };

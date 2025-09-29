@@ -22,7 +22,7 @@ export type Permission =
   | 'MANAGE_DEPARTMENT_SERVANTS'
   | '*';
 
-export type BaseRole = 'super_admin' | 'admin' | 'shepherd' | 'adn' | 'pasteur';
+export type BaseRole = 'super_admin' | 'admin' | 'shepherd' | 'adn' | 'pasteur' | 'department_leader';
 
 export interface UserRoles {
   primary: BaseRole;

@@ -23,6 +23,8 @@ export default function Dashboard() {
       return <ShepherdDashboard />;
     case ROLES.ADN:
       return <ADNDashboard />;
+    case ROLES.DEPARTMENT_LEADER:
+      return <AdminDashboard />; // Department leaders use admin dashboard
     case ROLES.ADMIN:
     case ROLES.SUPER_ADMIN:
       return <AdminDashboard />;

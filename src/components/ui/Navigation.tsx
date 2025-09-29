@@ -184,6 +184,62 @@ export default function Navigation({ onItemClick }: NavigationProps) {
           href: '/modeles-sms'
         });
       }
+
+      // Add servants menu for department leaders
+      if (hasPermission(PERMISSIONS.MANAGE_SERVANTS)) {
+        items.push({
+          id: 'servants',
+          label: 'Serviteurs',
+          icon: <UsersRound className="w-5 h-5" />,
+          href: '/serviteurs'
+        });
+      }
+      
+      return items;
+    }
+
+    // Navigation pour les responsables de département
+    if (currentRole === ROLES.DEPARTMENT_LEADER) {
+      const items: MenuItem[] = [
+        {
+          id: 'dashboard',
+          label: 'Tableau de bord',
+          icon: <LayoutDashboard className="w-5 h-5" />,
+          href: '/'
+        },
+        {
+          id: 'department-management',
+          label: 'Gestion Département',
+          icon: <Briefcase className="w-5 h-5" />,
+          children: [
+            {
+              id: 'servants',
+              label: 'Serviteurs',
+              href: '/serviteurs',
+              icon: <UsersRound className="w-5 h-5" />
+            },
+            {
+              id: 'interactions',
+              label: 'Interactions',
+              href: '/interactions',
+              icon: <MessageCircle className="w-5 h-5" />
+            },
+            {
+              id: 'attendance',
+              label: 'Présences',
+              href: '/presences',
+              icon: <CalendarCheck className="w-5 h-5" />
+            },
+            {
+              id: 'sms',
+              label: 'SMS',
+              href: '/sms',
+              icon: <MessageSquare className="w-5 h-5" />
+            }
+          ]
+        }
+      ];
+
       return items;
     }
 
@@ -274,12 +330,12 @@ export default function Navigation({ onItemClick }: NavigationProps) {
             href: '/ames',
             icon: <Heart className="w-5 h-5" />
           },
-          {
+          ...(hasPermission(PERMISSIONS.MANAGE_SERVANTS) ? [{
             id: 'servants',
             label: 'Serviteurs',
             href: '/serviteurs',
             icon: <UsersRound className="w-5 h-5" />
-          },
+          }] : []),
           {
             id: 'service-families',
             label: 'Familles de service',
