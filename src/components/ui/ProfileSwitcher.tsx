@@ -65,7 +65,7 @@ export function ProfileSwitcher() {
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 bg-card border border-border rounded-md shadow-lg z-50">
+        <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-gray-800 border border-border rounded-md shadow-xl ring-1 ring-black/5 backdrop-blur-sm z-[9999]">
           <div className="py-2">
             <div className="px-4 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wide border-b border-border">
               Sélectionner un profil
