@@ -1,6 +1,7 @@
 // src/types/user.types.ts
 
 import { Role } from './permission.types'; // garde si utile ailleurs
+import { BusinessProfile } from './businessProfile.types';
 
 export type UserRoles = 'admin' | 'shepherd' | 'adn' | 'intern';
 
@@ -21,9 +22,10 @@ export interface User {
   fullName: string;
   nickname?: string;
   email: string;
-  role?: string;
-  roles: UserRoles;
-  additionalMenus?: string[];
+  role?: string; // Keep for backward compatibility
+  roles?: UserRoles; // Keep for backward compatibility
+  businessProfiles?: BusinessProfile[]; // New system
+  additionalMenus?: string[]; // Keep for backward compatibility
   phone?: string;
   location?: string;
   coordinates?: {

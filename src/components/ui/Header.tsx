@@ -5,7 +5,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useUserProfile } from '../../contexts/UserProfileContext';
 import { User as UserIcon, LogOut, Bell } from 'lucide-react';
 import { NotificationBell } from '../notifications/NotificationBell';
-import { RoleSwitcher } from './RoleSwitcher';
+import { BusinessProfileSwitcher } from './BusinessProfileSwitcher';
 import toast from 'react-hot-toast';
 
 export function Header() {
@@ -92,7 +92,7 @@ export function Header() {
         
         <div className="flex items-center space-x-4">
           {/* Role Switcher */}
-          <RoleSwitcher />
+          <BusinessProfileSwitcher />
           
           {/* Notifications */}
           {((activeRole || userRole) === 'shepherd' || (userRole as any) === 'intern') && <NotificationBell />}

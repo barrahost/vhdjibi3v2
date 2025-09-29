@@ -86,10 +86,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
         }
         
-        // Determine available roles - check for multiple roles
-        const availableRoles = userData.roles && Array.isArray(userData.roles) 
-          ? userData.roles as BaseRole[]
-          : [userData.role as BaseRole];
+        let availableRoles = [];
+        
+        // Check for business profiles first (new system)
+        if (userData.businessProfiles && Array.isArray(userData.businessProfiles)) {
+          availableRoles = userData.businessProfiles.map((profile: any) => profile.type);
+        } else {
+          // Fallback to old system
+          if (userData.roles && userData.roles.primary) {
+            availableRoles.push(userData.roles.primary);
+            if (userData.roles.secondary) {
+              availableRoles.push(...userData.roles.secondary);
+            }
+          } else if (userData.role) {
+            availableRoles.push(userData.role);
+          }
+        }
         const activeRole = userData.activeRole || userData.role as BaseRole;
         const activePermissions = getUserPermissions(activeRole as Role);
         

@@ -4,11 +4,11 @@ import { db } from '../../lib/firebase';
 import { Modal } from '../ui/Modal';
 import { PhotoUpload } from '../ui/PhotoUpload';
 import { LocationField } from '../souls/form/LocationField';
-import { MenuAssignment } from './MenuAssignment';
+import { BusinessProfileAssignment } from './BusinessProfileAssignment';
 import { StorageService } from '../../services/storage.service';
 import { validatePhoneNumber } from '../../utils/phoneValidation';
 import { User } from '../../types/user.types';
-import { BaseRole } from '../../types/permission.types';
+import { BusinessProfile } from '../../types/businessProfile.types';
 import { Key } from 'lucide-react';
 import toast from 'react-hot-toast';
 import PasswordResetModal from './PasswordResetModal';
@@ -24,11 +24,7 @@ export default function EditUserModal({ user, isOpen, onClose }: EditUserModalPr
     fullName: '',
     nickname: '',
     phone: '',
-    roles: {
-      primary: '' as BaseRole,
-      secondary: [] as BaseRole[]
-    },
-    additionalMenus: [] as string[],
+    businessProfiles: [] as BusinessProfile[],
     status: 'active' as 'active' | 'inactive',
     location: '',
     coordinates: null as { latitude: number; longitude: number; } | null,
@@ -41,24 +37,27 @@ export default function EditUserModal({ user, isOpen, onClose }: EditUserModalPr
 
   useEffect(() => {
     if (user) {
-      // Handle both old single role format and new roles object format
-      let roles;
-      if (user.roles && typeof user.roles === 'object') {
-        roles = user.roles;
+      // Convert existing user data to business profiles format
+      let businessProfiles: BusinessProfile[] = [];
+      
+      if (user.businessProfiles && Array.isArray(user.businessProfiles)) {
+        businessProfiles = user.businessProfiles;
       } else {
-        // Convert old single role format to new format
-        roles = {
-          primary: (user.role || 'admin') as BaseRole,
-          secondary: []
-        };
+        // Convert from old format - check roles, additionalMenus, etc.
+        const primaryRole = user.role || 'shepherd';
+        businessProfiles.push({ type: primaryRole as any, isActive: true });
+        
+        // Convert additional menus to profiles if applicable
+        if (user.additionalMenus?.includes('MANAGE_SERVANTS')) {
+          businessProfiles.push({ type: 'department_leader', isActive: false });
+        }
       }
 
       setFormData({
         fullName: user.fullName,
         nickname: user.nickname || '',
         phone: user.phone?.replace('+225', '') || '',
-        roles,
-        additionalMenus: user.additionalMenus || [],
+        businessProfiles,
         status: user.status || 'active',
         location: user.location || '',
         coordinates: user.coordinates || null,
@@ -150,14 +149,20 @@ export default function EditUserModal({ user, isOpen, onClose }: EditUserModalPr
         return;
       }
 
+      // Determine primary role from business profiles for backward compatibility
+      const primaryRole = formData.businessProfiles.find(p => p.type === 'admin')?.type || 
+                          formData.businessProfiles.find(p => p.type === 'adn')?.type ||
+                          formData.businessProfiles.find(p => p.type === 'department_leader')?.type ||
+                          formData.businessProfiles.find(p => p.type === 'shepherd')?.type ||
+                          'shepherd';
+
       // Préparer les données pour la mise à jour
       const updateData: any = {
         fullName: formData.fullName.trim(),
         nickname: formData.nickname?.trim() || null,
         phone: phoneValidation.formattedNumber,
-        roles: formData.roles,
-        additionalMenus: formData.additionalMenus,
-        role: formData.roles.primary, // Update the top-level role field to match the primary role
+        businessProfiles: formData.businessProfiles,
+        role: primaryRole, // Update the top-level role field for backward compatibility
         status: formData.status,
         location: formData.location?.trim() || null,
         coordinates: formData.useGeolocation ? formData.coordinates : null,
@@ -281,77 +286,13 @@ export default function EditUserModal({ user, isOpen, onClose }: EditUserModalPr
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Rôle Principal
+            Profils Métier
           </label>
-          <select
-            value={formData.roles.primary}
-            onChange={(e) => setFormData(prev => ({
-              ...prev,
-              roles: {
-                ...prev.roles,
-                primary: e.target.value as BaseRole
-              }
-            }))}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-[#00665C] focus:border-[#00665C]"
-          >
-            <option value="admin">Administrateur</option>
-            <option value="shepherd">Berger(e)</option>
-            <option value="adn">ADN</option>
-          </select>
+          <BusinessProfileAssignment
+            selectedProfiles={formData.businessProfiles}
+            onChange={(profiles) => setFormData(prev => ({ ...prev, businessProfiles: profiles }))}
+          />
         </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Rôles Secondaires
-          </label>
-          <div className="space-y-2">
-            {(['admin', 'shepherd', 'adn'] as BaseRole[]).map(role => (
-              role !== formData.roles.primary && (
-                <label key={role} className="flex items-center">
-                  <input
-                    type="checkbox"
-                    checked={formData.roles.secondary.includes(role)}
-                    onChange={(e) => {
-                      setFormData(prev => ({
-                        ...prev,
-                        roles: {
-                          ...prev.roles,
-                          secondary: e.target.checked
-                            ? [...prev.roles.secondary, role]
-                            : prev.roles.secondary.filter(r => r !== role)
-                        }
-                      }));
-                    }}
-                    className="rounded border-gray-300 text-[#00665C] focus:ring-[#00665C]"
-                  />
-                  <span className="ml-2 text-sm text-gray-700">
-                    {role === 'admin' ? 'Administrateur' :
-                     role === 'adn' ? 'ADN' : 'Berger(e)'}
-                  </span>
-                </label>
-              )
-            ))}
-          </div>
-          <p className="mt-1 text-sm text-gray-500">
-            Sélectionnez les rôles additionnels pour cet utilisateur
-          </p>
-        </div>
-
-        {/* Additional Menus Section - Only show for shepherds */}
-        {formData.roles.primary === 'shepherd' && (
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Menus Additionnels
-            </label>
-            <MenuAssignment 
-              selectedMenus={formData.additionalMenus}
-              onChange={(menus) => setFormData(prev => ({ ...prev, additionalMenus: menus }))}
-            />
-            <p className="mt-1 text-sm text-gray-500">
-              Sélectionnez les menus additionnels à attribuer à cet utilisateur
-            </p>
-          </div>
-        )}
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">

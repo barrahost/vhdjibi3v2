@@ -5,11 +5,11 @@ import { db } from '../../lib/firebase';
 import { ServantService } from '../../services/servant.service';
 import toast from 'react-hot-toast';
 import { PhotoUpload } from '../ui/PhotoUpload';
-import { MenuAssignment } from './MenuAssignment';
-import { ROLES } from '../../constants/roles';
+import { BusinessProfileAssignment } from './BusinessProfileAssignment';
 import { validatePhoneNumber } from '../../utils/phoneValidation';
 import { LocationField } from '../souls/form/LocationField';
 import { StorageService } from '../../services/storage.service';
+import { BusinessProfile } from '../../types/businessProfile.types';
 
 const DEFAULT_PASSWORDS = {
   ADMIN: '@123456',
@@ -27,30 +27,25 @@ export default function UserForm({ onSuccess }: UserFormProps) {
     nickname: '',
     phone: '',
     email: '',
-    role: '',
+    businessProfiles: [] as BusinessProfile[],
     password: DEFAULT_PASSWORDS.ADMIN, // Default password
-    additionalMenus: [] as string[],
     location: '',
     coordinates: null as { latitude: number; longitude: number; } | null,
     photo: null as File | null
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Définir les rôles disponibles
-  const availableRoles = [
-    { value: 'admin', label: 'Administrateur' },
-    { value: 'shepherd', label: 'Berger(e)' },
-    { value: 'adn', label: 'ADN' }
-  ];
-
-  // Mettre à jour le mot de passe par défaut en fonction du rôle
-  const updatePasswordForRole = (role: string) => {
+  // Mettre à jour le mot de passe par défaut en fonction des profils
+  const updatePasswordForProfiles = (profiles: BusinessProfile[]) => {
     let password = DEFAULT_PASSWORDS.ADMIN;
     
-    if (role === 'shepherd') {
-      password = DEFAULT_PASSWORDS.SHEPHERD;
-    } else if (role === 'adn') {
+    // Use the highest privilege profile for password
+    if (profiles.some(p => p.type === 'admin')) {
+      password = DEFAULT_PASSWORDS.ADMIN;
+    } else if (profiles.some(p => p.type === 'adn')) {
       password = DEFAULT_PASSWORDS.ADN;
+    } else if (profiles.some(p => p.type === 'shepherd' || p.type === 'department_leader')) {
+      password = DEFAULT_PASSWORDS.SHEPHERD;
     }
     
     setFormData(prev => ({ ...prev, password }));
@@ -107,15 +102,22 @@ export default function UserForm({ onSuccess }: UserFormProps) {
         }
       }
 
+      // Determine primary role from business profiles
+      const primaryRole = formData.businessProfiles.find(p => p.type === 'admin')?.type || 
+                          formData.businessProfiles.find(p => p.type === 'adn')?.type ||
+                          formData.businessProfiles.find(p => p.type === 'department_leader')?.type ||
+                          formData.businessProfiles.find(p => p.type === 'shepherd')?.type ||
+                          'shepherd';
+
       // Créer l'utilisateur dans Firestore
       docRef = await addDoc(collection(db, 'users'), {
         uid: uid,
         fullName: formData.fullName.trim(),
         nickname: formData.nickname?.trim() || null,
         email: formData.email,
-        role: formData.role,
+        role: primaryRole, // Keep for backward compatibility
+        businessProfiles: formData.businessProfiles,
         password: formData.password, // Stockage du mot de passe par défaut
-        additionalMenus: formData.role === 'shepherd' ? formData.additionalMenus : [],
         phone: phoneValidation.formattedNumber,
         location: formData.location?.trim() || null,
         coordinates: formData.coordinates,
@@ -135,16 +137,16 @@ export default function UserForm({ onSuccess }: UserFormProps) {
         nickname: '',
         phone: '',
         email: '',
-        additionalMenus: [],
-        role: '',
+        businessProfiles: [],
         password: DEFAULT_PASSWORDS.ADMIN,
         location: '',
         coordinates: null,
         photo: null
       });
 
-      // If the user is a shepherd or intern, also create a servant entry
-      if (formData.role === 'shepherd') {
+      // If the user has shepherd or department_leader profile, also create a servant entry
+      const hasShepherdProfile = formData.businessProfiles.some(p => p.type === 'shepherd' || p.type === 'department_leader');
+      if (hasShepherdProfile) {
         try {
           await ServantService.createServant({
             fullName: formData.fullName.trim(),
@@ -258,25 +260,15 @@ export default function UserForm({ onSuccess }: UserFormProps) {
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Rôle
+            Profils Métier
           </label>
-          <select
-            required
-            value={formData.role}
-            onChange={(e) => {
-              const role = e.target.value;
-              setFormData(prev => ({ ...prev, role }));
-              updatePasswordForRole(role);
+          <BusinessProfileAssignment
+            selectedProfiles={formData.businessProfiles}
+            onChange={(profiles) => {
+              setFormData(prev => ({ ...prev, businessProfiles: profiles }));
+              updatePasswordForProfiles(profiles);
             }}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-[#00665C] focus:border-[#00665C]"
-          >
-            <option value="">Sélectionner un rôle</option>
-            {availableRoles.map(role => (
-              <option key={role.value} value={role.value}>
-                {role.label}
-              </option>
-            ))}
-          </select>
+          />
         </div>
 
         <div>
@@ -290,29 +282,13 @@ export default function UserForm({ onSuccess }: UserFormProps) {
             className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-50"
           />
           <p className="mt-1 text-sm text-gray-500">
-            Mot de passe par défaut qui sera attribué à l'utilisateur selon son rôle
+            Mot de passe par défaut qui sera attribué à l'utilisateur selon ses profils
           </p>
         </div>
 
-        {/* Additional Menus - Only show for shepherds */}
-        {formData.role === 'shepherd' && (
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Menus Additionnels
-            </label>
-            <MenuAssignment 
-              selectedMenus={formData.additionalMenus}
-              onChange={(menus) => setFormData(prev => ({ ...prev, additionalMenus: menus }))}
-            />
-            <p className="mt-1 text-sm text-gray-500">
-              Sélectionnez les menus additionnels à attribuer à ce berger
-            </p>
-          </div>
-        )}
-
         <button
           type="submit"
-          disabled={isSubmitting}
+          disabled={isSubmitting || formData.businessProfiles.length === 0}
           className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-[#00665C] hover:bg-[#00665C]/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#00665C] disabled:opacity-50"
         >
           {isSubmitting ? 'Ajout en cours...' : 'Ajouter l\'utilisateur'}
