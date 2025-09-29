@@ -21,7 +21,8 @@ interface AuthState {
   permissions: Permission[];
   login: (phone: string, password: string) => Promise<any>;
   logout: () => void;
-  switchRole: (role: BaseRole) => void;
+  switchRole: (role: BaseRole | BusinessProfileType) => void;
+  toggleProfile?: (profileType: BusinessProfileType) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthState>({
@@ -347,15 +348,69 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     navigate('/login');
   };
 
-  // Switch role function
-  const switchRole = (newRole: BaseRole) => {
-    if (!state.availableRoles.includes(newRole)) return;
+  // Toggle profile function for business profiles
+  const toggleProfile = async (profileType: BusinessProfileType) => {
+    if (!state.user?.businessProfiles) return;
+    
+    console.log('🔄 [AuthContext] Toggling profile:', profileType);
+    
+    try {
+      // Toggle the profile's active state
+      const updatedProfiles = state.user.businessProfiles.map((profile: any) => 
+        profile.type === profileType 
+          ? { ...profile, isActive: !profile.isActive }
+          : profile
+      );
+      
+      // Get currently active profiles after toggle
+      const activeProfiles = updatedProfiles.filter((profile: any) => profile.isActive);
+      const activeProfileTypes = activeProfiles.map((profile: any) => profile.type as BusinessProfileType);
+      
+      // Calculate cumulative permissions
+      const newPermissions = getCumulativePermissions(activeProfileTypes) as Permission[];
+      
+      // Update user object
+      const updatedUser = {
+        ...state.user,
+        businessProfiles: updatedProfiles
+      };
+      
+      // Update state
+      setState(prev => ({
+        ...prev,
+        user: updatedUser,
+        permissions: newPermissions,
+        activeRole: activeProfileTypes.length > 0 ? activeProfileTypes[0] as BaseRole : null
+      }));
+      
+      // Update localStorage
+      localStorage.setItem('user', JSON.stringify(updatedUser));
+      
+      const profileLabel = getRoleLabel(profileType as BaseRole);
+      const isNowActive = activeProfiles.some((p: any) => p.type === profileType);
+      toast.success(`Profil ${profileLabel} ${isNowActive ? 'activé' : 'désactivé'}`);
+    } catch (error) {
+      console.error('❌ [AuthContext] Error toggling profile:', error);
+      toast.error('Erreur lors du changement de profil');
+    }
+  };
+
+  // Switch role function (updated to handle both old and new systems)
+  const switchRole = (newRole: BaseRole | BusinessProfileType) => {
+    // For business profiles, use toggle functionality
+    if (state.user?.businessProfiles && state.user.businessProfiles.some((p: any) => p.type === newRole)) {
+      toggleProfile(newRole as BusinessProfileType);
+      return;
+    }
+    
+    // Legacy role switching
+    if (!state.availableRoles.includes(newRole as BaseRole)) return;
     
     const newPermissions = getUserPermissions(newRole as Role);
     
     setState(prev => ({
       ...prev,
-      activeRole: newRole,
+      activeRole: newRole as BaseRole,
       permissions: newPermissions
     }));
     
@@ -363,11 +418,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
     localStorage.setItem('user', JSON.stringify({ ...currentUser, activeRole: newRole }));
     
-    toast.success(`Basculé vers le rôle: ${getRoleLabel(newRole)}`);
+    toast.success(`Basculé vers le rôle: ${getRoleLabel(newRole as BaseRole)}`);
   };
 
   // Helper function to get role labels
-  const getRoleLabel = (role: BaseRole) => {
+  const getRoleLabel = (role: BaseRole | BusinessProfileType) => {
     switch (role) {
       case 'super_admin': return 'Super Admin';
       case 'admin': return 'Administrateur';
@@ -379,7 +434,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ ...state, login, logout, switchRole }}>
+    <AuthContext.Provider value={{ ...state, login, logout, switchRole, toggleProfile }}>
       {children}
     </AuthContext.Provider>
   );
