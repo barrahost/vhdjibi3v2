@@ -72,7 +72,7 @@ export default function Navigation({ onItemClick }: NavigationProps) {
             {
               id: 'reminders',
               label: 'Rappels',
-              href: '/rappels-bergers',
+              href: '/rappels',
               icon: <Bell className="w-5 h-5" />
             },
             {
