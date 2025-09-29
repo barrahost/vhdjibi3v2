@@ -34,7 +34,7 @@ export default function BatchAttendanceForm() {
 
         // Vérifier si l'utilisateur a un profil berger actif
         const userData = userDoc.docs[0].data();
-        const hasShepherdProfile = userData.businessProfiles?.profiles?.some(
+        const hasShepherdProfile = userData.businessProfiles?.some(
           (profile: any) => profile.type === 'shepherd' && profile.isActive
         ) || userData.role === 'shepherd' || userData.role === 'intern';
 
