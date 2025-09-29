@@ -90,10 +90,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
         
         let availableRoles = [];
+        let activeRole = null;
+        let activePermissions: Permission[] = [];
         
         // Check for business profiles first (new system)
         if (userData.businessProfiles && Array.isArray(userData.businessProfiles)) {
           availableRoles = userData.businessProfiles.map((profile: any) => profile.type);
+          
+          // Get active profiles
+          const activeProfiles = userData.businessProfiles.filter((profile: any) => profile.isActive);
+          const activeProfileTypes = activeProfiles.map((profile: any) => profile.type as BusinessProfileType);
+          
+          if (activeProfileTypes.length > 0) {
+            // Calculate cumulative permissions
+            activePermissions = getCumulativePermissions(activeProfileTypes) as Permission[];
+            // Set activeRole to shepherd if present, otherwise first active profile
+            activeRole = activeProfileTypes.includes('shepherd') ? 'shepherd' : activeProfileTypes[0];
+          } else {
+            // No active profiles, use old system permissions
+            activePermissions = getUserPermissions(userData.role as Role);
+            activeRole = userData.role as BaseRole;
+          }
         } else {
           // Fallback to old system
           if (userData.roles && userData.roles.primary) {
@@ -104,9 +121,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           } else if (userData.role) {
             availableRoles.push(userData.role);
           }
+          activeRole = userData.activeRole || userData.role as BaseRole;
+          activePermissions = getUserPermissions(activeRole as Role);
         }
-        const activeRole = userData.activeRole || userData.role as BaseRole;
-        const activePermissions = getUserPermissions(activeRole as Role);
         
         setState(prev => ({
           ...prev,
@@ -292,11 +309,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       localStorage.setItem('user', JSON.stringify(userToStore));
       
-      // Determine available roles - check for multiple roles
-      const availableRoles = userData.roles && Array.isArray(userData.roles) 
-        ? userData.roles as BaseRole[]
-        : [userToStore.role as BaseRole];
-      const activeRole = userToStore.role as BaseRole;
+      // Determine available roles - prioritize business profiles
+      let availableRoles: BaseRole[] = [];
+      let activeRole: BaseRole | null = null;
+      
+      if (userData.businessProfiles && Array.isArray(userData.businessProfiles)) {
+        availableRoles = userData.businessProfiles.map((profile: any) => profile.type as BaseRole);
+        
+        // Get active profiles
+        const activeProfiles = userData.businessProfiles.filter((profile: any) => profile.isActive);
+        const activeProfileTypes = activeProfiles.map((profile: any) => profile.type as BusinessProfileType);
+        
+        if (activeProfileTypes.length > 0) {
+          // Set activeRole to shepherd if present, otherwise first active profile
+          activeRole = activeProfileTypes.includes('shepherd') ? 'shepherd' : activeProfileTypes[0] as BaseRole;
+        } else {
+          // No active profiles, use main role
+          activeRole = userToStore.role as BaseRole;
+        }
+      } else {
+        // Fallback to old role system
+        availableRoles = userData.roles && Array.isArray(userData.roles) 
+          ? userData.roles as BaseRole[]
+          : [userToStore.role as BaseRole];
+        activeRole = userToStore.role as BaseRole;
+      }
       
       console.log('🔍 [AuthContext] Roles determined:', {
         availableRoles,
@@ -380,7 +417,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         ...prev,
         user: updatedUser,
         permissions: newPermissions,
-        activeRole: activeProfileTypes.length > 0 ? activeProfileTypes[0] as BaseRole : null
+        activeRole: activeProfileTypes.length > 0 
+          ? (activeProfileTypes.includes('shepherd') ? 'shepherd' : activeProfileTypes[0]) as BaseRole 
+          : null
       }));
       
       // Update localStorage
