@@ -109,7 +109,7 @@ export default function AssignedSouls() {
         // Récupérer les âmes assignées
         const soulsQuery = query(
           collection(db, 'souls'),
-          where('role', '==', 'shepherd'),
+          where('shepherdId', '==', currentShepherdId),
           where('status', '==', 'active')
         );
         const soulsSnapshot = await getDocs(soulsQuery);
