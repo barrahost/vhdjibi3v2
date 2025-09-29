@@ -20,20 +20,30 @@ export default function BatchAttendanceForm() {
 
       try {
         // Récupérer l'ID du berger depuis la collection users
-        const shepherdsQuery = query(
+        const userQuery = query(
           collection(db, 'users'),
           where('uid', '==', user.uid),
-          where('role', 'in', ['shepherd', 'intern']),
           where('status', '==', 'active')
         );
-        const shepherdDoc = await getDocs(shepherdsQuery);
+        const userDoc = await getDocs(userQuery);
         
-        if (shepherdDoc.empty) {
-          toast.error('Berger non trouvé');
+        if (userDoc.empty) {
+          toast.error('Utilisateur non trouvé');
           return;
         }
 
-        const currentShepherdId = shepherdDoc.docs[0].id;
+        // Vérifier si l'utilisateur a un profil berger actif
+        const userData = userDoc.docs[0].data();
+        const hasShepherdProfile = userData.businessProfiles?.profiles?.some(
+          (profile: any) => profile.type === 'shepherd' && profile.isActive
+        ) || userData.role === 'shepherd' || userData.role === 'intern';
+
+        if (!hasShepherdProfile) {
+          toast.error('Accès non autorisé - profil berger requis');
+          return;
+        }
+
+        const currentShepherdId = userDoc.docs[0].id;
         setShepherdId(currentShepherdId);
 
         // Récupérer les âmes assignées
