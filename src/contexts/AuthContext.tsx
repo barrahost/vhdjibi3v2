@@ -6,7 +6,7 @@ import { DEFAULT_PASSWORDS } from '../constants/auth';
 import { RoleService } from '../services/auth/roleService';
 import type { Permission, Role, BaseRole } from '../types/permission.types';
 import { ROLE_PERMISSIONS } from '../constants/roles';
-import { PROFILE_PERMISSIONS, getCumulativePermissions } from '../types/businessProfile.types';
+import { PROFILE_PERMISSIONS, getProfilePermissions } from '../types/businessProfile.types';
 import type { BusinessProfileType } from '../types/businessProfile.types';
 import { validatePhoneNumber } from '../utils/phoneValidation';
 import toast from 'react-hot-toast';
@@ -22,7 +22,7 @@ interface AuthState {
   login: (phone: string, password: string) => Promise<any>;
   logout: () => void;
   switchRole: (role: BaseRole | BusinessProfileType) => void;
-  toggleProfile?: (profileType: BusinessProfileType) => Promise<void>;
+  switchToProfile: (profileType: BusinessProfileType) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthState>({
@@ -35,7 +35,8 @@ const AuthContext = createContext<AuthState>({
   permissions: [],
   login: async () => {},
   logout: () => {},
-  switchRole: () => {}
+  switchRole: () => {},
+  switchToProfile: async () => {}
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -50,7 +51,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     permissions: [],
     login: async () => null,
     logout: () => {},
-    switchRole: () => {}
+    switchRole: () => {},
+    switchToProfile: async () => {}
   });
 
   // Check for existing session on mount
@@ -103,7 +105,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           
           if (activeProfileTypes.length > 0) {
             // Calculate cumulative permissions
-            activePermissions = getCumulativePermissions(activeProfileTypes) as Permission[];
+            activePermissions = getProfilePermissions(activeProfileTypes[0]) as Permission[];
             // Set activeRole to shepherd if present, otherwise first active profile
             activeRole = activeProfileTypes.includes('shepherd') ? 'shepherd' : activeProfileTypes[0];
           } else {
@@ -267,7 +269,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           activeProfileTypes.push(userData.businessProfiles[0].type as BusinessProfileType);
         }
         
-        permissions = getCumulativePermissions(activeProfileTypes) as Permission[];
+        permissions = getProfilePermissions(activeProfileTypes[0]) as Permission[];
         console.log('🔍 [AuthContext] Business profile permissions:', {
           activeProfileTypes,
           permissions
@@ -380,31 +382,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       permissions: [],
       login,
       logout,
-      switchRole
+      switchRole,
+      switchToProfile
     });
     navigate('/login');
   };
 
-  // Toggle profile function for business profiles
-  const toggleProfile = async (profileType: BusinessProfileType) => {
+  // Switch to single profile function for business profiles
+  const switchToProfile = async (profileType: BusinessProfileType) => {
     if (!state.user?.businessProfiles) return;
     
-    console.log('🔄 [AuthContext] Toggling profile:', profileType);
+    console.log('🔄 [AuthContext] Switching to profile:', profileType);
     
     try {
-      // Toggle the profile's active state
-      const updatedProfiles = state.user.businessProfiles.map((profile: any) => 
-        profile.type === profileType 
-          ? { ...profile, isActive: !profile.isActive }
-          : profile
-      );
+      // Set only the selected profile as active
+      const updatedProfiles = state.user.businessProfiles.map((profile: any) => ({
+        ...profile,
+        isActive: profile.type === profileType
+      }));
       
-      // Get currently active profiles after toggle
-      const activeProfiles = updatedProfiles.filter((profile: any) => profile.isActive);
-      const activeProfileTypes = activeProfiles.map((profile: any) => profile.type as BusinessProfileType);
-      
-      // Calculate cumulative permissions
-      const newPermissions = getCumulativePermissions(activeProfileTypes) as Permission[];
+      // Get permissions from the single active profile
+      const newPermissions = getProfilePermissions(profileType) as Permission[];
       
       // Update user object
       const updatedUser = {
@@ -417,28 +415,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         ...prev,
         user: updatedUser,
         permissions: newPermissions,
-        activeRole: activeProfileTypes.length > 0 
-          ? (activeProfileTypes.includes('shepherd') ? 'shepherd' : activeProfileTypes[0]) as BaseRole 
-          : null
+        activeRole: profileType as BaseRole
       }));
       
       // Update localStorage
       localStorage.setItem('user', JSON.stringify(updatedUser));
       
       const profileLabel = getRoleLabel(profileType as BaseRole);
-      const isNowActive = activeProfiles.some((p: any) => p.type === profileType);
-      toast.success(`Profil ${profileLabel} ${isNowActive ? 'activé' : 'désactivé'}`);
+      toast.success(`Profil basculé vers: ${profileLabel}`);
     } catch (error) {
-      console.error('❌ [AuthContext] Error toggling profile:', error);
+      console.error('❌ [AuthContext] Error switching profile:', error);
       toast.error('Erreur lors du changement de profil');
     }
   };
 
   // Switch role function (updated to handle both old and new systems)
   const switchRole = (newRole: BaseRole | BusinessProfileType) => {
-    // For business profiles, use toggle functionality
+    // For business profiles, use switchToProfile functionality
     if (state.user?.businessProfiles && state.user.businessProfiles.some((p: any) => p.type === newRole)) {
-      toggleProfile(newRole as BusinessProfileType);
+      switchToProfile(newRole as BusinessProfileType);
       return;
     }
     
@@ -473,7 +468,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ ...state, login, logout, switchRole, toggleProfile }}>
+    <AuthContext.Provider value={{ ...state, login, logout, switchRole, switchToProfile }}>
       {children}
     </AuthContext.Provider>
   );

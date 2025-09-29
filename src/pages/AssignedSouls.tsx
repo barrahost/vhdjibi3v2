@@ -93,33 +93,44 @@ export default function AssignedSouls() {
     if (!user) return;
 
     try {
-      // Récupérer l'ID du berger ou stagiaire depuis la collection users
+      // Récupérer l'utilisateur depuis la collection users
       const userQuery = query(
         collection(db, 'users'),
         where('uid', '==', user.uid),
-        where('role', 'in', ['shepherd', 'intern']),
         where('status', '==', 'active')
       );
-      const shepherdDoc = await getDocs(userQuery);
+      const userDoc = await getDocs(userQuery);
       
-      if (!shepherdDoc.empty) {
-        const currentShepherdId = shepherdDoc.docs[0].id;
-        setShepherdId(currentShepherdId);
-
-        // Récupérer les âmes assignées
-        const soulsQuery = query(
-          collection(db, 'souls'),
-          where('shepherdId', '==', currentShepherdId),
-          where('status', '==', 'active')
-        );
-        const soulsSnapshot = await getDocs(soulsQuery);
+      if (!userDoc.empty) {
+        const userData = userDoc.docs[0].data();
+        const currentUserId = userDoc.docs[0].id;
         
-        setSouls(soulsSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        } as Soul)));
+        // Vérifier si l'utilisateur a le profil berger actif ou l'ancien rôle berger
+        const hasShepherdProfile = userData.businessProfiles?.some((profile: any) => 
+          profile.type === 'shepherd' && profile.isActive
+        );
+        const hasOldShepherdRole = userData.role === 'shepherd' || userData.role === 'intern';
+        
+        if (hasShepherdProfile || hasOldShepherdRole) {
+          setShepherdId(currentUserId);
+
+          // Récupérer les âmes assignées
+          const soulsQuery = query(
+            collection(db, 'souls'),
+            where('shepherdId', '==', currentUserId),
+            where('status', '==', 'active')
+          );
+          const soulsSnapshot = await getDocs(soulsQuery);
+          
+          setSouls(soulsSnapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          } as Soul)));
+        } else {
+          toast.error('Profil berger requis pour voir les âmes assignées');
+        }
       } else {
-        toast.error('Berger non trouvé');
+        toast.error('Utilisateur non trouvé');
       }
     } catch (error) {
       console.error('Error loading souls:', error);

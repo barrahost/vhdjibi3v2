@@ -12,7 +12,7 @@ export interface BusinessProfile {
 
 export interface UserBusinessProfiles {
   profiles: BusinessProfile[];
-  activeProfileTypes: BusinessProfileType[]; // Multiple active profiles
+  activeProfileType?: BusinessProfileType; // Single active profile
 }
 
 export const BUSINESS_PROFILE_LABELS: Record<BusinessProfileType, string> = {
@@ -54,14 +54,7 @@ export const PROFILE_PERMISSIONS: Record<BusinessProfileType, string[]> = {
   admin: ['*']
 };
 
-// Helper function to get all permissions from multiple profiles
-export function getCumulativePermissions(profileTypes: BusinessProfileType[]): string[] {
-  const allPermissions = new Set<string>();
-  
-  profileTypes.forEach(profileType => {
-    const permissions = PROFILE_PERMISSIONS[profileType] || [];
-    permissions.forEach(permission => allPermissions.add(permission));
-  });
-  
-  return Array.from(allPermissions);
+// Helper function to get permissions from a single active profile
+export function getProfilePermissions(profileType: BusinessProfileType): string[] {
+  return PROFILE_PERMISSIONS[profileType] || [];
 }
