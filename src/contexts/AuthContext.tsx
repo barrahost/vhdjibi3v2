@@ -13,20 +13,26 @@ interface AuthState {
   user: any | null;
   loading: boolean;
   userRole: Role | null;
+  availableRoles: BaseRole[];
+  activeRole: BaseRole | null;
   additionalMenus: string[];
   permissions: Permission[];
   login: (phone: string, password: string) => Promise<any>;
   logout: () => void;
+  switchRole: (role: BaseRole) => void;
 }
 
 const AuthContext = createContext<AuthState>({
   user: null,
   loading: false,
   userRole: null,
+  availableRoles: [],
+  activeRole: null,
   additionalMenus: [],
   permissions: [],
   login: async () => {},
-  logout: () => {}
+  logout: () => {},
+  switchRole: () => {}
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -35,10 +41,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     user: null,
     loading: true,
     userRole: null,
+    availableRoles: [],
+    activeRole: null,
     additionalMenus: [],
     permissions: [],
     login: async () => null,
-    logout: () => {}
+    logout: () => {},
+    switchRole: () => {}
   });
 
   // Check for existing session on mount
@@ -77,12 +86,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
         }
         
+        // Determine available roles - for now, each user has their primary role + any additional roles they might have
+        const availableRoles = [userData.role as BaseRole];
+        const activeRole = userData.role as BaseRole;
+        const activePermissions = getUserPermissions(activeRole as Role);
+        
         setState(prev => ({
           ...prev,
           user: userData,
           userRole: userData.role,
+          availableRoles,
+          activeRole,
           additionalMenus,
-          permissions,
+          permissions: activePermissions,
           loading: false
         }));
       };
@@ -206,11 +222,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       localStorage.setItem('user', JSON.stringify(userToStore));
       
+      // Determine available roles - for now, each user has their primary role
+      const availableRoles = [userToStore.role as BaseRole];
+      const activeRole = userToStore.role as BaseRole;
+      
       // Update state
       setState(prev => ({
         ...prev,
         user: userToStore,
         userRole: userToStore.role as Role,
+        availableRoles,
+        activeRole,
         additionalMenus,
         permissions,
         loading: false
@@ -237,16 +259,49 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       user: null,
       loading: false,
       userRole: null,
+      availableRoles: [],
+      activeRole: null,
       additionalMenus: [],
       permissions: [],
       login,
-      logout
+      logout,
+      switchRole
     });
     navigate('/login');
   };
 
+  // Switch role function
+  const switchRole = (newRole: BaseRole) => {
+    if (!state.availableRoles.includes(newRole)) return;
+    
+    const newPermissions = getUserPermissions(newRole as Role);
+    
+    setState(prev => ({
+      ...prev,
+      activeRole: newRole,
+      permissions: newPermissions
+    }));
+    
+    // Store active role in localStorage
+    const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+    localStorage.setItem('user', JSON.stringify({ ...currentUser, activeRole: newRole }));
+    
+    toast.success(`Basculé vers le rôle: ${getRoleLabel(newRole)}`);
+  };
+
+  // Helper function to get role labels
+  const getRoleLabel = (role: BaseRole) => {
+    switch (role) {
+      case 'super_admin': return 'Super Admin';
+      case 'admin': return 'Administrateur';
+      case 'shepherd': return 'Berger(e)';
+      case 'adn': return 'ADN';
+      default: return 'Utilisateur';
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ ...state, login, logout }}>
+    <AuthContext.Provider value={{ ...state, login, logout, switchRole }}>
       {children}
     </AuthContext.Provider>
   );

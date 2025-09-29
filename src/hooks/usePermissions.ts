@@ -3,11 +3,14 @@ import { PERMISSIONS } from '../constants/roles';
 import type { Permission } from '../types/permission.types';
 
 export function usePermissions() {
-  const { permissions, userRole, additionalMenus } = useAuth();
+  const { permissions, userRole, activeRole, additionalMenus } = useAuth();
 
   const hasPermission = (permission: Permission): boolean => {
+    // Use active role if available, otherwise fall back to userRole
+    const currentRole = activeRole || userRole;
+    
     // Le super admin a toutes les permissions
-    if (userRole === 'super_admin') return true;
+    if (currentRole === 'super_admin') return true;
     
     // Check if the user has this permission in their additional menus
     if (additionalMenus && additionalMenus.includes(permission)) {

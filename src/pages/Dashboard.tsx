@@ -5,7 +5,7 @@ import { ADNDashboard } from '../components/dashboard/ADNDashboard';
 import { ROLES } from '../constants/roles';
 
 export default function Dashboard() {
-  const { userRole } = useAuth();
+  const { userRole, activeRole } = useAuth();
 
   // Si pas de rôle défini, afficher un message d'erreur
   if (!userRole) {
@@ -16,8 +16,9 @@ export default function Dashboard() {
     );
   }
 
-  // Afficher le tableau de bord spécifique selon le rôle
-  switch (userRole) {
+  // Afficher le tableau de bord spécifique selon le rôle actif ou le rôle principal
+  const currentRole = activeRole || userRole;
+  switch (currentRole) {
     case ROLES.SHEPHERD:
       return <ShepherdDashboard />;
     case ROLES.ADN:

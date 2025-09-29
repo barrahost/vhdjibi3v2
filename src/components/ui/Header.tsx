@@ -5,10 +5,11 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useUserProfile } from '../../contexts/UserProfileContext';
 import { User as UserIcon, LogOut, Bell } from 'lucide-react';
 import { NotificationBell } from '../notifications/NotificationBell';
+import { RoleSwitcher } from './RoleSwitcher';
 import toast from 'react-hot-toast';
 
 export function Header() {
-  const { user, userRole, logout } = useAuth();
+  const { user, userRole, activeRole, logout } = useAuth();
   const { openProfileModal } = useUserProfile();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [userFullName, setUserFullName] = useState<string>('');
@@ -54,7 +55,8 @@ export function Header() {
   }, [user]);
 
   const getRoleLabel = () => {
-    switch (userRole) {
+    const role = activeRole || userRole;
+    switch (role) {
       case 'super_admin':
         return 'Super Admin';
       case 'admin':
@@ -89,8 +91,11 @@ export function Header() {
         <div className="flex-1" /> {/* Spacer */}
         
         <div className="flex items-center space-x-4">
+          {/* Role Switcher */}
+          <RoleSwitcher />
+          
           {/* Notifications */}
-          {(userRole === 'shepherd' || (userRole as any) === 'intern') && <NotificationBell />}
+          {((activeRole || userRole) === 'shepherd' || (userRole as any) === 'intern') && <NotificationBell />}
 
           {/* Profile */}
           <button

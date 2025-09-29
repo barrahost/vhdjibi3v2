@@ -33,12 +33,15 @@ interface NavigationProps {
 }
 
 export default function Navigation({ onItemClick }: NavigationProps) {
-  const { userRole, user, additionalMenus } = useAuth();
+  const { userRole, activeRole, additionalMenus } = useAuth();
   const { hasPermission } = usePermissions();
 
   const getNavigationItems = (): MenuItem[] => {
+    // Use active role if available, otherwise fall back to userRole
+    const currentRole = activeRole || userRole;
+    
     // Navigation pour les bergers (selon l'image fournie)
-    if (userRole === ROLES.SHEPHERD) {
+    if (currentRole === ROLES.SHEPHERD) {
       const items: MenuItem[] = [
         {
           id: 'dashboard',
@@ -185,7 +188,7 @@ export default function Navigation({ onItemClick }: NavigationProps) {
     }
 
     // Navigation pour ADN (Assistant de Niveau)
-    if (userRole === ROLES.ADN) {
+    if (currentRole === ROLES.ADN) {
       const items: MenuItem[] = [
         {
           id: 'dashboard',
@@ -243,7 +246,7 @@ export default function Navigation({ onItemClick }: NavigationProps) {
     }
 
     // Navigation pour les administrateurs et super administrateurs
-    if ([ROLES.ADMIN, ROLES.SUPER_ADMIN].includes(userRole as any)) {
+    if ([ROLES.ADMIN, ROLES.SUPER_ADMIN].includes(currentRole as any)) {
       const items: MenuItem[] = [
         {
           id: 'dashboard',
@@ -387,7 +390,7 @@ export default function Navigation({ onItemClick }: NavigationProps) {
       ];
       
       // Ajouter le menu Paramètres seulement pour le super admin
-      if (userRole === ROLES.SUPER_ADMIN) {
+      if (currentRole === ROLES.SUPER_ADMIN) {
         toolsConfigurationChildren.push({
           id: 'settings',
           label: 'Paramètres',
