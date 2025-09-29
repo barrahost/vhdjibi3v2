@@ -40,6 +40,13 @@ export default function Navigation({ onItemClick }: NavigationProps) {
     // Use active role if available, otherwise fall back to userRole
     const currentRole = activeRole || userRole;
     
+    console.log('🔍 [Navigation] Current role for menu generation:', {
+      currentRole,
+      userRole,
+      activeRole,
+      additionalMenus
+    });
+    
     // Navigation pour les bergers (selon l'image fournie)
     if (currentRole === ROLES.SHEPHERD) {
       const items: MenuItem[] = [

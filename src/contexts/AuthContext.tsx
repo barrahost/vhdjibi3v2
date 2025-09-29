@@ -6,6 +6,8 @@ import { DEFAULT_PASSWORDS } from '../constants/auth';
 import { RoleService } from '../services/auth/roleService';
 import type { Permission, Role, BaseRole } from '../types/permission.types';
 import { ROLE_PERMISSIONS } from '../constants/roles';
+import { PROFILE_PERMISSIONS } from '../types/businessProfile.types';
+import type { BusinessProfileType } from '../types/businessProfile.types';
 import { validatePhoneNumber } from '../utils/phoneValidation';
 import toast from 'react-hot-toast';
 
@@ -233,8 +235,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw new Error('Invalid password');
       }
 
-      // Get permissions based on role
-      const permissions = getUserPermissions(userData.role as Role);
+      // Get permissions based on role or business profiles
+      let permissions: Permission[] = [];
+      
+      if (userData.businessProfiles && userData.businessProfiles.length > 0) {
+        // Use new business profiles system
+        const activeProfile = userData.businessProfiles[0];
+        const profilePermissions = PROFILE_PERMISSIONS[activeProfile.type as BusinessProfileType] || [];
+        permissions = profilePermissions as Permission[];
+        console.log('🔍 [AuthContext] Active business profile permissions:', {
+          profileType: activeProfile.type,
+          permissions
+        });
+      } else {
+        // Fallback to old role system
+        permissions = getUserPermissions(userData.role as Role);
+        console.log('🔍 [AuthContext] Legacy role permissions:', {
+          role: userData.role,
+          permissions
+        });
+      }
       
       // Get additional menus if user is a shepherd or intern
       let additionalMenus: string[] = [];
@@ -254,6 +274,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         lastLoginAt: userData.lastLoginAt?.toDate ? userData.lastLoginAt.toDate() : userData.lastLoginAt
       };
       
+      console.log('🔍 [AuthContext] User data after login:', {
+        fullName: userData.fullName,
+        role: userToStore.role,
+        businessProfiles: userData.businessProfiles,
+        additionalMenus: userToStore.additionalMenus,
+        hasBusinessProfiles: !!(userData.businessProfiles && userData.businessProfiles.length > 0)
+      });
+      
       localStorage.setItem('user', JSON.stringify(userToStore));
       
       // Determine available roles - check for multiple roles
@@ -261,6 +289,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         ? userData.roles as BaseRole[]
         : [userToStore.role as BaseRole];
       const activeRole = userToStore.role as BaseRole;
+      
+      console.log('🔍 [AuthContext] Roles determined:', {
+        availableRoles,
+        activeRole,
+        permissions
+      });
       
       // Update state
       setState(prev => ({
