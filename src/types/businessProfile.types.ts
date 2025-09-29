@@ -12,7 +12,7 @@ export interface BusinessProfile {
 
 export interface UserBusinessProfiles {
   profiles: BusinessProfile[];
-  activeProfileType: BusinessProfileType;
+  activeProfileTypes: BusinessProfileType[]; // Multiple active profiles
 }
 
 export const BUSINESS_PROFILE_LABELS: Record<BusinessProfileType, string> = {
@@ -24,7 +24,7 @@ export const BUSINESS_PROFILE_LABELS: Record<BusinessProfileType, string> = {
 
 export const BUSINESS_PROFILE_DESCRIPTIONS: Record<BusinessProfileType, string> = {
   shepherd: 'Peut promouvoir des âmes, gérer ses interactions',
-  department_leader: 'Peut gérer son département + permissions de berger',
+  department_leader: 'Peut gérer son département et ses serviteurs',
   adn: 'Peut gérer les âmes, audios, statistiques',
   admin: 'Accès complet au système'
 };
@@ -38,12 +38,9 @@ export const PROFILE_PERMISSIONS: Record<BusinessProfileType, string[]> = {
     'MANAGE_PROFILE'
   ],
   department_leader: [
-    'MANAGE_INTERACTIONS',
-    'MANAGE_ATTENDANCES',
-    'PROMOTE_SOUL_TO_SERVANT',
-    'MANAGE_PROFILE',
     'MANAGE_SERVANTS',
-    'MANAGE_DEPARTMENT_SERVANTS'
+    'MANAGE_DEPARTMENT_SERVANTS',
+    'MANAGE_PROFILE'
   ],
   adn: [
     'MANAGE_SOULS',
@@ -56,3 +53,15 @@ export const PROFILE_PERMISSIONS: Record<BusinessProfileType, string[]> = {
   ],
   admin: ['*']
 };
+
+// Helper function to get all permissions from multiple profiles
+export function getCumulativePermissions(profileTypes: BusinessProfileType[]): string[] {
+  const allPermissions = new Set<string>();
+  
+  profileTypes.forEach(profileType => {
+    const permissions = PROFILE_PERMISSIONS[profileType] || [];
+    permissions.forEach(permission => allPermissions.add(permission));
+  });
+  
+  return Array.from(allPermissions);
+}

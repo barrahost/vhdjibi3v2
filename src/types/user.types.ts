@@ -25,6 +25,7 @@ export interface User {
   role?: string; // Keep for backward compatibility
   roles?: UserRoles; // Keep for backward compatibility
   businessProfiles?: BusinessProfile[]; // New system
+  activeProfiles?: BusinessProfile[]; // Currently active profiles
   additionalMenus?: string[]; // Keep for backward compatibility
   phone?: string;
   location?: string;

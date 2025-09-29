@@ -1,6 +1,8 @@
 import { useAuth } from '../contexts/AuthContext';
 import { PERMISSIONS } from '../constants/roles';
 import type { Permission } from '../types/permission.types';
+import { getCumulativePermissions } from '../types/businessProfile.types';
+import type { BusinessProfileType } from '../types/businessProfile.types';
 
 export function usePermissions() {
   const { permissions, userRole, activeRole, additionalMenus } = useAuth();

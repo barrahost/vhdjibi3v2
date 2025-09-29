@@ -4,9 +4,10 @@ import { BusinessProfile, BusinessProfileType, BUSINESS_PROFILE_LABELS, BUSINESS
 interface BusinessProfileAssignmentProps {
   selectedProfiles: BusinessProfile[];
   onChange: (profiles: BusinessProfile[]) => void;
+  allowMultiple?: boolean;
 }
 
-export function BusinessProfileAssignment({ selectedProfiles, onChange }: BusinessProfileAssignmentProps) {
+export function BusinessProfileAssignment({ selectedProfiles, onChange, allowMultiple = true }: BusinessProfileAssignmentProps) {
   const availableProfileTypes: BusinessProfileType[] = ['shepherd', 'department_leader', 'adn', 'admin'];
   
   const isProfileSelected = (profileType: BusinessProfileType): boolean => {
@@ -14,23 +15,35 @@ export function BusinessProfileAssignment({ selectedProfiles, onChange }: Busine
   };
 
   const toggleProfile = (profileType: BusinessProfileType) => {
-    if (isProfileSelected(profileType)) {
-      // Remove profile
-      onChange(selectedProfiles.filter(profile => profile.type !== profileType));
+    const isSelected = isProfileSelected(profileType);
+    
+    if (isSelected) {
+      // Remove the profile
+      const updatedProfiles = selectedProfiles.filter(p => p.type !== profileType);
+      onChange(updatedProfiles);
     } else {
-      // Add profile
+      // Add the profile
       const newProfile: BusinessProfile = {
         type: profileType,
-        isActive: selectedProfiles.length === 0 // First profile is active by default
+        isActive: true
       };
-      onChange([...selectedProfiles, newProfile]);
+      
+      if (allowMultiple) {
+        onChange([...selectedProfiles, newProfile]);
+      } else {
+        // Replace existing profile if single selection
+        onChange([newProfile]);
+      }
     }
   };
 
   return (
     <div className="space-y-4">
       <div className="text-sm text-gray-600 mb-3">
-        Sélectionnez les profils métier pour cet utilisateur. Il pourra basculer entre ses profils selon le contexte.
+        {allowMultiple 
+          ? "Sélectionnez les profils métier pour cet utilisateur. Il pourra basculer entre ses profils selon le contexte."
+          : "Sélectionnez un profil métier pour cet utilisateur."
+        }
       </div>
       
       <div className="space-y-3 border border-gray-200 rounded-md p-4">
@@ -71,6 +84,11 @@ export function BusinessProfileAssignment({ selectedProfiles, onChange }: Busine
           <div className="text-sm text-blue-700">
             {selectedProfiles.map(profile => BUSINESS_PROFILE_LABELS[profile.type]).join(', ')}
           </div>
+          {allowMultiple && selectedProfiles.length > 1 && (
+            <p className="text-xs text-blue-600 mt-2">
+              💡 Les permissions de tous les profils sélectionnés sont cumulées
+            </p>
+          )}
         </div>
       )}
     </div>

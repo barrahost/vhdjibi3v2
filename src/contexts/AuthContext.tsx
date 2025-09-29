@@ -6,7 +6,7 @@ import { DEFAULT_PASSWORDS } from '../constants/auth';
 import { RoleService } from '../services/auth/roleService';
 import type { Permission, Role, BaseRole } from '../types/permission.types';
 import { ROLE_PERMISSIONS } from '../constants/roles';
-import { PROFILE_PERMISSIONS } from '../types/businessProfile.types';
+import { PROFILE_PERMISSIONS, getCumulativePermissions } from '../types/businessProfile.types';
 import type { BusinessProfileType } from '../types/businessProfile.types';
 import { validatePhoneNumber } from '../utils/phoneValidation';
 import toast from 'react-hot-toast';
@@ -239,12 +239,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       let permissions: Permission[] = [];
       
       if (userData.businessProfiles && userData.businessProfiles.length > 0) {
-        // Use new business profiles system
-        const activeProfile = userData.businessProfiles[0];
-        const profilePermissions = PROFILE_PERMISSIONS[activeProfile.type as BusinessProfileType] || [];
-        permissions = profilePermissions as Permission[];
-        console.log('🔍 [AuthContext] Active business profile permissions:', {
-          profileType: activeProfile.type,
+        // Use new business profiles system - get cumulative permissions
+        const activeProfileTypes = userData.businessProfiles
+          .filter((profile: any) => profile.isActive)
+          .map((profile: any) => profile.type as BusinessProfileType);
+        
+        if (activeProfileTypes.length === 0) {
+          // If no active profiles, activate the first one
+          activeProfileTypes.push(userData.businessProfiles[0].type as BusinessProfileType);
+        }
+        
+        permissions = getCumulativePermissions(activeProfileTypes) as Permission[];
+        console.log('🔍 [AuthContext] Business profile permissions:', {
+          activeProfileTypes,
           permissions
         });
       } else {
