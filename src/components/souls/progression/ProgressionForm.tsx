@@ -1,21 +1,29 @@
 import { useState, useEffect } from 'react';
 import { collection, query, where, orderBy, getDocs } from 'firebase/firestore';
 import { db } from '../../../lib/firebase';
-import { SpiritualProfile } from '../../../types/database.types';
+import { SpiritualProfile, Soul } from '../../../types/database.types';
 import { formatDate } from '../../../utils/dateUtils';
 import { SpiritualCheckbox } from './SpiritualCheckbox';
 import { ServiceSelect } from './ServiceSelect';
+import ServantPromotionForm from './ServantPromotionForm';
+import { usePermissions } from '../../../hooks/usePermissions';
+import { Separator } from '../../ui/separator';
 import toast from 'react-hot-toast';
 
 interface ProgressionFormProps {
   value: SpiritualProfile;
   onChange: (profile: SpiritualProfile) => void;
+  soul?: Soul; // Ajout de l'âme pour la promotion
+  onSoulUpdate?: () => void;
 }
 
-export function ProgressionForm({ value, onChange }: ProgressionFormProps) {
+export function ProgressionForm({ value, onChange, soul, onSoulUpdate }: ProgressionFormProps) {
   const [departments, setDepartments] = useState<{id: string; name: string}[]>([]);
   const [serviceFamilies, setServiceFamilies] = useState<{id: string; name: string}[]>([]);
   const [loading, setLoading] = useState(true);
+  const { hasPermission } = usePermissions();
+
+  const canPromoteToServant = hasPermission('PROMOTE_SOUL_TO_SERVANT');
 
   useEffect(() => {
     const loadData = async () => {
@@ -217,6 +225,17 @@ export function ProgressionForm({ value, onChange }: ProgressionFormProps) {
           </div>
         </div>
       </div>
+
+      {/* Section de promotion au rang de serviteur */}
+      {soul && canPromoteToServant && !soul.isServant && (
+        <>
+          <Separator className="my-6" />
+          <ServantPromotionForm 
+            soul={soul} 
+            onSuccess={onSoulUpdate}
+          />
+        </>
+      )}
     </div>
   );
 }

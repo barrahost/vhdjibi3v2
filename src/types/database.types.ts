@@ -59,6 +59,10 @@ export interface Soul {
   updatedAt: Date;
   status: 'active' | 'inactive';
   photoURL?: string;
+  // Nouveaux champs pour la promotion en serviteur
+  isServant?: boolean; // Indique si l'âme est devenue serviteur
+  servantId?: string; // Lien vers l'enregistrement serviteur
+  promotionToServantDate?: Date; // Date de promotion
 }
 
 export interface ShepherdOption {

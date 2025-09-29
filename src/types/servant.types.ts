@@ -12,6 +12,9 @@ export interface Servant {
   status: 'active' | 'inactive';
   createdAt: Date;
   updatedAt: Date;
+  // Nouveaux champs pour le lien avec l'âme d'origine
+  originalSoulId?: string; // Référence vers l'âme d'origine
+  promotionDate?: Date; // Date de promotion depuis âme
 }
 
 export interface ServantFormData {
@@ -25,4 +28,6 @@ export interface ServantFormData {
   isShepherd?: boolean;
   shepherdId?: string;
   status?: 'active' | 'inactive';
+  originalSoulId?: string;
+  promotionDate?: Date;
 }

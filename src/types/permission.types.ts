@@ -4,6 +4,7 @@ export type Permission =
   | 'MANAGE_SHEPHERDS'
   | 'MANAGE_DEPARTMENTS'
   | 'MANAGE_FAMILIES'
+  | 'MANAGE_SERVANTS'
   | 'VIEW_STATS'
   | 'EXPORT_DATA'
   | 'MANAGE_SETTINGS'
@@ -17,7 +18,8 @@ export type Permission =
   | 'MANAGE_SMS_TEMPLATES'
   | 'MANAGE_AUDIO'
   | 'MANAGE_ROLES_PERMISSIONS'
-  | 'MANAGE_ROLES_PERMISSIONS'
+  | 'PROMOTE_SOUL_TO_SERVANT'
+  | 'MANAGE_DEPARTMENT_SERVANTS'
   | '*';
 
 export type BaseRole = 'super_admin' | 'admin' | 'shepherd' | 'adn' | 'pasteur';
