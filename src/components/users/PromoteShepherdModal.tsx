@@ -86,69 +86,71 @@ export default function PromoteShepherdModal({
       onClose={onClose}
       title="Promouvoir Responsable de Département"
     >
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {/* User Info */}
-        <div className="flex items-center space-x-3 p-4 bg-gray-50 rounded-lg">
-          <UserCircle className="w-10 h-10 text-[#00665C]" />
-          <div>
-            <p className="font-medium text-gray-900">{userName}</p>
-            <p className="text-sm text-gray-500">Sera promu responsable de département</p>
+      <div className="p-6">
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {/* User Info */}
+          <div className="flex items-center space-x-3 p-4 bg-muted rounded-lg">
+            <UserCircle className="w-8 h-8 text-primary" />
+            <div>
+              <p className="font-medium text-foreground">{userName}</p>
+              <p className="text-sm text-muted-foreground">Sera promu responsable de département</p>
+            </div>
           </div>
-        </div>
 
-        {/* Department Selection */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            <Building2 className="inline w-4 h-4 mr-1" />
-            Département à gérer *
-          </label>
-          {loadingDepartments ? (
-            <div className="text-sm text-gray-500">Chargement des départements...</div>
-          ) : (
-            <select
-              value={selectedDepartmentId}
-              onChange={(e) => setSelectedDepartmentId(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-[#00665C] focus:border-[#00665C]"
-              required
+          {/* Department Selection */}
+          <div>
+            <label className="flex items-center gap-2 text-sm font-medium text-foreground mb-2">
+              <Building2 className="w-4 h-4" />
+              Département à gérer *
+            </label>
+            {loadingDepartments ? (
+              <div className="text-sm text-muted-foreground">Chargement des départements...</div>
+            ) : (
+              <select
+                value={selectedDepartmentId}
+                onChange={(e) => setSelectedDepartmentId(e.target.value)}
+                className="w-full px-3 py-2 border border-input bg-background rounded-md shadow-sm focus:ring-2 focus:ring-ring focus:border-input"
+                required
+                disabled={isLoading}
+              >
+                <option value="">Sélectionner un département</option>
+                {departments.map((dept) => (
+                  <option key={dept.id} value={dept.id}>
+                    {dept.name}
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
+
+          {/* Info Box */}
+          <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+            <p className="text-sm text-blue-800 dark:text-blue-200">
+              <strong>Note :</strong> Cette action ajoutera le profil "Responsable de Département" 
+              à cet utilisateur, lui permettant de gérer les serviteurs de ce département.
+            </p>
+          </div>
+
+          {/* Actions */}
+          <div className="flex justify-end gap-3 pt-4 border-t">
+            <button
+              type="button"
+              onClick={onClose}
               disabled={isLoading}
+              className="px-4 py-2 text-sm font-medium text-foreground bg-background border border-input rounded-md hover:bg-accent hover:text-accent-foreground disabled:opacity-50"
             >
-              <option value="">Sélectionner un département</option>
-              {departments.map((dept) => (
-                <option key={dept.id} value={dept.id}>
-                  {dept.name}
-                </option>
-              ))}
-            </select>
-          )}
-        </div>
-
-        {/* Info Box */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <p className="text-sm text-blue-800">
-            <strong>Note :</strong> Cette action ajoutera le profil "Responsable de Département" 
-            à cet utilisateur, lui permettant de gérer les serviteurs de ce département.
-          </p>
-        </div>
-
-        {/* Actions */}
-        <div className="flex justify-end space-x-3 pt-4">
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={isLoading}
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
-          >
-            Annuler
-          </button>
-          <button
-            type="submit"
-            disabled={isLoading || !selectedDepartmentId}
-            className="px-4 py-2 text-sm font-medium text-white bg-[#00665C] hover:bg-[#00665C]/90 rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isLoading ? 'Promotion en cours...' : 'Confirmer la promotion'}
-          </button>
-        </div>
-      </form>
+              Annuler
+            </button>
+            <button
+              type="submit"
+              disabled={isLoading || !selectedDepartmentId}
+              className="px-4 py-2 text-sm font-medium text-primary-foreground bg-primary hover:bg-primary/90 rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isLoading ? 'Promotion en cours...' : 'Confirmer la promotion'}
+            </button>
+          </div>
+        </form>
+      </div>
     </Modal>
   );
 }
