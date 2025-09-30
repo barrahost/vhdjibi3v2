@@ -2,15 +2,22 @@ import { useState } from 'react';
 import ServantForm from '../components/servants/ServantForm';
 import ServantList from '../components/servants/ServantList';
 import DepartmentLeaderDashboard from '../components/servants/DepartmentLeaderDashboard';
+import BulkDeleteServantModal from '../components/servants/BulkDeleteServantModal';
 import { useAuth } from '../contexts/AuthContext';
 import { usePermissions } from '../hooks/usePermissions';
-import { Plus, Users } from 'lucide-react';
+import { Plus, Users, Trash2 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
+import { ServantService } from '../services/servant.service';
+import { Servant } from '../types/servant.types';
+import toast from 'react-hot-toast';
 
 export default function ServantManagement() {
   const [showForm, setShowForm] = useState(false);
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('active');
+  const [selectedServantIds, setSelectedServantIds] = useState<string[]>([]);
+  const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
+  const [servantsToDelete, setServantsToDelete] = useState<Servant[]>([]);
   const { user } = useAuth();
   const { hasPermission } = usePermissions();
 
@@ -18,19 +25,73 @@ export default function ServantManagement() {
   const canManageDepartmentServants = hasPermission('MANAGE_DEPARTMENT_SERVANTS');
   const isAdmin = hasPermission('*') || canManageServants;
 
+  const handleBulkDelete = async () => {
+    // Get all servants data from the window object (set by ServantList)
+    const allServants = (window as any).currentServants as Servant[] || [];
+    const servantsToDelete = allServants.filter(s => selectedServantIds.includes(s.id));
+    
+    if (servantsToDelete.length === 0) {
+      toast.error('Aucun serviteur sélectionné');
+      return;
+    }
+
+    setServantsToDelete(servantsToDelete);
+    setShowBulkDeleteModal(true);
+  };
+
+  const handleConfirmBulkDelete = async (servantIds: string[], deactivateHeads: boolean) => {
+    try {
+      const result = await ServantService.bulkDeleteServants(servantIds);
+      
+      let message = '';
+      if (result.deleted > 0) {
+        message += `${result.deleted} serviteur(s) supprimé(s)`;
+      }
+      if (result.deactivated > 0) {
+        if (message) message += ', ';
+        message += `${result.deactivated} responsable(s) désactivé(s)`;
+      }
+      
+      toast.success(message);
+      setSelectedServantIds([]);
+      setShowBulkDeleteModal(false);
+    } catch (error: any) {
+      console.error('Error in bulk delete:', error);
+      toast.error(error.message || 'Erreur lors de la suppression');
+      throw error;
+    }
+  };
+
+  // Store servants data for bulk operations
+  const handleSelectionChange = (servantIds: string[]) => {
+    setSelectedServantIds(servantIds);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-foreground">Gestion des Serviteurs</h1>
-        {canManageServants && (
-          <Button
-            onClick={() => setShowForm(!showForm)}
-            className="flex items-center gap-2"
-          >
-            <Plus className="w-4 h-4" />
-            {showForm ? 'Masquer le formulaire' : 'Ajouter un serviteur'}
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          {selectedServantIds.length > 0 && canManageServants && (
+            <Button
+              onClick={handleBulkDelete}
+              variant="destructive"
+              className="flex items-center gap-2"
+            >
+              <Trash2 className="w-4 h-4" />
+              Supprimer la sélection ({selectedServantIds.length})
+            </Button>
+          )}
+          {canManageServants && (
+            <Button
+              onClick={() => setShowForm(!showForm)}
+              className="flex items-center gap-2"
+            >
+              <Plus className="w-4 h-4" />
+              {showForm ? 'Masquer le formulaire' : 'Ajouter un serviteur'}
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Tabs pour séparer la vue admin de la vue responsable de département */}
@@ -78,7 +139,11 @@ export default function ServantManagement() {
               </div>
             )}
 
-            <ServantList statusFilter={statusFilter} />
+            <ServantList 
+              statusFilter={statusFilter} 
+              selectedServantIds={selectedServantIds}
+              onSelectionChange={handleSelectionChange}
+            />
           </TabsContent>
         )}
 
@@ -89,6 +154,13 @@ export default function ServantManagement() {
           </TabsContent>
         )}
       </Tabs>
+
+      <BulkDeleteServantModal
+        isOpen={showBulkDeleteModal}
+        onClose={() => setShowBulkDeleteModal(false)}
+        servants={servantsToDelete}
+        onConfirm={handleConfirmBulkDelete}
+      />
     </div>
   );
 }

@@ -7,6 +7,7 @@ import ServantListItem from './ServantListItem';
 import EditServantModal from './EditServantModal';
 import { CustomPagination } from '../ui/CustomPagination';
 import { useDepartments } from '../../hooks/useDepartments';
+import { Checkbox } from '../ui/checkbox';
 import toast from 'react-hot-toast';
 
 const ITEMS_PER_PAGE = 10;
@@ -16,9 +17,11 @@ type SortDirection = 'asc' | 'desc';
 
 interface ServantListProps {
   statusFilter: 'all' | 'active' | 'inactive';
+  selectedServantIds?: string[];
+  onSelectionChange?: (servantIds: string[]) => void;
 }
 
-export default function ServantList({ statusFilter }: ServantListProps) {
+export default function ServantList({ statusFilter, selectedServantIds = [], onSelectionChange }: ServantListProps) {
   const [servants, setServants] = useState<Servant[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -33,6 +36,45 @@ export default function ServantList({ statusFilter }: ServantListProps) {
     direction: 'asc'
   });
   const { departments } = useDepartments();
+
+  // Store servants data for bulk operations
+  useEffect(() => {
+    if (onSelectionChange && typeof window !== 'undefined') {
+      (window as any).currentServants = servants;
+    }
+  }, [servants, onSelectionChange]);
+
+  const toggleServantSelection = (servantId: string) => {
+    if (!onSelectionChange) return;
+    
+    const newSelection = selectedServantIds.includes(servantId)
+      ? selectedServantIds.filter(id => id !== servantId)
+      : [...selectedServantIds, servantId];
+    
+    onSelectionChange(newSelection);
+  };
+
+  const toggleAllSelection = () => {
+    if (!onSelectionChange) return;
+    
+    const allSelected = paginatedServants.every(servant => selectedServantIds.includes(servant.id));
+    
+    if (allSelected) {
+      // Unselect all servants from current page
+      const currentPageIds = paginatedServants.map(servant => servant.id);
+      onSelectionChange(selectedServantIds.filter(id => !currentPageIds.includes(id)));
+    } else {
+      // Select all servants from current page
+      const currentPageIds = paginatedServants.map(servant => servant.id);
+      const newSelection = [...selectedServantIds];
+      currentPageIds.forEach(id => {
+        if (!newSelection.includes(id)) {
+          newSelection.push(id);
+        }
+      });
+      onSelectionChange(newSelection);
+    }
+  };
 
   // Charger les serviteurs
   useEffect(() => {
@@ -177,6 +219,14 @@ export default function ServantList({ statusFilter }: ServantListProps) {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
+                {onSelectionChange && (
+                  <th className="px-6 py-3 w-12">
+                    <Checkbox
+                      checked={paginatedServants.length > 0 && paginatedServants.every(servant => selectedServantIds.includes(servant.id))}
+                      onCheckedChange={toggleAllSelection}
+                    />
+                  </th>
+                )}
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   <button
                     onClick={() => handleSort('fullName')}
@@ -213,18 +263,27 @@ export default function ServantList({ statusFilter }: ServantListProps) {
             <tbody className="bg-white divide-y divide-gray-200">
               {paginatedServants.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-4 text-center text-gray-500">
+                  <td colSpan={onSelectionChange ? 6 : 5} className="px-6 py-4 text-center text-gray-500">
                     Aucun serviteur trouvé
                   </td>
                 </tr>
               ) : (
                 paginatedServants.map((servant) => (
-                  <ServantListItem
-                    key={servant.id}
-                    servant={servant}
-                    departmentName={getDepartmentName(servant.departmentId)}
-                    onEdit={() => setEditingServant(servant)}
-                  />
+                  <tr key={servant.id}>
+                    {onSelectionChange && (
+                      <td className="px-6 py-4">
+                        <Checkbox
+                          checked={selectedServantIds.includes(servant.id)}
+                          onCheckedChange={() => toggleServantSelection(servant.id)}
+                        />
+                      </td>
+                    )}
+                    <ServantListItem
+                      servant={servant}
+                      departmentName={getDepartmentName(servant.departmentId)}
+                      onEdit={() => setEditingServant(servant)}
+                    />
+                  </tr>
                 ))
               )}
             </tbody>

@@ -35,7 +35,7 @@ export default function ServantListItem({ servant, departmentName, onEdit }: Ser
   };
 
   return (
-    <tr>
+    <>
       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
         {servant.fullName}
         {servant.nickname && (
@@ -77,6 +77,6 @@ export default function ServantListItem({ servant, departmentName, onEdit }: Ser
           </button>
         </div>
       </td>
-    </tr>
+    </>
   );
 }

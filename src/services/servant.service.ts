@@ -357,4 +357,48 @@ export class ServantService {
       throw error;
     }
   }
+
+  /**
+   * Bulk delete servants
+   * Department heads will be deactivated instead of deleted
+   */
+  static async bulkDeleteServants(servantIds: string[]): Promise<{ deleted: number; deactivated: number }> {
+    try {
+      const batch = writeBatch(db);
+      let deletedCount = 0;
+      let deactivatedCount = 0;
+
+      // Process each servant
+      for (const servantId of servantIds) {
+        const servantRef = doc(db, 'servants', servantId);
+        const servantSnap = await getDoc(servantRef);
+        
+        if (!servantSnap.exists()) {
+          console.warn(`Servant ${servantId} not found, skipping`);
+          continue;
+        }
+        
+        const servant = servantSnap.data() as Servant;
+        
+        // If the servant is a department head, deactivate instead of delete
+        if (servant.isHead) {
+          batch.update(servantRef, {
+            status: 'inactive',
+            updatedAt: new Date()
+          });
+          deactivatedCount++;
+        } else {
+          batch.delete(servantRef);
+          deletedCount++;
+        }
+      }
+
+      await batch.commit();
+      
+      return { deleted: deletedCount, deactivated: deactivatedCount };
+    } catch (error) {
+      console.error('Error in bulk delete servants:', error);
+      throw error;
+    }
+  }
 }
