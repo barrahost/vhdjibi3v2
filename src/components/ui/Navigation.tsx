@@ -53,8 +53,8 @@ export default function Navigation({ onItemClick }: NavigationProps) {
       }
     ];
 
-    // Build shepherd-specific menu
-    if (hasPermission(PERMISSIONS.MANAGE_INTERACTIONS) || hasPermission(PERMISSIONS.MANAGE_ATTENDANCES)) {
+    // Build shepherd-specific menu - only for shepherds
+    if ((activeRole === ROLES.SHEPHERD || userRole === ROLES.SHEPHERD) && (hasPermission(PERMISSIONS.MANAGE_INTERACTIONS) || hasPermission(PERMISSIONS.MANAGE_ATTENDANCES))) {
       const shepherdChildren = [];
       
       if (hasPermission(PERMISSIONS.MANAGE_INTERACTIONS)) {
