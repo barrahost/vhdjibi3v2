@@ -3,6 +3,7 @@ import { useState } from 'react';
 import UserList from '../components/users/UserList';
 import UserForm from '../components/users/UserForm';
 import BulkRoleAssignmentModal from '../components/users/BulkRoleAssignmentModal';
+import PromoteShepherdModal from '../components/users/PromoteShepherdModal';
 import { Plus, Users } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -12,6 +13,8 @@ export default function UserManagement() {
   const [showBulkModal, setShowBulkModal] = useState(false);
   const [roleFilter, setRoleFilter] = useState<'all' | 'shepherds' | 'adn' | 'admins'>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('active');
+  const [showPromoteModal, setShowPromoteModal] = useState(false);
+  const [promotingUser, setPromotingUser] = useState<{ userId: string; userName: string } | null>(null);
 
   const handleSelectionChange = (userIds: string[]) => {
     setSelectedUserIds(userIds);
@@ -21,6 +24,16 @@ export default function UserManagement() {
     setSelectedUserIds([]);
     setShowBulkModal(false);
     toast.success('Rôles assignés avec succès');
+  };
+
+  const handlePromoteShepherd = (userId: string, userName: string) => {
+    setPromotingUser({ userId, userName });
+    setShowPromoteModal(true);
+  };
+
+  const handlePromotionSuccess = () => {
+    setShowPromoteModal(false);
+    setPromotingUser(null);
   };
 
   // Get selected users data for the modal
@@ -103,6 +116,7 @@ export default function UserManagement() {
         statusFilter={statusFilter}
         selectedUserIds={selectedUserIds}
         onSelectionChange={handleSelectionChange}
+        onPromoteShepherd={handlePromoteShepherd}
       />
 
       {/* Modal d'assignation en masse */}
@@ -113,6 +127,17 @@ export default function UserManagement() {
         selectedUsers={selectedUsers}
         onSuccess={handleBulkAssignmentSuccess}
       />
+
+      {/* Modal de promotion berger → responsable de département */}
+      {promotingUser && (
+        <PromoteShepherdModal
+          isOpen={showPromoteModal}
+          onClose={() => setShowPromoteModal(false)}
+          userId={promotingUser.userId}
+          userName={promotingUser.userName}
+          onSuccess={handlePromotionSuccess}
+        />
+      )}
     </div>
   );
 }

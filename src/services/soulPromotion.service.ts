@@ -64,6 +64,13 @@ export class SoulPromotionService {
       // Exécuter la transaction
       await batch.commit();
 
+      console.log('✅ [SoulPromotion] Promotion réussie:', {
+        soulId,
+        servantId,
+        fullName: soulDataCurrent.fullName,
+        servantData: servantDataToSave
+      });
+
       toast.success(`${soulDataCurrent.fullName} a été promu(e) au rang de serviteur avec succès !`);
       return servantId;
 

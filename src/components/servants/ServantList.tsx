@@ -118,6 +118,21 @@ export default function ServantList({ statusFilter, selectedServantIds = [], onS
         createdAt: doc.data().createdAt?.toDate(),
         updatedAt: doc.data().updatedAt?.toDate()
       } as Servant));
+      
+      console.log('🔍 [ServantList] Serviteurs chargés:', {
+        total: servantsData.length,
+        statusFilter,
+        selectedDepartmentId,
+        servants: servantsData.map(s => ({
+          id: s.id,
+          fullName: s.fullName,
+          status: s.status,
+          departmentId: s.departmentId,
+          isHead: s.isHead,
+          originalSoulId: s.originalSoulId
+        }))
+      });
+      
       setServants(servantsData);
       setLoading(false);
     }, (error) => {

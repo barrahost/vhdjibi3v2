@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { collection, query, orderBy, onSnapshot, where, getDocs, doc, deleteDoc } from 'firebase/firestore';
 import { db, auth } from '../../lib/firebase';
 import { User } from '../../types/user.types';
-import { Search, Pencil, Trash2, User as UserIcon } from 'lucide-react';
+import { Search, Pencil, Trash2, User as UserIcon, Building2 } from 'lucide-react';
 import { deleteUser } from 'firebase/auth';
 import { usePermissions } from '../../hooks/usePermissions';
 import { PERMISSIONS } from '../../constants/roles';
@@ -20,9 +20,10 @@ interface UserListProps {
   statusFilter: 'all' | 'active' | 'inactive';
   selectedUserIds?: string[];
   onSelectionChange?: (userIds: string[]) => void;
+  onPromoteShepherd?: (userId: string, userName: string) => void;
 }
 
-export default function UserList({ filter, statusFilter, selectedUserIds = [], onSelectionChange }: UserListProps) {
+export default function UserList({ filter, statusFilter, selectedUserIds = [], onSelectionChange, onPromoteShepherd }: UserListProps) {
   const { userRole } = useAuth();
   const { hasPermission } = usePermissions();
   const canEditUsers = userRole === 'super_admin' || hasPermission(PERMISSIONS.MANAGE_USERS);
@@ -313,6 +314,10 @@ export default function UserList({ filter, statusFilter, selectedUserIds = [], o
       render: (_: any, user: User) => {
         if (!canEditUsers && !canDeleteUsers) return null;
         
+        // Check if user has shepherd profile
+        const hasShepherdProfile = user.businessProfiles?.some((p: any) => p.type === 'shepherd');
+        const hasDepartmentLeaderProfile = user.businessProfiles?.some((p: any) => p.type === 'department_leader');
+        
         return (
           <div className="flex justify-end space-x-2">
             {canEditUsers && (
@@ -325,6 +330,18 @@ export default function UserList({ filter, statusFilter, selectedUserIds = [], o
                 title="Modifier"
               >
                 <Pencil className="w-4 h-4" />
+              </button>
+            )}
+            {onPromoteShepherd && hasShepherdProfile && !hasDepartmentLeaderProfile && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onPromoteShepherd(user.uid, user.fullName);
+                }}
+                className="p-1 text-[#00665C] hover:bg-[#00665C]/10 rounded transition-colors"
+                title="Promouvoir responsable de département"
+              >
+                <Building2 className="w-4 h-4" />
               </button>
             )}
             {canDeleteUsers && (
