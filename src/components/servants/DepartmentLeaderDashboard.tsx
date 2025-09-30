@@ -31,46 +31,49 @@ export default function DepartmentLeaderDashboard() {
 
   const canManageDepartmentServants = hasPermission('MANAGE_DEPARTMENT_SERVANTS');
 
-  // Récupérer le département de l'utilisateur s'il est responsable
+  // Récupérer le département de l'utilisateur via business profiles
   useEffect(() => {
-    if (!user?.id) return;
+    if (!user?.businessProfiles) {
+      setLoading(false);
+      return;
+    }
 
-    const q = query(
-      collection(db, 'servants'),
-      where('id', '==', user.id),
-      where('isHead', '==', true),
-      where('status', '==', 'active')
-    );
-
-    const unsubscribe = onSnapshot(q, async (snapshot) => {
-      if (!snapshot.empty) {
-        const servantData = snapshot.docs[0].data() as Servant;
+    const loadDepartment = async () => {
+      try {
+        // Find the department_leader profile
+        const deptLeaderProfile = user.businessProfiles.find(
+          (p: any) => p.type === 'department_leader' && p.departmentId
+        );
         
-        // Récupérer les informations du département
-        try {
-          const deptQuery = query(
-            collection(db, 'departments'),
-            where('id', '==', servantData.departmentId)
-          );
-          
-          const deptSnapshot = await getDocs(deptQuery);
-          if (!deptSnapshot.empty) {
-            const deptData = deptSnapshot.docs[0].data() as Department;
-            setDepartment({
-              id: deptSnapshot.docs[0].id,
-              name: deptData.name,
-              description: deptData.description
-            });
-          }
-        } catch (error) {
-          console.error('Erreur lors du chargement du département:', error);
+        if (!deptLeaderProfile?.departmentId) {
+          console.log('User has no department_leader profile with departmentId');
+          setLoading(false);
+          return;
         }
+        
+        // Get department details
+        const deptQuery = query(
+          collection(db, 'departments'),
+          where('__name__', '==', deptLeaderProfile.departmentId)
+        );
+        
+        const deptSnapshot = await getDocs(deptQuery);
+        if (!deptSnapshot.empty) {
+          const deptData = deptSnapshot.docs[0].data() as Department;
+          setDepartment({
+            id: deptSnapshot.docs[0].id,
+            name: deptData.name,
+            description: deptData.description
+          });
+        }
+      } catch (error) {
+        console.error('Erreur lors du chargement du département:', error);
       }
       setLoading(false);
-    });
+    };
 
-    return () => unsubscribe();
-  }, [user?.id]);
+    loadDepartment();
+  }, [user?.businessProfiles]);
 
   // Récupérer les serviteurs du département
   useEffect(() => {

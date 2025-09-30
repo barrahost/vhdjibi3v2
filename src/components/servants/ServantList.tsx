@@ -8,6 +8,7 @@ import EditServantModal from './EditServantModal';
 import { CustomPagination } from '../ui/CustomPagination';
 import { useDepartments } from '../../hooks/useDepartments';
 import { Checkbox } from '../ui/checkbox';
+import { useAuth } from '../../contexts/AuthContext';
 import toast from 'react-hot-toast';
 
 const ITEMS_PER_PAGE = 10;
@@ -22,6 +23,7 @@ interface ServantListProps {
 }
 
 export default function ServantList({ statusFilter, selectedServantIds = [], onSelectionChange }: ServantListProps) {
+  const { user, activeRole } = useAuth();
   const [servants, setServants] = useState<Servant[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -36,6 +38,19 @@ export default function ServantList({ statusFilter, selectedServantIds = [], onS
     direction: 'asc'
   });
   const { departments } = useDepartments();
+
+  // Auto-filter by department if user is a department leader in that mode
+  useEffect(() => {
+    if (activeRole === 'department_leader' && user?.businessProfiles) {
+      const deptLeaderProfile = user.businessProfiles.find(
+        (p: any) => p.type === 'department_leader' && p.departmentId
+      );
+      
+      if (deptLeaderProfile?.departmentId) {
+        setSelectedDepartmentId(deptLeaderProfile.departmentId);
+      }
+    }
+  }, [activeRole, user?.businessProfiles]);
 
   // Store servants data for bulk operations
   useEffect(() => {
@@ -218,6 +233,7 @@ export default function ServantList({ statusFilter, selectedServantIds = [], onS
             value={selectedDepartmentId}
             onChange={(e) => setSelectedDepartmentId(e.target.value)}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-[#00665C] focus:border-[#00665C]"
+            disabled={activeRole === 'department_leader'}
           >
             <option value="">Tous les départements</option>
             {departments.map(department => (
@@ -226,6 +242,11 @@ export default function ServantList({ statusFilter, selectedServantIds = [], onS
               </option>
             ))}
           </select>
+          {activeRole === 'department_leader' && (
+            <p className="text-xs text-muted-foreground mt-1">
+              Filtré automatiquement par votre département
+            </p>
+          )}
         </div>
       </div>
 

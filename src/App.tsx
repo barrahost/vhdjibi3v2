@@ -39,6 +39,7 @@ const BirthdayForm = lazy(() => import('./pages/BirthdayForm'));
 const BirthdayList = lazy(() => import('./pages/BirthdayList'));
 const ReplayTeachings = lazy(() => import('./pages/ReplayTeachings'));
 const AudioManagement = lazy(() => import('./pages/AudioManagement'));
+const SyncDepartmentLeaders = lazy(() => import('./pages/SyncDepartmentLeaders'));
 
 // Loading component
 function PageLoader() {
@@ -258,6 +259,13 @@ function AppContent() {
           <Route path="/audio" element={
             <PrivateRoute requiredPermissions={[PERMISSIONS.MANAGE_AUDIO]}>
               <AudioManagement />
+            </PrivateRoute>
+          } />
+
+          {/* Synchronisation des responsables de département */}
+          <Route path="/sync-department-leaders" element={
+            <PrivateRoute requiredPermissions={[PERMISSIONS.MANAGE_USERS]}>
+              <SyncDepartmentLeaders />
             </PrivateRoute>
           } />
 
