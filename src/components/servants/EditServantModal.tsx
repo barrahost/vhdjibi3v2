@@ -6,6 +6,7 @@ import { Modal } from '../ui/Modal';
 import { GenderRadioGroup } from '../ui/GenderRadioGroup';
 import { validatePhoneNumber } from '../../utils/phoneValidation';
 import { useDepartments } from '../../hooks/useDepartments';
+import { AutomaticSyncService } from '../../services/automaticSync.service';
 import toast from 'react-hot-toast';
 
 interface EditServantModalProps {
@@ -146,6 +147,20 @@ export default function EditServantModal({ servant, departmentName, isOpen, onCl
         status: formData.status,
         updatedAt: new Date()
       });
+
+      // Synchroniser les profils si le statut isHead a changé
+      await AutomaticSyncService.syncOnServantUpdate(
+        {
+          isHead: servant.isHead,
+          email: servant.email
+        },
+        {
+          fullName: formData.fullName.trim(),
+          email: formData.email.trim(),
+          departmentId: formData.departmentId,
+          isHead: formData.isHead
+        }
+      );
       
       toast.success('Serviteur modifié avec succès');
       onClose();

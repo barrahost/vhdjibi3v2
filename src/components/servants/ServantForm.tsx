@@ -4,6 +4,7 @@ import { db } from '../../lib/firebase';
 import { validatePhoneNumber } from '../../utils/phoneValidation';
 import { GenderRadioGroup } from '../../components/ui/GenderRadioGroup';
 import { useDepartments } from '../../hooks/useDepartments';
+import { AutomaticSyncService } from '../../services/automaticSync.service';
 import toast from 'react-hot-toast';
 
 export default function ServantForm({ onSuccess }: { onSuccess?: () => void }) {
@@ -96,6 +97,14 @@ export default function ServantForm({ onSuccess }: { onSuccess?: () => void }) {
         status: 'active',
         createdAt: new Date(),
         updatedAt: new Date()
+      });
+
+      // Synchroniser les profils si c'est un responsable
+      await AutomaticSyncService.syncOnServantCreation({
+        fullName: formData.fullName.trim(),
+        email: formData.email.trim(),
+        departmentId: formData.departmentId,
+        isHead: formData.isHead
       });
 
       // Réinitialiser le formulaire
