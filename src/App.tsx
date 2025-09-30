@@ -175,9 +175,9 @@ function AppContent() {
             </PrivateRoute>
           } />
 
-          {/* Gestion des familles de service */}
+          {/* Gestion des serviteurs */}
           <Route path="serviteurs" element={
-            <PrivateRoute requiredPermissions={[PERMISSIONS.MANAGE_DEPARTMENTS]}>
+            <PrivateRoute requiredPermissions={[PERMISSIONS.MANAGE_SERVANTS, PERMISSIONS.MANAGE_DEPARTMENT_SERVANTS]}>
               <ServantManagement />
             </PrivateRoute>
           } />

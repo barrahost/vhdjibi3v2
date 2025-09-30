@@ -2,6 +2,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { AdminDashboard } from '../components/dashboard/AdminDashboard';
 import { ShepherdDashboard } from '../components/dashboard/ShepherdDashboard';
 import { ADNDashboard } from '../components/dashboard/ADNDashboard';
+import DepartmentLeaderDashboard from '../components/servants/DepartmentLeaderDashboard';
 import { ROLES } from '../constants/roles';
 
 export default function Dashboard() {
@@ -24,7 +25,7 @@ export default function Dashboard() {
     case ROLES.ADN:
       return <ADNDashboard />;
     case ROLES.DEPARTMENT_LEADER:
-      return <AdminDashboard />; // Department leaders use admin dashboard
+      return <DepartmentLeaderDashboard />;
     case ROLES.ADMIN:
     case ROLES.SUPER_ADMIN:
       return <AdminDashboard />;
