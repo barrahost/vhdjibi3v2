@@ -14,6 +14,7 @@ import { CustomTable } from '../ui/CustomTable';
 import { useAuth } from '../../contexts/AuthContext';
 import { Checkbox } from '../ui/checkbox';
 import toast from 'react-hot-toast';
+import { UserRoleMigration } from '../../utils/migration/userRoleMigration';
 
 interface UserListProps {
   filter: 'all' | 'shepherds' | 'adn' | 'admins';
@@ -37,6 +38,34 @@ export default function UserList({ filter, statusFilter, selectedUserIds = [], o
     field: 'fullName' as keyof User,
     direction: 'asc' as 'asc' | 'desc'
   });
+  const [migrationCompleted, setMigrationCompleted] = useState(false);
+
+  // Auto-migration effect
+  useEffect(() => {
+    const runMigration = async () => {
+      if (migrationCompleted) return;
+      
+      try {
+        console.log('🔄 Starting automatic user role migration...');
+        const results = await UserRoleMigration.migrateAllUsers();
+        
+        if (results.migrated > 0) {
+          console.log(`✅ Migration completed: ${results.migrated} users migrated`);
+          toast.success(`${results.migrated} utilisateurs migrés vers le nouveau système`);
+        }
+        
+        if (results.errors.length > 0) {
+          console.warn(`⚠️ Migration had ${results.errors.length} errors`);
+        }
+        
+        setMigrationCompleted(true);
+      } catch (error) {
+        console.error('❌ Migration failed:', error);
+      }
+    };
+
+    runMigration();
+  }, [migrationCompleted]);
 
   // Pass users data to parent component for bulk operations
   useEffect(() => {
@@ -314,9 +343,12 @@ export default function UserList({ filter, statusFilter, selectedUserIds = [], o
       render: (_: any, user: User) => {
         if (!canEditUsers && !canDeleteUsers) return null;
         
-        // Check if user has shepherd profile
-        const hasShepherdProfile = user.businessProfiles?.some((p: any) => p.type === 'shepherd');
-        const hasDepartmentLeaderProfile = user.businessProfiles?.some((p: any) => p.type === 'department_leader');
+        // Check both new businessProfiles and legacy role system
+        const hasShepherdProfile = user.businessProfiles?.some((p: any) => p.type === 'shepherd') || 
+                                  user.role === 'shepherd' || 
+                                  user.role === 'intern';
+        const hasDepartmentLeaderProfile = user.businessProfiles?.some((p: any) => p.type === 'department_leader') ||
+                                          user.role === 'department_leader';
         
         return (
           <div className="flex justify-end space-x-2">

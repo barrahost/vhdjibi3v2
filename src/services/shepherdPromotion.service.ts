@@ -2,6 +2,7 @@ import { db, writeBatch } from '../lib/firebase';
 import { collection, doc, getDoc, updateDoc, Timestamp, query, where, getDocs } from 'firebase/firestore';
 import { toast } from 'react-hot-toast';
 import { ServantService } from './servant.service';
+import { BusinessProfile } from '../types/businessProfile.types';
 
 export class ShepherdPromotionService {
   /**
@@ -35,8 +36,24 @@ export class ShepherdPromotionService {
         phone: userData.phone
       });
 
+      // Handle legacy role system - convert if needed
+      let existingProfiles = userData.businessProfiles || [];
+      if (existingProfiles.length === 0 && userData.role) {
+        // Convert legacy role to businessProfile
+        const roleMap: Record<string, BusinessProfile['type']> = {
+          'shepherd': 'shepherd',
+          'intern': 'shepherd',
+          'adn': 'adn',
+          'admin': 'admin',
+          'pasteur': 'admin'
+        };
+        const profileType = roleMap[userData.role];
+        if (profileType) {
+          existingProfiles = [{ type: profileType, isActive: true }];
+        }
+      }
+
       // Vérifier si l'utilisateur a déjà le profil department_leader
-      const existingProfiles = userData.businessProfiles || [];
       const hasDepartmentLeaderProfile = existingProfiles.some(
         (p: any) => p.type === 'department_leader'
       );
