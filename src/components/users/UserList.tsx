@@ -15,6 +15,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { Checkbox } from '../ui/checkbox';
 import toast from 'react-hot-toast';
 import { UserRoleMigration } from '../../utils/migration/userRoleMigration';
+import { useServantStatus } from '../../hooks/useServantStatus';
 
 interface UserListProps {
   filter: 'all' | 'shepherds' | 'adn' | 'admins';
@@ -22,6 +23,82 @@ interface UserListProps {
   selectedUserIds?: string[];
   onSelectionChange?: (userIds: string[]) => void;
   onPromoteShepherd?: (userId: string, userName: string) => void;
+}
+
+// Component for action buttons with servant status check
+function ActionButtons({ 
+  user, 
+  canEditUsers, 
+  canDeleteUsers, 
+  onPromoteShepherd,
+  onEdit,
+  onDelete
+}: { 
+  user: User; 
+  canEditUsers: boolean;
+  canDeleteUsers: boolean;
+  onPromoteShepherd?: (userId: string, userName: string) => void;
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
+  const servantStatus = useServantStatus(user.email);
+  
+  // Check both new businessProfiles and legacy role system
+  const hasShepherdProfile = user.businessProfiles?.some((p: any) => p.type === 'shepherd') || 
+                            user.role === 'shepherd' || 
+                            user.role === 'intern';
+  const hasDepartmentLeaderProfile = user.businessProfiles?.some((p: any) => p.type === 'department_leader') ||
+                                    user.role === 'department_leader';
+  
+  // Check if already a department head in servants collection OR has department_leader profile
+  const isAlreadyDepartmentLeader = hasDepartmentLeaderProfile || servantStatus.isDepartmentHead;
+  
+  // Show promote button only if: is shepherd, not already department leader, and not loading
+  const canPromote = onPromoteShepherd && 
+                     hasShepherdProfile && 
+                     !isAlreadyDepartmentLeader && 
+                     !servantStatus.loading;
+  
+  return (
+    <div className="flex justify-end space-x-2">
+      {canEditUsers && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onEdit();
+          }}
+          className="p-1 text-blue-600 hover:bg-blue-50 rounded transition-colors"
+          title="Modifier"
+        >
+          <Pencil className="w-4 h-4" />
+        </button>
+      )}
+      {canPromote && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onPromoteShepherd(user.uid, user.fullName);
+          }}
+          className="p-1 text-[#00665C] hover:bg-[#00665C]/10 rounded transition-colors"
+          title="Promouvoir responsable de département"
+        >
+          <Building2 className="w-4 h-4" />
+        </button>
+      )}
+      {canDeleteUsers && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete();
+          }}
+          className="p-1 text-red-600 hover:bg-red-50 rounded transition-colors"
+          title="Supprimer"
+        >
+          <Trash2 className="w-4 h-4" />
+        </button>
+      )}
+    </div>
+  );
 }
 
 export default function UserList({ filter, statusFilter, selectedUserIds = [], onSelectionChange, onPromoteShepherd }: UserListProps) {
@@ -343,52 +420,15 @@ export default function UserList({ filter, statusFilter, selectedUserIds = [], o
       render: (_: any, user: User) => {
         if (!canEditUsers && !canDeleteUsers) return null;
         
-        // Check both new businessProfiles and legacy role system
-        const hasShepherdProfile = user.businessProfiles?.some((p: any) => p.type === 'shepherd') || 
-                                  user.role === 'shepherd' || 
-                                  user.role === 'intern';
-        const hasDepartmentLeaderProfile = user.businessProfiles?.some((p: any) => p.type === 'department_leader') ||
-                                          user.role === 'department_leader';
-        
         return (
-          <div className="flex justify-end space-x-2">
-            {canEditUsers && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setEditingUser(user);
-                }}
-                className="p-1 text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                title="Modifier"
-              >
-                <Pencil className="w-4 h-4" />
-              </button>
-            )}
-            {onPromoteShepherd && hasShepherdProfile && !hasDepartmentLeaderProfile && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onPromoteShepherd(user.uid, user.fullName);
-                }}
-                className="p-1 text-[#00665C] hover:bg-[#00665C]/10 rounded transition-colors"
-                title="Promouvoir responsable de département"
-              >
-                <Building2 className="w-4 h-4" />
-              </button>
-            )}
-            {canDeleteUsers && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleDelete(user.id, user.uid);
-                }}
-                className="p-1 text-red-600 hover:bg-red-50 rounded transition-colors"
-                title="Supprimer"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
-            )}
-          </div>
+          <ActionButtons
+            user={user}
+            canEditUsers={canEditUsers}
+            canDeleteUsers={canDeleteUsers}
+            onPromoteShepherd={onPromoteShepherd}
+            onEdit={() => setEditingUser(user)}
+            onDelete={() => handleDelete(user.id, user.uid)}
+          />
         );
       }
     }
