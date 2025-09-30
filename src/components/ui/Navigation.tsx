@@ -198,14 +198,6 @@ export default function Navigation({ onItemClick }: NavigationProps) {
         });
       }
 
-      if (hasPermission(PERMISSIONS.MANAGE_FAMILIES)) {
-        soulsChildren.push({
-          id: 'service-families',
-          label: 'Familles de service',
-          href: '/familles',
-          icon: <Users className="w-5 h-5" />
-        });
-      }
 
       if (soulsChildren.length > 0) {
         items.push({
@@ -315,7 +307,7 @@ export default function Navigation({ onItemClick }: NavigationProps) {
     }
 
     // Build tools & configuration menu
-    if (hasPermission(PERMISSIONS.MANAGE_DEPARTMENTS) || hasPermission(PERMISSIONS.MANAGE_SETTINGS) || hasPermission(PERMISSIONS.VIEW_STATS)) {
+    if (hasPermission(PERMISSIONS.MANAGE_DEPARTMENTS) || hasPermission(PERMISSIONS.MANAGE_SETTINGS) || hasPermission(PERMISSIONS.VIEW_STATS) || hasPermission(PERMISSIONS.MANAGE_FAMILIES)) {
       const toolsChildren = [];
       
       if (hasPermission(PERMISSIONS.VIEW_STATS)) {
@@ -341,6 +333,15 @@ export default function Navigation({ onItemClick }: NavigationProps) {
           label: 'Départements',
           href: '/departements',
           icon: <Briefcase className="w-5 h-5" />
+        });
+      }
+
+      if (hasPermission(PERMISSIONS.MANAGE_FAMILIES)) {
+        toolsChildren.push({
+          id: 'service-families',
+          label: 'Familles de service',
+          href: '/familles',
+          icon: <Users className="w-5 h-5" />
         });
       }
 
