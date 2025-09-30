@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { useAuth } from '../../contexts/AuthContext';
 import { Soul, Interaction } from '../../types/database.types';
@@ -24,141 +24,109 @@ export function ShepherdDashboard() {
       if (!user) return;
 
       try {
-        // Récupérer l'ID du berger ou stagiaire depuis la collection users
-        const shepherdsQuery = query(
+        console.log('🔍 [ShepherdDashboard] Loading data for user:', user.uid);
+        
+        // Récupérer le document utilisateur
+        const usersQuery = query(
           collection(db, 'users'),
           where('uid', '==', user.uid),
-          where('role', 'in', ['shepherd', 'intern']),
           where('status', '==', 'active')
         );
-        const shepherdDoc = await getDocs(shepherdsQuery);
+        const userSnapshot = await getDocs(usersQuery);
         
-        if (!shepherdDoc.empty) {
-          const currentShepherdId = shepherdDoc.docs[0].id;
-
-          // Récupérer les âmes
-          const soulsQuery = query(
-            collection(db, 'souls'),
-            where('shepherdId', '==', currentShepherdId),
-            where('status', '==', 'active')
-          );
-          const soulsSnapshot = await getDocs(soulsQuery);
-          const soulsData = soulsSnapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-          })) as Soul[];
-          setSouls(soulsData);
-
-          // Récupérer les interactions
-          const interactionsQuery = query(
-            collection(db, 'interactions'),
-            where('shepherdId', '==', currentShepherdId)
-          );
-          const interactionsSnapshot = await getDocs(interactionsQuery);
-          const interactionsData = interactionsSnapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data(),
-            date: doc.data().date.toDate()
-          })) as Interaction[];
-
-          // Calculer les statistiques
-          const totalSouls = soulsData.length;
-          const totalInteractions = interactionsData.length;
-
-          // Calculer les âmes nécessitant attention (pas d'interaction depuis 5 jours)
-          const fiveDaysAgo = new Date();
-          fiveDaysAgo.setDate(fiveDaysAgo.getDate() - 5);
-          
-          const soulsNeedingAttention = soulsData.filter(soul => {
-            const soulInteractions = interactionsData.filter(i => i.soulId === soul.id);
-            if (soulInteractions.length === 0) return true;
-            
-            const lastInteraction = new Date(Math.max(...soulInteractions.map(i => i.date.getTime())));
-            return lastInteraction < fiveDaysAgo;
-          }).length;
-
-          // Récupérer les interactions récentes
-          const sortedInteractions = [...interactionsData]
-            .sort((a, b) => b.date.getTime() - a.date.getTime())
-            .slice(0, 5);
-
-          setStats({
-            totalSouls,
-            totalInteractions,
-            soulsNeedingAttention
-          });
-          setRecentInteractions(sortedInteractions);
-        } else {
-          // Check if user is an intern
-          const internsQuery = query(
-            collection(db, 'users'),
-            where('uid', '==', user.uid),
-            where('role', '==', 'intern'),
-            where('status', '==', 'active')
-          );
-          const internDoc = await getDocs(internsQuery);
-          
-          if (internDoc.empty) {
-            toast.error('Berger ou stagiaire non trouvé');
-            setLoading(false);
-            return;
-          }
-          
-          const currentShepherdId = internDoc.docs[0].id;
-          
-          // Récupérer les âmes
-          const soulsQuery = query(
-            collection(db, 'souls'),
-            where('shepherdId', '==', currentShepherdId),
-            where('status', '==', 'active')
-          );
-          const soulsSnapshot = await getDocs(soulsQuery);
-          const soulsData = soulsSnapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-          })) as Soul[];
-          setSouls(soulsData);
-
-          // Récupérer les interactions
-          const interactionsQuery = query(
-            collection(db, 'interactions'),
-            where('shepherdId', '==', currentShepherdId)
-          );
-          const interactionsSnapshot = await getDocs(interactionsQuery);
-          const interactionsData = interactionsSnapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data(),
-            date: doc.data().date.toDate()
-          })) as Interaction[];
-
-          // Calculer les statistiques
-          const totalSouls = soulsData.length;
-          const totalInteractions = interactionsData.length;
-
-          // Calculer les âmes nécessitant attention (pas d'interaction depuis 5 jours)
-          const fiveDaysAgo = new Date();
-          fiveDaysAgo.setDate(fiveDaysAgo.getDate() - 5);
-          
-          const soulsNeedingAttention = soulsData.filter(soul => {
-            const soulInteractions = interactionsData.filter(i => i.soulId === soul.id);
-            if (soulInteractions.length === 0) return true;
-            
-            const lastInteraction = new Date(Math.max(...soulInteractions.map(i => i.date.getTime())));
-            return lastInteraction < fiveDaysAgo;
-          }).length;
-
-          // Récupérer les interactions récentes
-          const sortedInteractions = [...interactionsData]
-            .sort((a, b) => b.date.getTime() - a.date.getTime())
-            .slice(0, 5);
-
-          setStats({
-            totalSouls,
-            totalInteractions,
-            soulsNeedingAttention
-          });
-          setRecentInteractions(sortedInteractions);
+        if (userSnapshot.empty) {
+          console.error('🔍 [ShepherdDashboard] User not found in users collection');
+          toast.error('Utilisateur non trouvé');
+          setLoading(false);
+          return;
         }
+
+        const userData = userSnapshot.docs[0].data();
+        const currentShepherdId = userSnapshot.docs[0].id;
+        
+        console.log('🔍 [ShepherdDashboard] User data:', {
+          id: currentShepherdId,
+          role: userData.role,
+          businessProfiles: userData.businessProfiles
+        });
+
+        // Vérifier si l'utilisateur est un berger (nouveau ou ancien système)
+        const hasShepherdProfile = userData.businessProfiles?.some(
+          (profile: any) => profile.type === 'shepherd'
+        );
+        const hasLegacyShepherdRole = userData.role === 'shepherd' || userData.role === 'intern';
+        
+        if (!hasShepherdProfile && !hasLegacyShepherdRole) {
+          console.error('🔍 [ShepherdDashboard] User is not a shepherd');
+          toast.error('Vous devez avoir un profil Berger pour accéder à ce tableau de bord');
+          setLoading(false);
+          return;
+        }
+
+        console.log('🔍 [ShepherdDashboard] User is a shepherd, loading data...');
+
+        // Récupérer les âmes
+        const soulsQuery = query(
+          collection(db, 'souls'),
+          where('shepherdId', '==', currentShepherdId),
+          where('status', '==', 'active')
+        );
+        const soulsSnapshot = await getDocs(soulsQuery);
+        const soulsData = soulsSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        })) as Soul[];
+        
+        console.log('🔍 [ShepherdDashboard] Found souls:', soulsData.length);
+        setSouls(soulsData);
+
+        // Récupérer les interactions
+        const interactionsQuery = query(
+          collection(db, 'interactions'),
+          where('shepherdId', '==', currentShepherdId)
+        );
+        const interactionsSnapshot = await getDocs(interactionsQuery);
+        const interactionsData = interactionsSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+          date: doc.data().date.toDate()
+        })) as Interaction[];
+
+        console.log('🔍 [ShepherdDashboard] Found interactions:', interactionsData.length);
+
+        // Calculer les statistiques
+        const totalSouls = soulsData.length;
+        const totalInteractions = interactionsData.length;
+
+        // Calculer les âmes nécessitant attention (pas d'interaction depuis 5 jours)
+        const fiveDaysAgo = new Date();
+        fiveDaysAgo.setDate(fiveDaysAgo.getDate() - 5);
+        
+        const soulsNeedingAttention = soulsData.filter(soul => {
+          const soulInteractions = interactionsData.filter(i => i.soulId === soul.id);
+          if (soulInteractions.length === 0) return true;
+          
+          const lastInteraction = new Date(Math.max(...soulInteractions.map(i => i.date.getTime())));
+          return lastInteraction < fiveDaysAgo;
+        }).length;
+
+        // Récupérer les interactions récentes
+        const sortedInteractions = [...interactionsData]
+          .sort((a, b) => b.date.getTime() - a.date.getTime())
+          .slice(0, 5);
+
+        setStats({
+          totalSouls,
+          totalInteractions,
+          soulsNeedingAttention
+        });
+        setRecentInteractions(sortedInteractions);
+        
+        console.log('🔍 [ShepherdDashboard] Stats loaded:', {
+          totalSouls,
+          totalInteractions,
+          soulsNeedingAttention
+        });
       } catch (error) {
         console.error('Error loading dashboard data:', error);
         toast.error('Erreur lors du chargement des données');
