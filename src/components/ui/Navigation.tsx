@@ -250,31 +250,25 @@ export default function Navigation({ onItemClick }: NavigationProps) {
       });
     }
 
-    // Build content & communication menu
+    // Replay des enseignements - accessible à tous les utilisateurs authentifiés
+    if (hasPermission(PERMISSIONS.VIEW_REPLAY_TEACHINGS)) {
+      items.push({
+        id: 'replay-teachings-public',
+        label: 'Replay des enseignements',
+        icon: <Play className="w-5 h-5" />,
+        href: '/replay'
+      });
+    }
+
+    // Build content & communication menu - for admins only
     if (hasPermission(PERMISSIONS.MANAGE_AUDIO) || hasPermission(PERMISSIONS.MANAGE_SMS_TEMPLATES)) {
       const contentChildren = [];
       
       if (hasPermission(PERMISSIONS.MANAGE_AUDIO)) {
-        contentChildren.push(
-          {
-            id: 'audio',
-            label: 'Gestion audio',
-            href: '/audio',
-            icon: <Headphones className="w-5 h-5" />
-          },
-          {
-            id: 'replay-teachings',
-            label: 'Replay des enseignements',
-            href: '/replay',
-            icon: <Play className="w-5 h-5" />
-          }
-        );
-      } else {
-        // For non-admins, just show replay
         contentChildren.push({
-          id: 'replay-audio',
-          label: 'Replay Audio',
-          href: '/replay',
+          id: 'audio',
+          label: 'Gestion audio',
+          href: '/audio',
           icon: <Headphones className="w-5 h-5" />
         });
       }
@@ -299,8 +293,8 @@ export default function Navigation({ onItemClick }: NavigationProps) {
       if (contentChildren.length > 0) {
         items.push({
           id: 'content-communication',
-          label: hasPermission(PERMISSIONS.MANAGE_AUDIO) ? 'Contenu & Communication' : 'Ressources & Rapports',
-          icon: hasPermission(PERMISSIONS.MANAGE_AUDIO) ? <MessageSquare className="w-5 h-5" /> : <BarChart className="w-5 h-5" />,
+          label: 'Contenu & Communication',
+          icon: <MessageSquare className="w-5 h-5" />,
           children: contentChildren
         });
       }

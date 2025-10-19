@@ -20,6 +20,7 @@ export type Permission =
   | 'MANAGE_ROLES_PERMISSIONS'
   | 'PROMOTE_SOUL_TO_SERVANT'
   | 'MANAGE_DEPARTMENT_SERVANTS'
+  | 'VIEW_REPLAY_TEACHINGS'
   | '*';
 
 export type BaseRole = 'super_admin' | 'admin' | 'shepherd' | 'adn' | 'pasteur' | 'department_leader';
