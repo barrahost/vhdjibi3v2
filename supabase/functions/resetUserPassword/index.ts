@@ -1,18 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { initializeApp, cert, getApps } from "npm:firebase-admin/app";
-import { getAuth } from "npm:firebase-admin/auth";
-
-// Initialize Firebase Admin SDK
-const apps = getApps();
-if (apps.length === 0) {
-  initializeApp({
-    credential: cert({
-      projectId: Deno.env.get("FIREBASE_PROJECT_ID"),
-      clientEmail: Deno.env.get("FIREBASE_CLIENT_EMAIL"),
-      privateKey: Deno.env.get("FIREBASE_PRIVATE_KEY")?.replace(/\\n/g, "\n"),
-    }),
-  });
-}
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.75.0';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -30,6 +17,18 @@ serve(async (req) => {
   }
 
   try {
+    // Create Supabase client with service role key for admin operations
+    const supabaseAdmin = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+      {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false
+        }
+      }
+    );
+
     // Verify authentication
     const authHeader = req.headers.get("Authorization");
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
@@ -43,13 +42,22 @@ serve(async (req) => {
     }
 
     const token = authHeader.split("Bearer ")[1];
-    const decodedToken = await getAuth().verifyIdToken(token);
     
-    // Check if the user has admin privileges
-    const userRecord = await getAuth().getUser(decodedToken.uid);
+    // Verify the JWT token
+    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
+    
+    if (authError || !user) {
+      return new Response(
+        JSON.stringify({ error: "Invalid token" }),
+        {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
 
     // Parse request body
-    const { uid, newPassword, isSelfReset, currentPassword } = await req.json();
+    const { uid, newPassword, isSelfReset } = await req.json();
     
     if (!uid || !newPassword) {
       return new Response(
@@ -61,15 +69,15 @@ serve(async (req) => {
       );
     }
 
-    // Handle the two cases: admin reset or self reset
-    const isAdmin = userRecord.customClaims?.admin === true || 
-                   userRecord.customClaims?.role === "admin" || 
-                   userRecord.customClaims?.role === "super_admin";
+    // Check user permissions from metadata or custom claims
+    const isAdmin = user.user_metadata?.role === "admin" || 
+                   user.user_metadata?.role === "super_admin" ||
+                   user.app_metadata?.role === "admin" ||
+                   user.app_metadata?.role === "super_admin";
 
     // Case 1: User is trying to reset their own password
     if (isSelfReset) {
-      // Check if the user is resetting their own password
-      if (decodedToken.uid !== uid) {
+      if (user.id !== uid) {
         return new Response(
           JSON.stringify({ error: "Forbidden: Cannot reset another user's password" }),
           {
@@ -78,11 +86,6 @@ serve(async (req) => {
           }
         );
       }
-
-      // Verify current password - we'd need to check with Firebase Auth
-      // This would require a custom auth endpoint
-      // For now, we'll allow self-resets without verification
-      // Future enhancement: implement password verification
     } 
     // Case 2: Admin is resetting someone else's password
     else if (!isAdmin) {
@@ -95,10 +98,15 @@ serve(async (req) => {
       );
     }
 
-    // Update the user's password
-    await getAuth().updateUser(uid, {
-      password: newPassword,
-    });
+    // Update the user's password using admin client
+    const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
+      uid,
+      { password: newPassword }
+    );
+
+    if (updateError) {
+      throw updateError;
+    }
 
     return new Response(
       JSON.stringify({ success: true, message: "Password updated successfully" }),
@@ -108,7 +116,7 @@ serve(async (req) => {
       }
     );
   } catch (error: any) {
-    console.error("Error:", error);
+    console.error("Error resetting password:", error);
     
     return new Response(
       JSON.stringify({ error: error?.message || "Internal server error" }),
