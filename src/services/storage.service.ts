@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { auth } from '../lib/firebase';
 import toast from 'react-hot-toast';
 
 export class StorageService {
@@ -8,6 +9,12 @@ export class StorageService {
 
   static async uploadProfilePhoto(userId: string, file: File): Promise<string> {
     try {
+      // Vérifier que l'utilisateur est connecté via Firebase
+      const currentUser = auth.currentUser;
+      if (!currentUser) {
+        throw new Error('Vous devez être connecté pour uploader une photo');
+      }
+
       if (!userId || !file) {
         throw new Error('ID utilisateur et fichier sont requis');
       }
@@ -130,6 +137,12 @@ export class StorageService {
 
   static async uploadAudioFile(file: File): Promise<string> {
     try {
+      // Vérifier que l'utilisateur est connecté via Firebase
+      const currentUser = auth.currentUser;
+      if (!currentUser) {
+        throw new Error('Vous devez être connecté pour uploader un fichier');
+      }
+
       if (!file) {
         throw new Error('Le fichier est requis');
       }
