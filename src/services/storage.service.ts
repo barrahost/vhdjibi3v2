@@ -2,7 +2,7 @@ import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
 
 export class StorageService {
-  private static readonly BUCKET_NAME = 'audio-teachings'; // Using existing Audio Teachings bucket
+  private static readonly BUCKET_NAME = 'Audio Teachings'; // Using existing Audio Teachings bucket
   private static readonly MAX_AUDIO_SIZE = 104857600; // 100MB (matches Supabase limit)
   private static readonly MAX_IMAGE_SIZE = 2 * 1024 * 1024;   // 2MB
 
