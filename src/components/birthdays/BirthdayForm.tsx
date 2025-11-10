@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { addDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { Calendar, Cake, User } from 'lucide-react';
@@ -11,6 +12,7 @@ interface BirthdayFormProps {
 }
 
 export default function BirthdayForm({ onSuccess, onClose, isModal = false }: BirthdayFormProps) {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     fullName: '',
     nickname: '',
@@ -57,18 +59,28 @@ export default function BirthdayForm({ onSuccess, onClose, isModal = false }: Bi
         updatedAt: new Date()
       });
 
-      setFormData({
-        fullName: '',
-        nickname: '',
-        birthMonth: '',
-        birthDay: '',
-        phone: ''
-      });
-
-      toast.success('Date d\'anniversaire enregistrée avec succès !');
-      
-      if (onSuccess) {
-        onSuccess();
+      // Si en mode modal, utiliser l'ancien comportement
+      if (isModal) {
+        toast.success('Date d\'anniversaire enregistrée avec succès !');
+        setFormData({
+          fullName: '',
+          nickname: '',
+          birthMonth: '',
+          birthDay: '',
+          phone: ''
+        });
+        if (onSuccess) {
+          onSuccess();
+        }
+      } else {
+        // Rediriger vers la page de confirmation avec les données
+        navigate('/anniversaires/merci', {
+          state: {
+            fullName: formData.fullName,
+            birthMonth: formData.birthMonth,
+            birthDay: formData.birthDay
+          }
+        });
       }
     } catch (error) {
       console.error('Error saving birthday:', error);

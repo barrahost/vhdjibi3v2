@@ -37,6 +37,7 @@ const LegalNotice = lazy(() => import('./pages/LegalNotice'));
 const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy'));
 const BirthdayForm = lazy(() => import('./pages/BirthdayForm'));
 const BirthdayList = lazy(() => import('./pages/BirthdayList'));
+const BirthdayConfirmation = lazy(() => import('./pages/BirthdayConfirmation'));
 const ReplayTeachings = lazy(() => import('./pages/ReplayTeachings'));
 const AudioManagement = lazy(() => import('./pages/AudioManagement'));
 const SyncDepartmentLeaders = lazy(() => import('./pages/SyncDepartmentLeaders'));
@@ -84,6 +85,11 @@ function AppContent() {
         <Route path="/anniversaires/ajouter" element={
           <Suspense fallback={<PageLoader />}>
             <BirthdayForm />
+          </Suspense>
+        } />
+        <Route path="/anniversaires/merci" element={
+          <Suspense fallback={<PageLoader />}>
+            <BirthdayConfirmation />
           </Suspense>
         } />
         <Route path="/" element={
