@@ -44,7 +44,7 @@ export default function Login() {
           <div className="flex flex-col items-center">
             <Logo className="h-20 w-auto mb-6" />
             <h1 className="text-2xl font-bold text-gray-900 text-center">
-              Vases d'Honneur Angré Djibi 3 (VHAD3)
+              Vases d'Honneur Assemblée Grâce Confondante
             </h1>
           </div>
         </div>
@@ -111,7 +111,7 @@ export default function Login() {
         </div>
 
         <div className="mt-6 text-center text-sm text-gray-500">
-          <p>© {new Date().getFullYear()} Vases d'Honneur Angré Djibi 3. Tous droits réservés.</p>
+          <p>© {new Date().getFullYear()} Vases d'Honneur Assemblée Grâce Confondante. Tous droits réservés.</p>
           <button
             onClick={() => setIsChangelogOpen(true)}
             className="mt-1 text-xs text-gray-400 hover:text-[#00665C] transition-colors flex items-center justify-center mx-auto"

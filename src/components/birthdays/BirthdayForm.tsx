@@ -246,6 +246,24 @@ export default function BirthdayForm({ onSuccess, onClose, isModal = false }: Bi
           </p>
         </div>
 
+        <div className="bg-blue-50 border-l-4 border-[#00665C] p-4 mb-6 rounded-lg">
+          <div className="flex items-start">
+            <div className="flex-shrink-0">
+              <svg className="w-5 h-5 text-[#00665C] mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <p className="text-sm font-medium text-gray-900">
+                Réservé aux membres
+              </p>
+              <p className="text-sm text-gray-600 mt-1">
+                Ce formulaire est destiné aux membres de l'église Vases d'Honneur Assemblée Grâce Confondante. Si vous êtes membre, merci de renseigner vos informations ci-dessous.
+              </p>
+            </div>
+          </div>
+        </div>
+
         <div className="bg-white p-8 rounded-xl shadow-lg border border-gray-100">
           {formContent}
         </div>

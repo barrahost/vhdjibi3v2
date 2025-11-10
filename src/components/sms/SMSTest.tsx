@@ -10,7 +10,7 @@ const MAX_SMS_LENGTH = 125; // Reduced to 125 to allow for appending user info
 export function SMSTest() {
   const { user } = useAuth();
   const [phone, setPhone] = useState('');
-  const [message, setMessage] = useState('Test message from VHAD3');
+  const [message, setMessage] = useState('Test message from VHAGC');
   const [isSending, setIsSending] = useState(false);
   const [userInfo, setUserInfo] = useState({ fullName: '', phone: '' });
 
@@ -69,7 +69,7 @@ export function SMSTest() {
       await SMSService.sendSMS(phone, message + userSignature);
       toast.success('SMS envoyé avec succès');
       setPhone('');
-      setMessage('Test message from VHAD3');
+      setMessage('Test message from VHAGC');
     } catch (error) {
       if (error instanceof Error && error.message.includes('Crédit SMS insuffisant')) {
         toast.error('Crédit SMS insuffisant. Veuillez contacter l\'administrateur pour recharger le crédit.');

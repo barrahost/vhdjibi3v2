@@ -20,10 +20,10 @@ export default function LegalNotice() {
         <section className="mb-8">
           <h2 className="text-xl font-semibold text-gray-900 mb-4">1. Informations légales</h2>
           <p className="text-gray-700 mb-4">
-            Le site https://chad3.evdh.org est édité par la Cellule d'Honneur Angré Djibi 3 (CHAD3).
+            Le site https://chad3.evdh.org est édité par Vases d'Honneur Assemblée Grâce Confondante.
           </p>
           <p className="text-gray-700 mb-4">
-            Siège : Église Vases d'Honneur<br />
+            Siège : Vases d'Honneur Assemblée Grâce Confondante<br />
             Adresse : Angré, Cocody, Abidjan<br />
             Téléphone : 27 22 41 29 80<br />
             Email : digital@vasesdhonneur.info

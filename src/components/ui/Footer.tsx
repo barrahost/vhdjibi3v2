@@ -15,7 +15,7 @@ export function Footer() {
     <footer className={`mt-auto py-4 px-6 border-t ${location.pathname === '/replay' ? 'bg-white/80 backdrop-blur-sm' : 'bg-white'}`}>
       <div className="max-w-7xl mx-auto flex flex-col items-center">
         <div className="text-center text-sm text-gray-500 space-y-1 flex flex-col items-center">
-          © {new Date().getFullYear()} Vases d'Honneur Angré Djibi 3. Tous droits réservés.
+          © {new Date().getFullYear()} Vases d'Honneur Assemblée Grâce Confondante. Tous droits réservés.
           <button
             onClick={() => setIsChangelogOpen(true)}
             className="mt-1 text-xs text-gray-400 hover:text-[#00665C] transition-colors"

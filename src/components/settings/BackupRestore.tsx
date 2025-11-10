@@ -114,7 +114,7 @@ export default function BackupRestore() {
       const link = document.createElement('a');
       link.href = url;
       const timestamp = new Date().toISOString().replace(/:/g, '-').split('.')[0];
-      link.download = `vhad3-backup-${timestamp}.json`;
+      link.download = `vhagc-backup-${timestamp}.json`;
       
       document.body.appendChild(link);
       link.click();

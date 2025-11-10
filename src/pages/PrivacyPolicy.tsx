@@ -20,7 +20,7 @@ export default function PrivacyPolicy() {
         <section className="mb-8">
           <h2 className="text-xl font-semibold text-gray-900 mb-4">1. Introduction</h2>
           <p className="text-gray-700 mb-4">
-            La protection de vos données personnelles est une priorité pour la Cellule d'Honneur Angré Djibi 3 (CHAD3). Cette politique de confidentialité vous informe de la manière dont nous collectons, utilisons et protégeons vos données personnelles sur le site https://chad3.evdh.org.
+            La protection de vos données personnelles est une priorité pour Vases d'Honneur Assemblée Grâce Confondante. Cette politique de confidentialité vous informe de la manière dont nous collectons, utilisons et protégeons vos données personnelles sur le site https://chad3.evdh.org.
           </p>
         </section>
 

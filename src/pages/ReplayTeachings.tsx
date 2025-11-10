@@ -300,11 +300,11 @@ export default function ReplayTeachings() {
     window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`, '_blank');
   };
 
-  const shareOnTwitter = (url: string = window.location.href, text: string = 'Écoutez les audios de Vases d\'Honneur Angré Djibi 3') => {
+  const shareOnTwitter = (url: string = window.location.href, text: string = 'Écoutez les audios de Vases d\'Honneur Assemblée Grâce Confondante') => {
     window.open(`https://twitter.com/intent/tweet?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`, '_blank');
   };
 
-  const shareOnWhatsApp = (url: string = window.location.href, text: string = 'Écoutez les audios de Vases d\'Honneur Angré Djibi 3') => {
+  const shareOnWhatsApp = (url: string = window.location.href, text: string = 'Écoutez les audios de Vases d\'Honneur Assemblée Grâce Confondante') => {
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}%20${encodeURIComponent(url)}`, '_blank');
   };
 
@@ -542,7 +542,7 @@ export default function ReplayTeachings() {
                         window.location.href;
                       const text = selectedTeaching ? 
                         `${selectedTeaching.title} - ${selectedTeaching.speaker}` : 
-                        'Écoutez les audios de Vases d\'Honneur Angré Djibi 3';
+                        'Écoutez les audios de Vases d\'Honneur Assemblée Grâce Confondante';
                       shareOnTwitter(url, text);
                     }}
                     className="p-3 bg-black text-white rounded-full hover:bg-gray-800 transition-colors"
@@ -559,7 +559,7 @@ export default function ReplayTeachings() {
                         window.location.href;
                       const text = selectedTeaching ? 
                         `${selectedTeaching.title} - ${selectedTeaching.speaker}` : 
-                        'Écoutez les audios de Vases d\'Honneur Angré Djibi 3';
+                        'Écoutez les audios de Vases d\'Honneur Assemblée Grâce Confondante';
                       shareOnWhatsApp(url, text);
                     }}
                     className="p-3 bg-green-500 text-white rounded-full hover:bg-green-600 transition-colors"
@@ -590,7 +590,7 @@ export default function ReplayTeachings() {
               
               <div className="space-y-4 text-gray-600">
                 <p>
-                  Bienvenue sur la page de replay audio de Vases d'Honneur Angré Djibi 3. Cette plateforme vous permet d'écouter tous les moments forts de la cellule : adoration, louange, prédication, sainte cène et plus encore.
+                  Bienvenue sur la page de replay audio de Vases d'Honneur Assemblée Grâce Confondante. Cette plateforme vous permet d'écouter tous les moments forts de la cellule : adoration, louange, prédication, sainte cène et plus encore.
                 </p>
                 <p>
                   Vous pouvez filtrer les audios par date, catégorie ou orateur, et télécharger les fichiers pour les écouter hors ligne.
