@@ -81,6 +81,12 @@ export function MenuAssignment({ selectedMenus, onChange }: MenuAssignmentProps)
       label: 'Modèles SMS',
       permission: PERMISSIONS.MANAGE_SMS_TEMPLATES,
       description: 'Permet de gérer les modèles de SMS'
+    },
+    {
+      id: 'VIEW_BIRTHDAYS',
+      label: 'Anniversaires',
+      permission: PERMISSIONS.VIEW_STATS,
+      description: 'Permet de consulter la liste des anniversaires'
     }
   ];
 
