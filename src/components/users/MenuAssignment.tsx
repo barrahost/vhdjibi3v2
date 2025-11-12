@@ -90,11 +90,11 @@ export function MenuAssignment({ selectedMenus, onChange }: MenuAssignmentProps)
     }
   ];
 
-  const toggleMenu = (menuId: string) => {
-    if (selectedMenus.includes(menuId)) {
-      onChange(selectedMenus.filter(id => id !== menuId));
+  const toggleMenu = (permission: string) => {
+    if (selectedMenus.includes(permission)) {
+      onChange(selectedMenus.filter(p => p !== permission));
     } else {
-      onChange([...selectedMenus, menuId]);
+      onChange([...selectedMenus, permission]);
     }
   };
 
@@ -106,8 +106,8 @@ export function MenuAssignment({ selectedMenus, onChange }: MenuAssignmentProps)
             <input
               id={`menu-${menu.id}`}
               type="checkbox"
-              checked={selectedMenus.includes(menu.id)}
-              onChange={() => toggleMenu(menu.id)}
+              checked={selectedMenus.includes(menu.permission)}
+              onChange={() => toggleMenu(menu.permission)}
               className="h-4 w-4 text-[#00665C] border-gray-300 rounded focus:ring-[#00665C]"
             />
           </div>
