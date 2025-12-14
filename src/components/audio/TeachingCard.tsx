@@ -81,10 +81,10 @@ export function TeachingCard({
             {/* Speaker */}
             <p className="text-sm text-gray-700 font-medium mb-1">{speaker}</p>
             
-            {/* Theme - hidden on very small screens */}
+            {/* Theme */}
             {theme && (
-              <p className="hidden xs:block text-sm text-gray-600 line-clamp-1 mb-1">
-                <span className="font-medium">Thème:</span> {theme}
+              <p className="text-sm text-gray-600 line-clamp-1 mb-1">
+                <span className="font-medium text-[#00665C]">Thème:</span> {theme}
               </p>
             )}
           </div>

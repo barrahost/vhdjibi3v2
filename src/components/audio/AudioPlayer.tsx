@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Play, Pause, Volume2, VolumeX, AlertTriangle, Rewind, FastForward, X, Share2 } from 'lucide-react';
+import { Play, Pause, Volume2, VolumeX, AlertTriangle, Rewind, FastForward, X, Share2, Download } from 'lucide-react';
 import { formatDuration } from '../../utils/dateUtils';
 import { incrementPlayCount } from '../../lib/db';
 import toast from 'react-hot-toast';
@@ -276,6 +276,28 @@ export function AudioPlayer({
     setPlaybackSpeed(speed);
     toast.success(`Vitesse de lecture: ${speed}x`);
   };
+
+  const handleDownload = async () => {
+    try {
+      toast.loading('Préparation du téléchargement...', { id: 'download' });
+      const response = await fetch(url);
+      const blob = await response.blob();
+      
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = `${title.replace(/[^a-zA-Z0-9\s]/g, '_')}.mp3`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(downloadUrl);
+      
+      toast.success('Téléchargement démarré', { id: 'download' });
+    } catch (error) {
+      console.error('Download error:', error);
+      toast.error('Erreur lors du téléchargement', { id: 'download' });
+    }
+  };
   
   return (
     <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-r from-white via-gray-50 to-white backdrop-blur-sm border-t shadow-2xl z-50 animate-slide-up">
@@ -310,6 +332,14 @@ export function AudioPlayer({
             </div>
           </div>
           <div className="flex items-center space-x-2">
+            <button
+              onClick={handleDownload}
+              className="p-3 text-gray-400 hover:text-[#00665C] rounded-full hover:bg-[#00665C]/10 transition-all duration-200 hover:scale-110 shadow-md hover:shadow-lg"
+              title="Télécharger l'audio"
+              disabled={!!error}
+            >
+              <Download className="w-6 h-6" />
+            </button>
             {onShare && (
               <button
                 onClick={handleShare}
