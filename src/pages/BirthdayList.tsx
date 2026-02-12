@@ -8,6 +8,7 @@ import { formatDate } from '../utils/dateUtils';
 import { CustomPagination } from '../components/ui/CustomPagination';
 import { StatCard } from '../components/dashboard/stats/StatCard';
 import { useAuth } from '../contexts/AuthContext';
+import { usePermissions } from '../hooks/usePermissions';
 import BirthdayForm from '../components/birthdays/BirthdayForm';
 import toast from 'react-hot-toast';
 import { getDaysUntilBirthday } from '../utils/dateUtils';
@@ -16,6 +17,8 @@ const ITEMS_PER_PAGE = 10;
 
 export default function BirthdayList() {
   const { userRole } = useAuth();
+  const { hasPermission } = usePermissions();
+  const canManageBirthdays = userRole === 'super_admin' || hasPermission('MANAGE_BIRTHDAYS');
   const [birthdays, setBirthdays] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -79,8 +82,8 @@ export default function BirthdayList() {
   }, [birthdays]);
 
   const handleDelete = async (birthdayId: string) => {
-    if (userRole !== 'super_admin') {
-      toast.error('Seul le super admin peut supprimer des anniversaires');
+    if (!canManageBirthdays) {
+      toast.error('Vous n\'avez pas la permission de supprimer des anniversaires');
       return;
     }
 
@@ -132,7 +135,7 @@ export default function BirthdayList() {
       title: 'Téléphone',
       render: (value: string) => value
     },
-    ...(userRole === 'super_admin' ? [{
+    ...(canManageBirthdays ? [{
       key: 'actions',
       title: 'Actions',
       render: (_: any, birthday: any) => (

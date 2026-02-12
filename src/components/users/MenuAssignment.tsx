@@ -85,8 +85,8 @@ export function MenuAssignment({ selectedMenus, onChange }: MenuAssignmentProps)
     {
       id: 'VIEW_BIRTHDAYS',
       label: 'Anniversaires',
-      permission: PERMISSIONS.VIEW_STATS,
-      description: 'Permet de consulter la liste des anniversaires'
+      permission: PERMISSIONS.MANAGE_BIRTHDAYS,
+      description: 'Permet de consulter et gérer les anniversaires (ajout, suppression)'
     }
   ];
 
