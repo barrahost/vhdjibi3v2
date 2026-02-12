@@ -21,6 +21,7 @@ export type Permission =
   | 'PROMOTE_SOUL_TO_SERVANT'
   | 'MANAGE_DEPARTMENT_SERVANTS'
   | 'VIEW_REPLAY_TEACHINGS'
+  | 'MANAGE_BIRTHDAYS'
   | '*';
 
 export type BaseRole = 'super_admin' | 'admin' | 'shepherd' | 'adn' | 'pasteur' | 'department_leader';
