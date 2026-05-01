@@ -222,6 +222,17 @@ export function AudioPlayer({
             incrementPlayCount(id);
             playTrackedRef.current = true;
             console.log("Tracking play count for:", id);
+
+            // Persist locally for "Récemment écoutés"
+            try {
+              const key = 'recently_played';
+              const stored: string[] = JSON.parse(localStorage.getItem(key) || '[]');
+              const updated = [id, ...stored.filter((v) => v !== id)].slice(0, 5);
+              localStorage.setItem(key, JSON.stringify(updated));
+              window.dispatchEvent(new Event('recently_played:updated'));
+            } catch {
+              // ignore localStorage errors
+            }
           }
           
           playPromise
