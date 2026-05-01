@@ -21,6 +21,7 @@ const ITEMS_PER_PAGE = 10;
 
 export default function SoulManagement() {
   const [showForm, setShowForm] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
   const [souls, setSouls] = useState<Soul[]>([]);
   const [shepherdNames, setShepherdNames] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
