@@ -129,9 +129,17 @@ export default function SoulManagement() {
     }
 
     // Nettoyer l'URL pour ne pas réappliquer le filtre lors d'un re-render
-    const next = new URLSearchParams(searchParams);
-    next.delete('filter');
-    setSearchParams(Object.fromEntries(next), { replace: true });
+    // (utilisation directe de window.history pour éviter un bug de react-router
+    // dans certains environnements de preview où setSearchParams produit une URL invalide)
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.delete('filter');
+      const newSearch = url.searchParams.toString();
+      const newUrl = url.pathname + (newSearch ? `?${newSearch}` : '') + url.hash;
+      window.history.replaceState(window.history.state, '', newUrl);
+    } catch {
+      // ignore
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
