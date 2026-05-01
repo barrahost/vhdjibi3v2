@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
-import { Play, Pause, Volume2, VolumeX, AlertTriangle, Rewind, FastForward, X, Share2, Download } from 'lucide-react';
+import { Play, Pause, Volume2, VolumeX, AlertTriangle, Rewind, FastForward, X, Share2, Download, ChevronDown } from 'lucide-react';
 import { formatDuration } from '../../utils/dateUtils';
 import { incrementPlayCount } from '../../lib/db';
+import { useMediaQuery } from '../../hooks/useMediaQuery';
 import toast from 'react-hot-toast';
 
 interface AudioPlayerProps {
