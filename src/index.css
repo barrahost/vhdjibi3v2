@@ -389,3 +389,11 @@ input[type="range"].volume-slider::-webkit-slider-thumb:active {
 .badge-danger {
   @apply bg-red-100 text-red-800;
 }
+/* Hide scrollbar for mobile chip rows while keeping scroll */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}

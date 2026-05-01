@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.7.40] - Filtres en chips scrollables sur mobile (Replay)
+
+### Changed
+- Sur la page **Replay**, les filtres **Catégorie** et **Orateur** s'affichent désormais sous forme de **chips horizontalement scrollables** sur mobile (au lieu de menus déroulants empilés), pour gagner de la place verticale et accélérer la sélection.
+- Les chips actifs s'affichent en vert primaire (#00665C). Sur desktop, les menus déroulants restent inchangés.
+
 ## [1.7.39] - Cartes d'enseignement compactes sur mobile
 
 ### Changed
