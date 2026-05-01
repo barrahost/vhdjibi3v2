@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
-import { Play, Pause, Volume2, VolumeX, AlertTriangle, Rewind, FastForward, X, Share2, Download } from 'lucide-react';
+import { Play, Pause, Volume2, VolumeX, AlertTriangle, Rewind, FastForward, X, Share2, Download, ChevronDown } from 'lucide-react';
 import { formatDuration } from '../../utils/dateUtils';
 import { incrementPlayCount } from '../../lib/db';
+import { useMediaQuery } from '../../hooks/useMediaQuery';
 import toast from 'react-hot-toast';
 
 interface AudioPlayerProps {
@@ -48,6 +49,9 @@ export function AudioPlayer({
   const playTrackedRef = useRef(false);
   const [waveformPathData, setWaveformPathData] = useState<string>('');
   const [loadingWaveform, setLoadingWaveform] = useState(false);
+  const isMobile = useMediaQuery('(max-width: 768px)');
+  const [isExpanded, setIsExpanded] = useState(false);
+  const progressPercent = duration ? (currentTime / duration) * 100 : 0;
   
   // Gérer les propriétés de l'audio et les événements de base lors du premier montage
   // Initialize audio element once and reuse it throughout the component's lifecycle
@@ -299,6 +303,216 @@ export function AudioPlayer({
     }
   };
   
+  // ========== MOBILE: COMPACT MODE ==========
+  if (isMobile && !isExpanded) {
+    return (
+      <div
+        onClick={() => setIsExpanded(true)}
+        className="fixed bottom-0 left-0 right-0 bg-white border-t shadow-2xl z-50 animate-slide-up cursor-pointer"
+        role="button"
+        aria-label="Agrandir le lecteur"
+      >
+        <div className="flex items-center gap-3 px-3 py-2 h-16">
+          <div className="w-10 h-10 flex-shrink-0 rounded-md overflow-hidden bg-gray-100">
+            {thumbnailUrl ? (
+              <img src={thumbnailUrl} alt={title} className="w-full h-full object-cover" />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center bg-[#00665C]/10">
+                <Play className="w-5 h-5 text-[#00665C]" />
+              </div>
+            )}
+          </div>
+          <div className="flex-1 min-w-0">
+            <h3 className="text-sm font-semibold text-gray-900 truncate">{title}</h3>
+            <p className="text-xs text-gray-500 truncate">{speaker}</p>
+          </div>
+          <button
+            onClick={(e) => { e.stopPropagation(); handleSkip(-10); }}
+            className="p-2 text-gray-600 hover:text-[#00665C] disabled:opacity-50"
+            disabled={!!error}
+            aria-label="Reculer 10 secondes"
+          >
+            <Rewind className="w-5 h-5" />
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); togglePlayPause(); }}
+            className="p-2 bg-[#00665C] text-white rounded-full disabled:opacity-50 min-w-[44px] min-h-[44px] flex items-center justify-center"
+            disabled={isLoading || !!error}
+            aria-label={isPlaying ? 'Pause' : 'Lecture'}
+          >
+            {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5 ml-0.5" />}
+          </button>
+        </div>
+        {/* Fine progress bar */}
+        <div className="absolute bottom-0 left-0 h-0.5 bg-[#00665C]" style={{ width: `${progressPercent}%` }} />
+      </div>
+    );
+  }
+
+  // ========== MOBILE: EXPANDED MODE ==========
+  if (isMobile && isExpanded) {
+    return (
+      <>
+        <div className="fixed inset-0 z-40 bg-black/40" onClick={() => setIsExpanded(false)} />
+        <div className="fixed inset-x-0 bottom-0 z-50 bg-white rounded-t-2xl shadow-2xl animate-slide-up" style={{ height: '90vh' }}>
+          <div className="flex flex-col h-full overflow-y-auto">
+            {/* Header bar with handle and close */}
+            <div className="flex items-center justify-between px-4 pt-3 pb-2 flex-shrink-0">
+              <div className="w-10" />
+              <div className="w-10 h-1 bg-gray-300 rounded-full" />
+              <button
+                onClick={() => setIsExpanded(false)}
+                className="p-2 text-gray-500 hover:text-gray-900"
+                aria-label="Réduire le lecteur"
+              >
+                <ChevronDown className="w-6 h-6" />
+              </button>
+            </div>
+
+            {/* Cover */}
+            <div className="flex justify-center px-6 pt-4">
+              <div className="w-48 h-48 rounded-2xl overflow-hidden bg-gray-100 shadow-xl">
+                {thumbnailUrl ? (
+                  <img src={thumbnailUrl} alt={title} className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-[#00665C]/10 to-[#F2B636]/10">
+                    <Play className="w-16 h-16 text-[#00665C]" />
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Title */}
+            <div className="px-6 pt-6 text-center">
+              <h2 className="text-lg font-bold text-gray-900 line-clamp-2">{title}</h2>
+              <p className="text-sm text-gray-600 mt-1">{speaker}</p>
+            </div>
+
+            {error && (
+              <div className="mx-6 mt-4 flex items-center justify-center gap-2 text-red-700 bg-red-50 p-3 rounded-lg border border-red-200">
+                <AlertTriangle className="w-5 h-5" />
+                <span className="text-sm">{error}</span>
+              </div>
+            )}
+
+            {/* Progress */}
+            <div className="px-6 pt-6">
+              <div
+                className="h-2 bg-gray-200 rounded-full cursor-pointer relative overflow-hidden"
+                onClick={handleProgressClick}
+              >
+                <div
+                  className="absolute top-0 left-0 h-full bg-[#00665C] rounded-full"
+                  style={{ width: `${progressPercent}%` }}
+                />
+              </div>
+              <div className="flex justify-between text-xs font-mono text-gray-500 mt-2">
+                <span>{formatDuration(Math.floor(currentTime))}</span>
+                <span>{formatDuration(Math.floor(duration))}</span>
+              </div>
+            </div>
+
+            {/* Controls */}
+            <div className="flex items-center justify-center gap-4 px-6 pt-6">
+              <button
+                onClick={onPrevious}
+                disabled={!onPrevious || !!error}
+                className="p-2 text-gray-700 disabled:opacity-30"
+                aria-label="Précédent"
+              >
+                <svg className="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M19 20L9 12l10-8v16z" />
+                  <line x1="5" y1="19" x2="5" y2="5" />
+                </svg>
+              </button>
+              <button
+                onClick={() => handleSkip(-10)}
+                disabled={!!error}
+                className="p-3 text-gray-700 disabled:opacity-30"
+                aria-label="Reculer 10s"
+              >
+                <Rewind className="w-8 h-8" />
+              </button>
+              <button
+                onClick={togglePlayPause}
+                disabled={isLoading || !!error}
+                className="p-5 bg-[#00665C] text-white rounded-full shadow-lg disabled:opacity-50 min-w-[64px] min-h-[64px] flex items-center justify-center"
+                aria-label={isPlaying ? 'Pause' : 'Lecture'}
+              >
+                {isPlaying ? <Pause className="w-8 h-8" /> : <Play className="w-8 h-8 ml-1" />}
+              </button>
+              <button
+                onClick={() => handleSkip(10)}
+                disabled={!!error}
+                className="p-3 text-gray-700 disabled:opacity-30"
+                aria-label="Avancer 10s"
+              >
+                <FastForward className="w-8 h-8" />
+              </button>
+              <button
+                onClick={onNext}
+                disabled={!onNext || !!error}
+                className="p-2 text-gray-700 disabled:opacity-30"
+                aria-label="Suivant"
+              >
+                <svg className="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M5 4l10 8-10 8V4z" />
+                  <line x1="19" y1="5" x2="19" y2="19" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Speed selector */}
+            <div className="flex items-center justify-center gap-2 pt-6 px-6">
+              {[1, 1.25, 1.5, 2].map((s) => (
+                <button
+                  key={s}
+                  onClick={() => handleSpeedChange(s)}
+                  className={`px-3 py-1.5 text-sm font-medium rounded-full border transition-colors ${
+                    playbackSpeed === s
+                      ? 'bg-[#00665C] text-white border-[#00665C]'
+                      : 'bg-white text-gray-700 border-gray-200'
+                  }`}
+                >
+                  {s}x
+                </button>
+              ))}
+            </div>
+
+            {/* Bottom actions */}
+            <div className="flex items-center justify-center gap-6 pt-6 pb-8 px-6">
+              <button
+                onClick={handleDownload}
+                disabled={!!error}
+                className="flex flex-col items-center gap-1 text-gray-600 hover:text-[#00665C] disabled:opacity-50"
+              >
+                <Download className="w-6 h-6" />
+                <span className="text-xs">Télécharger</span>
+              </button>
+              {onShare && (
+                <button
+                  onClick={handleShare}
+                  className="flex flex-col items-center gap-1 text-gray-600 hover:text-[#00665C]"
+                >
+                  <Share2 className="w-6 h-6" />
+                  <span className="text-xs">Partager</span>
+                </button>
+              )}
+              <button
+                onClick={onClose}
+                className="flex flex-col items-center gap-1 text-gray-600 hover:text-red-500"
+              >
+                <X className="w-6 h-6" />
+                <span className="text-xs">Fermer</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  // ========== DESKTOP MODE (unchanged) ==========
   return (
     <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-r from-white via-gray-50 to-white backdrop-blur-sm border-t shadow-2xl z-50 animate-slide-up">
       <div className="space-y-6 p-6">
@@ -369,27 +583,24 @@ export function AudioPlayer({
 
         {/* Audio visualization */}
         <div className="max-w-7xl mx-auto relative">
-          <div 
+          <div
             className="h-6 bg-gray-200 rounded-full cursor-pointer relative overflow-hidden"
             onClick={handleProgressClick}
           >
-            {/* Progress bar */}
-            <div 
-              ref={progressBarRef} 
+            <div
+              ref={progressBarRef}
               className="absolute top-0 left-0 h-full bg-[#00665C] rounded-full transition-all duration-300"
-              style={{ width: `${(currentTime / duration) * 100 || 0}%` }}
+              style={{ width: `${progressPercent}%` }}
             />
           </div>
         </div>
 
         {/* Controls */}
         <div className="flex items-center justify-between max-w-7xl mx-auto">
-          {/* Time */}
           <div className="text-base font-mono text-gray-600 bg-gray-100 px-3 py-2 rounded-lg shadow-inner">
             {formatDuration(Math.floor(currentTime))} / {formatDuration(Math.floor(duration))}
           </div>
 
-          {/* Play controls */}
           <div className="flex items-center space-x-6">
             <button
               onClick={onPrevious}
@@ -402,7 +613,7 @@ export function AudioPlayer({
                 <line x1="5" y1="19" x2="5" y2="5" />
               </svg>
             </button>
-            
+
             <button
               onClick={() => handleSkip(-10)}
               className="p-3 text-gray-600 hover:text-[#00665C] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#00665C]/10 rounded-full hover:scale-110 shadow-md hover:shadow-lg"
@@ -411,7 +622,7 @@ export function AudioPlayer({
             >
               <Rewind className="w-7 h-7" />
             </button>
-            
+
             <button
               onClick={togglePlayPause}
               className="relative p-5 bg-gradient-to-r from-[#00665C] to-[#00665C]/90 text-white rounded-full hover:from-[#00665C]/90 hover:to-[#00665C] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-xl hover:shadow-2xl transform hover:scale-110 active:scale-95"
@@ -425,7 +636,7 @@ export function AudioPlayer({
                 <Play className="w-8 h-8 relative z-10" />
               )}
             </button>
-            
+
             <button
               onClick={() => handleSkip(10)}
               className="p-3 text-gray-600 hover:text-[#00665C] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#00665C]/10 rounded-full hover:scale-110 shadow-md hover:shadow-lg"
@@ -434,7 +645,7 @@ export function AudioPlayer({
             >
               <FastForward className="w-7 h-7" />
             </button>
-            
+
             <button
               onClick={onNext}
               className="p-3 text-gray-600 hover:text-[#00665C] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#00665C]/10 rounded-full hover:scale-110 shadow-md hover:shadow-lg"
@@ -473,7 +684,7 @@ export function AudioPlayer({
               disabled={!!error}
             />
           </div>
-          
+
           {/* Speed Control */}
           <div className="hidden md:flex items-center space-x-3 bg-white px-4 py-3 rounded-xl shadow-md border border-gray-200">
             <span className="text-sm font-medium text-gray-700 whitespace-nowrap">Vitesse</span>
