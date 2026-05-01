@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.7.24] - Import de serviteurs depuis les âmes et utilisateurs
+
+### Added
+- Nouveau bouton **« Importer des serviteurs »** dans la gestion des serviteurs et le tableau de bord du responsable de département
+- Possibilité d'ajouter des serviteurs en les important depuis la liste des **âmes** ou la liste des **utilisateurs** (n'importe quel rôle)
+- Une même personne peut être serviteur dans plusieurs départements simultanément
+- Affichage de l'origine du serviteur (badge « Importé d'âme » / « Importé d'utilisateur »)
+- Détection des doublons : impossible d'importer deux fois la même personne dans le même département
+
+### Changed
+- Suppression de la contrainte d'unicité globale du téléphone/email côté serviteurs (multi-appartenance autorisée)
+
+
 ## [1.7.23] - Profil principal multi-rôles & nettoyage du login
 
 ### Added
