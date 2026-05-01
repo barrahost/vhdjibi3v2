@@ -60,17 +60,6 @@ export default function ServantForm({ onSuccess }: { onSuccess?: () => void }) {
     return () => { cancelled = true; clearTimeout(t); };
   }, [formData.phone, formData.departmentId, departments]);
 
-  const [formData, setFormData] = useState({
-    fullName: '',
-    nickname: '',
-    gender: 'male' as 'male' | 'female',
-    phone: '',
-    email: '',
-    departmentId: '',
-    isHead: false
-  });
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const { departments, loading: loadingDepartments } = useDepartments();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
