@@ -41,6 +41,31 @@ export default function SoulManagement() {
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('active');
   const { hasPermission } = usePermissions();
   const { userRole, activeRole } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // Application des filtres venant de l'URL (one-shot au montage)
+  useEffect(() => {
+    const filter = searchParams.get('filter');
+    if (!filter) return;
+
+    if (filter === 'unassigned') {
+      setSelectedShepherdId('unassigned');
+      setStatusFilter('active');
+    } else if (filter === 'this_month') {
+      const today = new Date();
+      const start = new Date();
+      start.setDate(today.getDate() - 30);
+      const fmt = (d: Date) => d.toISOString().split('T')[0];
+      setDateRange({ startDate: fmt(start), endDate: fmt(today) });
+      setStatusFilter('active');
+    }
+
+    // Nettoyer l'URL pour ne pas réappliquer le filtre lors d'un re-render
+    const next = new URLSearchParams(searchParams);
+    next.delete('filter');
+    setSearchParams(next, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Restriction d'accès à l'import : ADN, Admin, Super Admin uniquement
   const canImport = ['adn', 'admin', 'super_admin'].includes(
