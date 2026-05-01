@@ -279,6 +279,63 @@ export function AudioPlayer({
       setIsMuted(true);
     }
   };
+
+  // Keyboard shortcuts (desktop): Space, ←/→, ↑/↓, N, P, M
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      const tag = target?.tagName;
+      // Skip when typing in inputs/textareas/selects or contentEditable
+      if (
+        tag === 'INPUT' ||
+        tag === 'TEXTAREA' ||
+        tag === 'SELECT' ||
+        target?.isContentEditable
+      ) return;
+      if (error) return;
+
+      switch (e.key) {
+        case ' ':
+        case 'Spacebar':
+          e.preventDefault();
+          togglePlayPause();
+          break;
+        case 'ArrowLeft':
+          e.preventDefault();
+          handleSkip(-10);
+          break;
+        case 'ArrowRight':
+          e.preventDefault();
+          handleSkip(10);
+          break;
+        case 'ArrowUp':
+          e.preventDefault();
+          handleVolumeChange(Math.min(1, volume + 0.1));
+          break;
+        case 'ArrowDown':
+          e.preventDefault();
+          handleVolumeChange(Math.max(0, volume - 0.1));
+          break;
+        case 'n':
+        case 'N':
+          if (onNext) { e.preventDefault(); onNext(); }
+          break;
+        case 'p':
+        case 'P':
+          if (onPrevious) { e.preventDefault(); onPrevious(); }
+          break;
+        case 'm':
+        case 'M':
+          e.preventDefault();
+          toggleMute();
+          break;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isPlaying, currentTime, duration, volume, isMuted, onNext, onPrevious, error]);
   
   const handleShare = (e: React.MouseEvent) => {
     e.stopPropagation();
