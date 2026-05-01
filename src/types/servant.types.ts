@@ -1,3 +1,5 @@
+export type ServantSourceType = 'soul' | 'user' | 'manual';
+
 export interface Servant {
   id: string;
   fullName: string;
@@ -12,9 +14,12 @@ export interface Servant {
   status: 'active' | 'inactive';
   createdAt: Date;
   updatedAt: Date;
-  // Nouveaux champs pour le lien avec l'âme d'origine
-  originalSoulId?: string; // Référence vers l'âme d'origine
-  promotionDate?: Date; // Date de promotion depuis âme
+  // Lien vers la personne source
+  sourceType?: ServantSourceType;
+  sourceId?: string;
+  // Rétro-compat (= sourceId quand sourceType === 'soul')
+  originalSoulId?: string;
+  promotionDate?: Date;
 }
 
 export interface ServantFormData {
@@ -28,6 +33,8 @@ export interface ServantFormData {
   isShepherd?: boolean;
   shepherdId?: string;
   status?: 'active' | 'inactive';
+  sourceType?: ServantSourceType;
+  sourceId?: string;
   originalSoulId?: string;
   promotionDate?: Date;
 }
