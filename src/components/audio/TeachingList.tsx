@@ -46,6 +46,17 @@ export function TeachingList({
     return matchesSearch && matchesCategory && matchesSpeaker;
   });
 
+  // Reset mobile pagination when filters change
+  useEffect(() => {
+    setVisibleCount(MOBILE_PAGE_SIZE);
+  }, [searchTerm, selectedCategory, selectedSpeaker, isMobile]);
+
+  // On mobile: show progressive slice. On desktop: keep parent pagination.
+  const displayedTeachings = isMobile
+    ? filteredTeachings.slice(0, visibleCount)
+    : filteredTeachings;
+  const remaining = Math.max(0, filteredTeachings.length - visibleCount);
+
   return (
     <div className="space-y-6 w-full">
       <TeachingFilters
