@@ -326,6 +326,8 @@ export default function SoulManagement() {
       if (soulDate > endDate) return false;
     }
     
+    if (unassignedFamilyOnly && (soul as any).serviceFamilyId) return false;
+
     return true;
   });
 
