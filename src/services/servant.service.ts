@@ -411,4 +411,154 @@ export class ServantService {
       throw error;
     }
   }
+
+  /**
+   * Find existing servants for a department restricted to a list of source ids.
+   * Returns a Set of sourceId already present in the department.
+   */
+  private static async getExistingSourceIds(
+    departmentId: string,
+    sourceType: ServantSourceType,
+    sourceIds: string[]
+  ): Promise<Set<string>> {
+    const existing = new Set<string>();
+    if (sourceIds.length === 0) return existing;
+
+    // Firestore "in" supports up to 10 values; chunk it.
+    const chunks: string[][] = [];
+    for (let i = 0; i < sourceIds.length; i += 10) {
+      chunks.push(sourceIds.slice(i, i + 10));
+    }
+
+    for (const chunk of chunks) {
+      const q = query(
+        collection(db, 'servants'),
+        where('departmentId', '==', departmentId),
+        where('sourceType', '==', sourceType),
+        where('sourceId', 'in', chunk)
+      );
+      const snap = await getDocs(q);
+      snap.docs.forEach(d => {
+        const data = d.data() as any;
+        if (data.sourceId) existing.add(data.sourceId);
+      });
+    }
+    return existing;
+  }
+
+  /**
+   * Import servants from existing souls.
+   */
+  static async importFromSouls(soulIds: string[], departmentId: string): Promise<ImportResult> {
+    const result: ImportResult = { imported: 0, skipped: [] };
+    if (soulIds.length === 0 || !departmentId) return result;
+
+    const existing = await this.getExistingSourceIds(departmentId, 'soul', soulIds);
+
+    // Fetch souls in chunks of 10 (documentId in)
+    const chunks: string[][] = [];
+    for (let i = 0; i < soulIds.length; i += 10) {
+      chunks.push(soulIds.slice(i, i + 10));
+    }
+
+    for (const chunk of chunks) {
+      const snap = await getDocs(
+        query(collection(db, 'souls'), where(documentId(), 'in', chunk))
+      );
+
+      for (const soulDoc of snap.docs) {
+        const soul = soulDoc.data() as any;
+        const name = soul.fullName || 'Inconnu';
+
+        if (existing.has(soulDoc.id)) {
+          result.skipped.push({ name, reason: 'Déjà serviteur dans ce département' });
+          continue;
+        }
+
+        try {
+          await addDoc(collection(db, 'servants'), {
+            fullName: (soul.fullName || '').trim(),
+            nickname: soul.nickname?.trim() || null,
+            gender: soul.gender || 'male',
+            phone: soul.phone || '',
+            email: soul.email?.trim() || null,
+            departmentId,
+            isHead: false,
+            isShepherd: false,
+            shepherdId: null,
+            sourceType: 'soul',
+            sourceId: soulDoc.id,
+            originalSoulId: soulDoc.id,
+            promotionDate: new Date(),
+            status: 'active',
+            createdAt: new Date(),
+            updatedAt: new Date()
+          });
+          result.imported++;
+        } catch (e: any) {
+          console.error('Error importing soul as servant:', e);
+          result.skipped.push({ name, reason: e?.message || 'Erreur inconnue' });
+        }
+      }
+    }
+
+    return result;
+  }
+
+  /**
+   * Import servants from existing users (any role).
+   */
+  static async importFromUsers(userDocIds: string[], departmentId: string): Promise<ImportResult> {
+    const result: ImportResult = { imported: 0, skipped: [] };
+    if (userDocIds.length === 0 || !departmentId) return result;
+
+    const existing = await this.getExistingSourceIds(departmentId, 'user', userDocIds);
+
+    const chunks: string[][] = [];
+    for (let i = 0; i < userDocIds.length; i += 10) {
+      chunks.push(userDocIds.slice(i, i + 10));
+    }
+
+    for (const chunk of chunks) {
+      const snap = await getDocs(
+        query(collection(db, 'users'), where(documentId(), 'in', chunk))
+      );
+
+      for (const userDoc of snap.docs) {
+        const user = userDoc.data() as any;
+        const name = user.fullName || 'Inconnu';
+
+        if (existing.has(userDoc.id)) {
+          result.skipped.push({ name, reason: 'Déjà serviteur dans ce département' });
+          continue;
+        }
+
+        try {
+          await addDoc(collection(db, 'servants'), {
+            fullName: (user.fullName || '').trim(),
+            nickname: user.nickname?.trim() || null,
+            gender: user.gender || 'male',
+            phone: user.phone || '',
+            email: user.email?.trim() || null,
+            departmentId,
+            isHead: false,
+            isShepherd: user.role === 'shepherd' || !!user.businessProfiles?.some?.((p: any) => p.type === 'shepherd'),
+            shepherdId: null,
+            sourceType: 'user',
+            sourceId: userDoc.id,
+            originalSoulId: null,
+            status: 'active',
+            createdAt: new Date(),
+            updatedAt: new Date()
+          });
+          result.imported++;
+        } catch (e: any) {
+          console.error('Error importing user as servant:', e);
+          result.skipped.push({ name, reason: e?.message || 'Erreur inconnue' });
+        }
+      }
+    }
+
+    return result;
+  }
 }
