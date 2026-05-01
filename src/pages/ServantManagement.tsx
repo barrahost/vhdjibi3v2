@@ -3,9 +3,10 @@ import ServantForm from '../components/servants/ServantForm';
 import ServantList from '../components/servants/ServantList';
 import DepartmentLeaderDashboard from '../components/servants/DepartmentLeaderDashboard';
 import BulkDeleteServantModal from '../components/servants/BulkDeleteServantModal';
+import { ImportServantsModal } from '../components/servants/ImportServantsModal';
 import { useAuth } from '../contexts/AuthContext';
 import { usePermissions } from '../hooks/usePermissions';
-import { Plus, Users, Trash2 } from 'lucide-react';
+import { Plus, Users, Trash2, Download } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { ServantService } from '../services/servant.service';
@@ -18,6 +19,7 @@ export default function ServantManagement() {
   const [selectedServantIds, setSelectedServantIds] = useState<string[]>([]);
   const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
   const [servantsToDelete, setServantsToDelete] = useState<Servant[]>([]);
+  const [showImportModal, setShowImportModal] = useState(false);
   const { user } = useAuth();
   const { hasPermission } = usePermissions();
 
@@ -80,6 +82,16 @@ export default function ServantManagement() {
             >
               <Trash2 className="w-4 h-4" />
               Supprimer la sélection ({selectedServantIds.length})
+            </Button>
+          )}
+          {(canManageServants || canManageDepartmentServants) && (
+            <Button
+              onClick={() => setShowImportModal(true)}
+              variant="outline"
+              className="flex items-center gap-2"
+            >
+              <Download className="w-4 h-4" />
+              Importer des serviteurs
             </Button>
           )}
           {canManageServants && (
