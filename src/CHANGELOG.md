@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.7.23] - Profil principal multi-rôles & nettoyage du login
+
+### Added
+- Possibilité de définir un **profil principal** pour les utilisateurs ayant plusieurs rôles ; ce profil est utilisé par défaut à la connexion
+- Affichage de tous les rôles d'un utilisateur (badges multiples) dans la liste de gestion des utilisateurs, avec mise en évidence du profil principal (★)
+
+### Changed
+- Le sélecteur d'utilisateur de la page de connexion n'affiche plus le badge de rôle (nom + téléphone uniquement)
+- L'utilisateur peut toujours basculer entre ses rôles via le sélecteur de profil dans l'en-tête après connexion
+
+
 ## [1.7.22] - Automatisation de la Mise à la Une pour les Audios
 
 ### Changed
