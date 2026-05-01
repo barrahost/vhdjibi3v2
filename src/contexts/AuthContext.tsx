@@ -428,7 +428,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       // Update localStorage
       localStorage.setItem('user', JSON.stringify(updatedUser));
-      
+      localStorage.setItem('activeProfileType', profileType);
+
       const profileLabel = getRoleLabel(profileType as BaseRole);
       toast.success(`Profil basculé vers: ${profileLabel}`);
     } catch (error) {
