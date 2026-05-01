@@ -130,6 +130,23 @@ export function ADNDashboard() {
 
       <PendingActionsWidget role="adn" />
 
+      {/* Sélecteur de période */}
+      <div className="flex gap-2 flex-wrap">
+        {(['7d', '30d', '90d', '365d', 'all'] as Period[]).map(p => (
+          <button
+            key={p}
+            onClick={() => setPeriod(p)}
+            className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+              period === p
+                ? 'bg-[#00665C] text-white'
+                : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
+            }`}
+          >
+            {periodLabel[p]}
+          </button>
+        ))}
+      </div>
+
       {/* Hero card — métrique principale */}
       <div className="bg-gradient-to-br from-[#00665C] to-[#00887A] rounded-2xl p-6 text-white shadow-lg">
         <p className="text-sm font-medium opacity-80">Total des âmes enregistrées</p>
@@ -159,10 +176,10 @@ export function ADNDashboard() {
       {/* Cartes secondaires */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <StatCard
-          title="Nouvelles âmes (30 j)"
-          value={stats.newSoulsThisMonth}
+          title={`Nouvelles âmes (${periodLabel[period]})`}
+          value={stats.newSoulsInPeriod}
           icon={UserCheck}
-          trend={`${stats.totalSouls ? ((stats.newSoulsThisMonth / stats.totalSouls) * 100).toFixed(1) : '0'}%`}
+          trend={`${stats.totalSouls ? ((stats.newSoulsInPeriod / stats.totalSouls) * 100).toFixed(1) : '0'}%`}
           trendLabel="du total"
           iconClassName="text-emerald-600"
           onClick={() => navigate('/souls?filter=this_month')}
