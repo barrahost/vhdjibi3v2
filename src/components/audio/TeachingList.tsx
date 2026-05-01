@@ -192,6 +192,7 @@ export function TeachingList({
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }
