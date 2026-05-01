@@ -19,35 +19,7 @@ interface UserSelectProps {
   onChange: (phone: string, userType: UserType) => void;
 }
 
-const getRoleBadgeColor = (role: string) => {
-  switch (role) {
-    case 'super_admin':
-      return 'bg-purple-100 text-purple-800';
-    case 'admin':
-      return 'bg-red-100 text-red-800';
-    case 'shepherd':
-      return 'bg-green-100 text-green-800';
-    case 'adn':
-      return 'bg-yellow-100 text-yellow-800';
-    default:
-      return 'bg-gray-100 text-gray-800';
-  }
-};
-
-const getRoleDisplayName = (role: string) => {
-  switch (role) {
-    case 'super_admin':
-      return 'Super Admin';
-    case 'admin':
-      return 'Admin';
-    case 'shepherd':
-      return 'Berger';
-    case 'adn':
-      return 'ADN';
-    default:
-      return role;
-  }
-};
+// Role badges intentionally removed from the login selector for privacy/cleanliness.
 
 const getUserType = (role: string): UserType => {
   switch (role) {
