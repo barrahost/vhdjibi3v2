@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.7.47] - Contrôles volume visibles dès la tablette (Lecteur audio)
+
+### Changed
+- Le **contrôle de volume** du lecteur audio est désormais visible dès la **tablette** (≥ 768px) au lieu du desktop uniquement (≥ 1024px). La vitesse de lecture l'était déjà.
+
 ## [1.7.46] - Side-drawer tablette pour la fiche détail (Replay)
 
 ### Added
