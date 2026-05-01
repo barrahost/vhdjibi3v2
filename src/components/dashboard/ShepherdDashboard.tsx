@@ -115,10 +115,9 @@ export function ShepherdDashboard() {
           return lastInteraction < attentionThreshold;
         }).length;
 
-        // Récupérer les interactions récentes
+        // Trier toutes les interactions (utilisé pour le calcul du dernier contact)
         const sortedInteractions = [...interactionsData]
-          .sort((a, b) => b.date.getTime() - a.date.getTime())
-          .slice(0, 5);
+          .sort((a, b) => b.date.getTime() - a.date.getTime());
 
         setStats({
           totalSouls,
@@ -142,6 +141,32 @@ export function ShepherdDashboard() {
 
     loadDashboardData();
   }, [user]);
+
+  const soulsWithLastContact = useMemo(() => {
+    return souls.map(soul => {
+      const soulInteractions = recentInteractions.filter(i => i.soulId === soul.id);
+      const lastContact = soulInteractions.length > 0
+        ? new Date(Math.max(...soulInteractions.map(i => i.date.getTime())))
+        : null;
+      const daysSince = lastContact
+        ? Math.floor((Date.now() - lastContact.getTime()) / (1000 * 60 * 60 * 24))
+        : null;
+      return { ...soul, lastContact, daysSince };
+    }).sort((a, b) => {
+      if (a.daysSince === null && b.daysSince === null) return 0;
+      if (a.daysSince === null) return -1;
+      if (b.daysSince === null) return 1;
+      return b.daysSince - a.daysSince;
+    });
+  }, [souls, recentInteractions]);
+
+  const getContactBadge = (daysSince: number | null) => {
+    if (daysSince === null) return { label: 'Jamais contacté', color: 'bg-gray-100 text-gray-600' };
+    if (daysSince === 0) return { label: "Aujourd'hui", color: 'bg-green-100 text-green-700' };
+    if (daysSince <= 7) return { label: `Il y a ${daysSince} j`, color: 'bg-green-100 text-green-700' };
+    if (daysSince <= 14) return { label: `Il y a ${daysSince} j`, color: 'bg-yellow-100 text-yellow-700' };
+    return { label: `Il y a ${daysSince} j`, color: 'bg-red-100 text-red-700' };
+  };
 
   if (loading) {
     return (
