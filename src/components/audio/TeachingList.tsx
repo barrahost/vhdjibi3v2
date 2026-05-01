@@ -58,58 +58,77 @@ export function TeachingList({
   const remaining = Math.max(0, filteredTeachings.length - visibleCount);
 
   return (
-    <div className="space-y-6 w-full">
-      <TeachingFilters
-        searchTerm={searchTerm}
-        onSearchChange={setSearchTerm}
-        selectedCategory={selectedCategory}
-        onCategoryChange={setSelectedCategory}
-        selectedSpeaker={selectedSpeaker}
-        onSpeakerChange={setSelectedSpeaker}
-        categories={categories}
-        speakers={speakers}
-      />
-
-      <div className="space-y-2 w-full">
-        {filteredTeachings.length === 0 ? (
-          <div className="text-center py-8 bg-white rounded-lg border">
-            <p className="text-gray-500">Aucun audio trouvé</p>
-          </div>
-        ) : (
-          <>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-1 gap-4">
-              {displayedTeachings.map(teaching => (
-                <TeachingCard
-                  key={teaching.id}
-                  id={teaching.id}
-                  title={teaching.title}
-                  speaker={teaching.speaker}
-                  date={teaching.date}
-                  duration={teaching.duration}
-                  category={teaching.category}
-                  theme={teaching.theme}
-                  thumbnail_url={teaching.thumbnail_url}
-                  plays={teaching.plays}
-                  isSelected={selectedTeaching?.id === teaching.id}
-                  isPlaying={selectedTeaching?.id === teaching.id}
-                  onClick={() => onSelect(teaching)}
-                />
-              ))}
-            </div>
-
-            {/* Mobile only: load more */}
-            {isMobile && remaining > 0 && (
-              <button
-                type="button"
-                onClick={() => setVisibleCount((c) => c + MOBILE_PAGE_SIZE)}
-                className="w-full py-3 text-sm font-medium text-[#00665C] border border-[#00665C] rounded-xl mt-4 hover:bg-[#00665C]/5 transition-colors"
-              >
-                Charger plus ({remaining} restant{remaining > 1 ? 's' : ''})
-              </button>
-            )}
-          </>
-        )}
+    <div className="w-full xl:grid xl:grid-cols-[224px_1fr] xl:gap-6 xl:items-start space-y-6 xl:space-y-0">
+      {/* Sidebar filters — desktop XL only */}
+      <div className="hidden xl:block sticky top-4 self-start">
+        <TeachingFilters
+          variant="sidebar"
+          searchTerm={searchTerm}
+          onSearchChange={setSearchTerm}
+          selectedCategory={selectedCategory}
+          onCategoryChange={setSelectedCategory}
+          selectedSpeaker={selectedSpeaker}
+          onSpeakerChange={setSelectedSpeaker}
+          categories={categories}
+          speakers={speakers}
+        />
       </div>
+
+      <div className="space-y-6 min-w-0">
+        {/* Inline filters — mobile, tablet, lg (hidden at XL) */}
+        <div className="xl:hidden">
+          <TeachingFilters
+            searchTerm={searchTerm}
+            onSearchChange={setSearchTerm}
+            selectedCategory={selectedCategory}
+            onCategoryChange={setSelectedCategory}
+            selectedSpeaker={selectedSpeaker}
+            onSpeakerChange={setSelectedSpeaker}
+            categories={categories}
+            speakers={speakers}
+          />
+        </div>
+
+        <div className="space-y-2 w-full">
+          {filteredTeachings.length === 0 ? (
+            <div className="text-center py-8 bg-white rounded-lg border">
+              <p className="text-gray-500">Aucun audio trouvé</p>
+            </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-1 gap-4">
+                {displayedTeachings.map(teaching => (
+                  <TeachingCard
+                    key={teaching.id}
+                    id={teaching.id}
+                    title={teaching.title}
+                    speaker={teaching.speaker}
+                    date={teaching.date}
+                    duration={teaching.duration}
+                    category={teaching.category}
+                    theme={teaching.theme}
+                    thumbnail_url={teaching.thumbnail_url}
+                    plays={teaching.plays}
+                    isSelected={selectedTeaching?.id === teaching.id}
+                    isPlaying={selectedTeaching?.id === teaching.id}
+                    onClick={() => onSelect(teaching)}
+                  />
+                ))}
+              </div>
+
+              {/* Mobile only: load more */}
+              {isMobile && remaining > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setVisibleCount((c) => c + MOBILE_PAGE_SIZE)}
+                  className="w-full py-3 text-sm font-medium text-[#00665C] border border-[#00665C] rounded-xl mt-4 hover:bg-[#00665C]/5 transition-colors"
+                >
+                  Charger plus ({remaining} restant{remaining > 1 ? 's' : ''})
+                </button>
+              )}
+            </>
+          )}
+        </div>
       
       {/* Pagination — desktop only (mobile uses "Charger plus") */}
       {!isMobile && totalPages > 1 && (
