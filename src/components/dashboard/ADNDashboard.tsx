@@ -9,6 +9,7 @@ import { SoulEvolutionChart } from './stats/SoulEvolutionChart';
 import toast from 'react-hot-toast';
 
 export function ADNDashboard() {
+  const navigate = useNavigate();
   const [stats, setStats] = useState({
     totalSouls: 0,
     activeAssignedSouls: 0,
