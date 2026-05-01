@@ -6,6 +6,7 @@ import { Soul, Interaction } from '../../types/database.types';
 import { StatCard } from './stats/StatCard';
 import { Users, MessageSquare, AlertTriangle } from 'lucide-react';
 import { formatDate } from '../../utils/dateUtils';
+import PendingActionsWidget from './PendingActionsWidget';
 import toast from 'react-hot-toast';
 
 export function ShepherdDashboard() {
