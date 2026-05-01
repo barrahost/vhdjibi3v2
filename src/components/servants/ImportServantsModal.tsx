@@ -74,7 +74,7 @@ export function ImportServantsModal({ isOpen, onClose, fixedDepartmentId, onImpo
 
   // Load souls / users when needed
   useEffect(() => {
-    if (!isOpen || !selectedDept) return;
+    if (!isOpen || !selectedDept || tab === 'manual') return;
 
     const load = async () => {
       setLoading(true);
