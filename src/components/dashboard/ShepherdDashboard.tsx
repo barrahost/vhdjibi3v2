@@ -18,6 +18,7 @@ export function ShepherdDashboard() {
   });
   const [recentInteractions, setRecentInteractions] = useState<Interaction[]>([]);
   const [souls, setSouls] = useState<Soul[]>([]);
+  const [shepherdId, setShepherdId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
