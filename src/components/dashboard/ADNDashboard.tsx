@@ -7,6 +7,7 @@ import { Users, UserCheck, UserX, User, AlertTriangle } from 'lucide-react';
 import { RecentActivity } from './stats/RecentActivity';
 import { SoulEvolutionChart } from './stats/SoulEvolutionChart';
 import PendingActionsWidget from './PendingActionsWidget';
+import { useServiceFamilies } from '../../hooks/useServiceFamilies';
 import toast from 'react-hot-toast';
 
 type Period = '7d' | '30d' | '90d' | '365d' | 'all';
