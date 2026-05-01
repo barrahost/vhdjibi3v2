@@ -75,15 +75,16 @@ export class SMSService {
     }
   }
 
-  static async getTemplates(): Promise<any[]> {
+  static async getTemplates(category?: string): Promise<any[]> {
     try {
-      const templatesQuery = query(
-        collection(db, 'smsTemplates'),
-        where('status', '==', 'active'),
-        where('category', '==', 'Suivi'),
-        orderBy('title', 'asc')
-      );
-      
+      const constraints: any[] = [where('status', '==', 'active')];
+      if (category) {
+        constraints.push(where('category', '==', category));
+      }
+      constraints.push(orderBy('title', 'asc'));
+
+      const templatesQuery = query(collection(db, 'smsTemplates'), ...constraints);
+
       const snapshot = await getDocs(templatesQuery);
       return snapshot.docs.map(doc => ({
         id: doc.id,
