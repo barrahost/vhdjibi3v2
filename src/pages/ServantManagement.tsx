@@ -27,6 +27,12 @@ export default function ServantManagement() {
   const canManageDepartmentServants = hasPermission('MANAGE_DEPARTMENT_SERVANTS');
   const isAdmin = hasPermission('*') || canManageServants;
 
+  // Département du responsable connecté (verrouille la cible d'import pour les non-admins)
+  const leaderDepartmentId = (user as any)?.businessProfiles?.find(
+    (p: any) => p.type === 'department_leader' && p.departmentId
+  )?.departmentId as string | undefined;
+  const canShowImportButton = isAdmin || (canManageDepartmentServants && !!leaderDepartmentId);
+
   const handleBulkDelete = async () => {
     // Get all servants data from the window object (set by ServantList)
     const allServants = (window as any).currentServants as Servant[] || [];
