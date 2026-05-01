@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.7.27] - Verrouillage du département cible à l'import (responsables)
+
+### Fixed
+- Un responsable de département ne peut plus choisir un autre département cible dans la modale « Importer des serviteurs » : la cible est automatiquement verrouillée sur son propre département. Le sélecteur reste disponible pour les administrateurs.
+
+
 ## [1.7.26] - Correction de l'import de serviteurs
 
 ### Fixed
