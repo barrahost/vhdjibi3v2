@@ -214,7 +214,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (userData.businessProfiles && userData.businessProfiles.length > 0) {
         // Check if any business profile matches the password
         for (const profile of userData.businessProfiles) {
-          if (profile.type === 'shepherd' || profile.type === 'department_leader') {
+          if (profile.type === 'shepherd' || profile.type === 'department_leader' || profile.type === 'family_leader') {
             isPasswordValid = password === DEFAULT_PASSWORDS.SHEPHERD;
           } else if (profile.type === 'adn') {
             isPasswordValid = password === DEFAULT_PASSWORDS.ADN;
@@ -230,7 +230,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       // Fallback to old role system for backward compatibility
       else if (userData.role) {
-        if (['shepherd', 'adn', 'department_leader'].includes(userData.role)) {
+        if (['shepherd', 'adn', 'department_leader', 'family_leader'].includes(userData.role)) {
           const defaultPassword = userData.role === 'adn' 
             ? DEFAULT_PASSWORDS.ADN 
             : DEFAULT_PASSWORDS.SHEPHERD;
