@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.7.25] - Création manuelle de serviteurs depuis le modal d'import
+
+### Added
+- Nouvel onglet **« Créer manuellement »** dans le modal d'import des serviteurs : permet aux chefs de département (et aux admins) d'ajouter un serviteur qui n'existe ni dans la liste des âmes ni dans celle des utilisateurs
+- Le département est verrouillé sur celui du chef de département lorsqu'il ouvre le modal depuis son tableau de bord
+- L'option « Responsable de département » dans la création manuelle est réservée aux administrateurs
+
+### Changed
+- Le formulaire d'ajout de serviteur (`ServantForm`) utilise désormais `ServantService.createServant`, avec une unicité téléphone/email **scopée au département** (une même personne peut être serviteur dans plusieurs départements sans blocage)
+
+
 ## [1.7.24] - Import de serviteurs depuis les âmes et utilisateurs
 
 ### Added
