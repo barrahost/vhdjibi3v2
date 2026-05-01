@@ -59,7 +59,8 @@ export default function ReplayTeachings() {
   const [showInfoModal, setShowInfoModal] = useState(false);
   const [currentSlide, setCurrentSlide] = useState(0);
   const featuredSliderRef = useRef<HTMLDivElement>(null);
-  const isMobile = useMediaQuery('(max-width: 768px)');
+  const isMobile = useMediaQuery('(max-width: 767px)');
+  const isTablet = useMediaQuery('(min-width: 768px) and (max-width: 1023px)');
   const ITEMS_PER_PAGE = 12;
   
   // Audio Player state
@@ -402,6 +403,43 @@ export default function ReplayTeachings() {
                       Fermer
                     </button>
                   </div>
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* Tablet view: side-drawer from the right for selected teaching */}
+          {isTablet && (
+            <>
+              {/* Overlay */}
+              <div
+                onClick={() => setSelectedTeaching(null)}
+                className={`fixed inset-0 z-30 bg-black/30 backdrop-blur-sm transition-opacity duration-300 ${
+                  selectedTeaching ? 'opacity-100' : 'opacity-0 pointer-events-none'
+                }`}
+                aria-hidden="true"
+              />
+              {/* Drawer */}
+              <div
+                role="dialog"
+                aria-modal="true"
+                className={`fixed top-0 right-0 h-full w-[380px] max-w-[90vw] z-40 bg-white shadow-2xl transform transition-transform duration-300 overflow-y-auto ${
+                  selectedTeaching ? 'translate-x-0' : 'translate-x-full'
+                }`}
+                style={{ paddingBottom: isAudioPlayerVisible ? '80px' : '16px' }}
+              >
+                <div className="sticky top-0 bg-white border-b border-gray-100 px-4 py-3 flex items-center justify-between z-10">
+                  <span className="text-sm font-semibold text-[#00665C]">Détails de l'enseignement</span>
+                  <button
+                    onClick={() => setSelectedTeaching(null)}
+                    className="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-500 hover:text-[#00665C] transition-colors"
+                    aria-label="Fermer"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+                <div className="p-4">
+                  {selectedTeaching && <TeachingDetails teaching={selectedTeaching} />}
                 </div>
               </div>
             </>
