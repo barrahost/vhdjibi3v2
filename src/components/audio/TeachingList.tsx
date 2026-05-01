@@ -27,6 +27,8 @@ export function TeachingList({
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
   const [selectedSpeaker, setSelectedSpeaker] = useState('');
+  const isMobile = useMediaQuery('(max-width: 768px)');
+  const [visibleCount, setVisibleCount] = useState(MOBILE_PAGE_SIZE);
 
   // Get unique categories and speakers
   const categories = [...new Set(teachings.map(t => t.category))];
