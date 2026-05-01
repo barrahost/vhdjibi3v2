@@ -4,9 +4,12 @@ import { db } from '../../lib/firebase';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/button';
 import { Checkbox } from '../ui/checkbox';
-import { Search, Heart, Users as UsersIcon, Download, Loader2 } from 'lucide-react';
+import { Search, Heart, Users as UsersIcon, Download, Loader2, UserPlus } from 'lucide-react';
 import { useDepartments } from '../../hooks/useDepartments';
 import { ServantService } from '../../services/servant.service';
+import { validatePhoneNumber } from '../../utils/phoneValidation';
+import { GenderRadioGroup } from '../ui/GenderRadioGroup';
+import { usePermissions } from '../../hooks/usePermissions';
 import toast from 'react-hot-toast';
 
 interface ImportServantsModalProps {
@@ -34,10 +37,12 @@ interface UserRow {
   alreadyServant: boolean;
 }
 
-type Tab = 'souls' | 'users';
+type Tab = 'souls' | 'users' | 'manual';
 
 export function ImportServantsModal({ isOpen, onClose, fixedDepartmentId, onImported }: ImportServantsModalProps) {
   const { departments } = useDepartments();
+  const { hasPermission } = usePermissions();
+  const canSetHead = hasPermission('MANAGE_SERVANTS') || hasPermission('*');
   const [tab, setTab] = useState<Tab>('souls');
   const [selectedDept, setSelectedDept] = useState<string>(fixedDepartmentId || '');
   const [search, setSearch] = useState('');
@@ -46,6 +51,17 @@ export function ImportServantsModal({ isOpen, onClose, fixedDepartmentId, onImpo
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
   const [importing, setImporting] = useState(false);
+
+  // Manual create form state
+  const [manualForm, setManualForm] = useState({
+    fullName: '',
+    nickname: '',
+    gender: 'male' as 'male' | 'female',
+    phone: '',
+    email: '',
+    isHead: false,
+  });
+  const [creatingManual, setCreatingManual] = useState(false);
 
   useEffect(() => {
     if (fixedDepartmentId) setSelectedDept(fixedDepartmentId);
