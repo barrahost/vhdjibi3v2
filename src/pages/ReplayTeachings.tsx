@@ -407,7 +407,7 @@ export default function ReplayTeachings() {
             </>
           )}
           
-          <div className="w-full lg:w-2/3 space-y-8">
+          <div className="w-full min-w-0 space-y-8">
             {/* Featured Teachings Section */}
             {featuredTeachings.length > 0 && (
               <div className="bg-white rounded-lg shadow-sm border p-6">
