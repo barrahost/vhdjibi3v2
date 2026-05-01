@@ -110,7 +110,7 @@ export default function Navigation({ onItemClick }: NavigationProps) {
     }
 
     // Build department management menu - only for department leaders
-    if ((activeRole === ROLES.DEPARTMENT_LEADER || userRole === ROLES.DEPARTMENT_LEADER) && (hasPermission(PERMISSIONS.MANAGE_SERVANTS) || hasPermission(PERMISSIONS.MANAGE_DEPARTMENT_SERVANTS))) {
+    if (activeRole === ROLES.DEPARTMENT_LEADER && (hasPermission(PERMISSIONS.MANAGE_SERVANTS) || hasPermission(PERMISSIONS.MANAGE_DEPARTMENT_SERVANTS))) {
       const departmentChildren = [];
       
       if (hasPermission(PERMISSIONS.MANAGE_SERVANTS) || hasPermission(PERMISSIONS.MANAGE_DEPARTMENT_SERVANTS)) {
