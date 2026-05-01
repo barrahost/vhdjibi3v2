@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { collection, query, where, orderBy, getDocs } from 'firebase/firestore';
+import { useState, useEffect, useMemo } from 'react';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { Modal } from '../ui/Modal';
 import { Soul } from '../../types/database.types';
@@ -8,7 +8,7 @@ import { SMSService } from '../../services/sms.service';
 import { useAuth } from '../../contexts/AuthContext';
 import toast from 'react-hot-toast';
 
-const MAX_SMS_LENGTH = 125; // Reduced to 125 to allow for appending user info
+const SMS_HARD_LIMIT = 160;
 
 interface UndecidedSoulMessageModalProps {
   soul: Soul;
@@ -26,24 +26,15 @@ export default function UndecidedSoulMessageModal({
   const [templates, setTemplates] = useState<SMSTemplate[]>([]);
   const [message, setMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [, setLoading] = useState(true);
   const [userInfo, setUserInfo] = useState({ fullName: '', phone: '' });
 
-  // Charger les modèles actifs
+  // Charger les modèles actifs (catégorie "Suivi")
   useEffect(() => {
     const loadTemplates = async () => {
       try {
-        const templatesQuery = query(
-          collection(db, 'smsTemplates'),
-          where('status', '==', 'active'),
-          orderBy('title', 'asc')
-        );
-        
-        const snapshot = await getDocs(templatesQuery);
-        setTemplates(snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        } as SMSTemplate)));
+        const data = await SMSService.getTemplates('Suivi');
+        setTemplates(data as SMSTemplate[]);
       } catch (error) {
         console.error('Error loading templates:', error);
         toast.error('Erreur lors du chargement des modèles');
@@ -61,7 +52,6 @@ export default function UndecidedSoulMessageModal({
       if (!user) return;
       
       try {
-        // Get user info from Firestore
         const userQuery = query(
           collection(db, 'users'),
           where('uid', '==', user.uid)
@@ -91,6 +81,27 @@ export default function UndecidedSoulMessageModal({
     }
   };
 
+  // Construire la signature (avec indicatif +225 conservé)
+  const userSignature = useMemo(() => {
+    const nameParts = userInfo.fullName.split(' ').filter(Boolean);
+    const signatureName = nameParts.slice(0, 2).join(' ');
+    const signaturePhone = userInfo.phone || '';
+    return `\n- ${signatureName} (${signaturePhone})`;
+  }, [userInfo]);
+
+  // Aperçu du message final tel que reçu
+  const messagePreview = useMemo(() => {
+    if (!message) return '';
+    const exampleName = soul.fullName;
+    const exampleNickname = soul.nickname || soul.fullName.split(' ')[0];
+    return message
+      .replace(/\[nom\]/g, exampleName)
+      .replace(/\[surnom\]/g, exampleNickname)
+      + userSignature;
+  }, [message, userSignature, soul]);
+
+  const previewCharCount = messagePreview.length;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -99,8 +110,12 @@ export default function UndecidedSoulMessageModal({
       return;
     }
 
+    if (previewCharCount > SMS_HARD_LIMIT) {
+      toast.error('Le message final dépasse 160 caractères. Veuillez le raccourcir.');
+      return;
+    }
+
     try {
-      // Check if we have sufficient credits
       const creditCheck = await SMSService.checkSufficientCredits();
       if (!creditCheck.sufficient) {
         toast.error('Crédit SMS insuffisant. Veuillez contacter l\'administrateur pour recharger le crédit.');
@@ -109,18 +124,6 @@ export default function UndecidedSoulMessageModal({
       
       setIsSending(true);
 
-      // Get user surname (first part of fullName)
-      // Get first two names from user's full name (or just one if that's all they have)
-      const nameParts = userInfo.fullName.split(' ');
-      const userSignatureName = nameParts.length > 1 
-        ? `${nameParts[0]} ${nameParts[1]}`
-        : nameParts[0] || '';
-      const userPhone = userInfo.phone.replace('+225', '') || '';
-      
-      // Append user info to the message
-      const userSignature = `\n- ${userSignatureName} (${userPhone})`;
-      
-      // Personalize message
       const personalizedMessage = message
         .replace(/\[nom\]/g, soul.fullName)
         .replace(/\[surnom\]/g, soul.nickname || soul.fullName.split(' ')[0])
@@ -179,20 +182,29 @@ export default function UndecidedSoulMessageModal({
           <textarea
             value={message}
             onChange={(e) => setMessage(e.target.value)}
-            maxLength={MAX_SMS_LENGTH}
             rows={4}
             className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-[#00665C] focus:border-[#00665C]"
             placeholder="Votre message..."
           />
-          <p className={`mt-1 text-sm ${
-            message.length > MAX_SMS_LENGTH - 20 ? 'text-amber-600' : 'text-gray-500'
-          }`}>
-            {message.length}/{MAX_SMS_LENGTH} caractères maximum
-          </p>
           <p className="mt-1 text-sm text-gray-500">
             Votre nom et numéro seront automatiquement ajoutés à la fin du message.
           </p>
         </div>
+
+        {message && (
+          <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+            <p className="text-xs font-medium text-gray-500 mb-2">
+              📱 Aperçu du message reçu par le destinataire :
+            </p>
+            <div className="bg-white rounded-lg border p-3 text-sm text-gray-800 whitespace-pre-wrap font-mono">
+              {messagePreview}
+            </div>
+            <p className={`mt-2 text-xs ${previewCharCount > SMS_HARD_LIMIT ? 'text-red-600 font-semibold' : 'text-gray-500'}`}>
+              Message final : {previewCharCount}/{SMS_HARD_LIMIT} caractères
+              {previewCharCount > SMS_HARD_LIMIT && ' ⚠️ Trop long — raccourcir le message'}
+            </p>
+          </div>
+        )}
 
         <div className="flex justify-end space-x-3">
           <button
@@ -205,7 +217,7 @@ export default function UndecidedSoulMessageModal({
           </button>
           <button
             type="submit"
-            disabled={isSending || !message.trim()}
+            disabled={isSending || !message.trim() || previewCharCount > SMS_HARD_LIMIT}
             className="px-4 py-2 text-sm font-medium text-white bg-[#00665C] hover:bg-[#00665C]/90 rounded-md disabled:opacity-50"
           >
             {isSending ? 'Envoi...' : 'Envoyer'}
