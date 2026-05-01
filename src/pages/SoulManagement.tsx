@@ -450,6 +450,18 @@ export default function SoulManagement() {
             onChange={setSelectedShepherdId}
           />
           
+          {unassignedFamilyOnly && (
+            <div className="flex items-center justify-between bg-amber-50 border border-amber-200 rounded-md px-3 py-2 text-sm text-amber-900">
+              <span>Filtre actif : âmes sans famille de service</span>
+              <button
+                onClick={() => setUnassignedFamilyOnly(false)}
+                className="text-amber-900 hover:underline font-medium"
+              >
+                Retirer
+              </button>
+            </div>
+          )}
+
           <div className="flex justify-end">
             <button
               onClick={() => setDateRange({ startDate: '', endDate: '' })}
