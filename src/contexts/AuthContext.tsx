@@ -298,7 +298,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       
       // Store user data
-      const userToStore = {
+      const userToStore: any = {
         id: userDoc.id,
         uid: userData.uid || userDoc.id,
         role: userData.role as Role,
