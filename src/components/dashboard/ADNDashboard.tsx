@@ -27,10 +27,12 @@ interface SoulLite {
   isUndecided?: boolean;
   gender?: string;
   status?: string;
+  serviceFamilyId?: string;
 }
 
 export function ADNDashboard() {
   const navigate = useNavigate();
+  const { families } = useServiceFamilies(true);
   const [souls, setSouls] = useState<SoulLite[]>([]);
   const [period, setPeriod] = useState<Period>('30d');
   const [loading, setLoading] = useState(true);
@@ -53,6 +55,7 @@ export function ADNDashboard() {
               isUndecided: d.isUndecided as boolean,
               gender: d.gender as string,
               status: d.status as string,
+              serviceFamilyId: d.serviceFamilyId as string | undefined,
             };
           });
           setSouls(data);
