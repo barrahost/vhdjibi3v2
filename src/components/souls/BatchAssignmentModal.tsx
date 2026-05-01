@@ -58,13 +58,30 @@ export default function BatchAssignmentModal({ isOpen, onClose, onSuccess }: Bat
   useEffect(() => {
     if (!isOpen) return;
 
-    const q = query(collection(db, 'users'), where('role', 'in', ['shepherd', 'admin']));
+    const q = query(collection(db, 'users'), where('status', '==', 'active'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const shepherdData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        fullName: doc.data().fullName,
-        role: doc.data().role
-      })) as ShepherdOption[];
+      const shepherdData = snapshot.docs
+        .map(doc => {
+          const data: any = doc.data();
+          const profiles: any[] = Array.isArray(data.businessProfiles) ? data.businessProfiles : [];
+          const fromRole = data.role === 'shepherd' || data.role === 'intern' || data.role === 'admin';
+          const fromProfiles = profiles.some(
+            (p: any) => (p?.type === 'shepherd' || p?.type === 'intern') && p?.isActive !== false
+          );
+          if (!fromRole && !fromProfiles) return null;
+          const isIntern =
+            data.role === 'intern' ||
+            (data.role !== 'shepherd' && data.role !== 'admin' &&
+              profiles.some((p: any) => p?.type === 'intern' && p?.isActive !== false));
+          const role: string = data.role === 'admin' ? 'admin' : (isIntern ? 'intern' : 'shepherd');
+          return {
+            id: doc.id,
+            fullName: (data.fullName || '') as string,
+            role,
+          };
+        })
+        .filter((s): s is { id: string; fullName: string; role: string } => s !== null && !!s.fullName)
+        .sort((a, b) => a.fullName.localeCompare(b.fullName)) as ShepherdOption[];
       setShepherds(shepherdData);
     });
 
