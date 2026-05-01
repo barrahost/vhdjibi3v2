@@ -90,7 +90,7 @@ export default function ServantManagement() {
               Supprimer la sélection ({selectedServantIds.length})
             </Button>
           )}
-          {(canManageServants || canManageDepartmentServants) && (
+          {canShowImportButton && (
             <Button
               onClick={() => setShowImportModal(true)}
               variant="outline"
