@@ -189,7 +189,7 @@ export default function ServantManagement() {
       <ImportServantsModal
         isOpen={showImportModal}
         onClose={() => setShowImportModal(false)}
-        fixedDepartmentId={isAdmin ? undefined : leaderDepartmentId}
+        fixedDepartmentId={isActingAsDepartmentLeader ? leaderDepartmentId : undefined}
       />
     </div>
   );
