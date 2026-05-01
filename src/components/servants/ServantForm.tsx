@@ -42,60 +42,16 @@ export default function ServantForm({ onSuccess }: { onSuccess?: () => void }) {
         return;
       }
 
-      // Vérifier si le numéro existe déjà
-      const phoneQuery = query(
-        collection(db, 'servants'),
-        where('phone', '==', phoneValidation.formattedNumber)
-      );
-      const phoneSnapshot = await getDocs(phoneQuery);
-      
-      if (!phoneSnapshot.empty) {
-        toast.error('Ce numéro de téléphone est déjà utilisé');
-        return;
-      }
-
-      // Vérifier si l'email existe déjà
-      if (formData.email) {
-        const emailQuery = query(
-          collection(db, 'servants'),
-          where('email', '==', formData.email.trim())
-        );
-        const emailSnapshot = await getDocs(emailQuery);
-        
-        if (!emailSnapshot.empty) {
-          toast.error('Cet email est déjà utilisé');
-          return;
-        }
-      }
-
-      // Si c'est un responsable, vérifier qu'il n'y a pas déjà un responsable pour ce département
-      if (formData.isHead) {
-        const headQuery = query(
-          collection(db, 'servants'),
-          where('departmentId', '==', formData.departmentId),
-          where('isHead', '==', true),
-          where('status', '==', 'active')
-        );
-        const headSnapshot = await getDocs(headQuery);
-        
-        if (!headSnapshot.empty) {
-          toast.error('Ce département a déjà un responsable');
-          return;
-        }
-      }
-
-      // Ajouter le serviteur
-      await addDoc(collection(db, 'servants'), {
+      // Création via le service (unicité scopée au département)
+      await ServantService.createServant({
         fullName: formData.fullName.trim(),
-        nickname: formData.nickname.trim() || null,
+        nickname: formData.nickname.trim() || undefined,
         gender: formData.gender,
-        phone: phoneValidation.formattedNumber,
-        email: formData.email.trim() || null,
+        phone: phoneValidation.formattedNumber || '',
+        email: formData.email.trim(),
         departmentId: formData.departmentId,
         isHead: formData.isHead,
-        status: 'active',
-        createdAt: new Date(),
-        updatedAt: new Date()
+        sourceType: 'manual',
       });
 
       // Synchroniser les profils si c'est un responsable
@@ -116,12 +72,12 @@ export default function ServantForm({ onSuccess }: { onSuccess?: () => void }) {
         departmentId: '',
         isHead: false
       });
-      
+
       toast.success('Serviteur ajouté avec succès');
       if (onSuccess) onSuccess();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error adding servant:', error);
-      toast.error('Erreur lors de l\'ajout du serviteur');
+      toast.error(error?.message || 'Erreur lors de l\'ajout du serviteur');
     } finally {
       setIsSubmitting(false);
     }
