@@ -463,6 +463,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       case 'shepherd': return 'Berger(e)';
       case 'adn': return 'ADN';
       case 'department_leader': return 'Responsable Département';
+      case 'family_leader': return 'Responsable de Famille';
       default: return 'Utilisateur';
     }
   };
