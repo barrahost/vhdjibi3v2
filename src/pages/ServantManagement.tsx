@@ -173,6 +173,11 @@ export default function ServantManagement() {
         servants={servantsToDelete}
         onConfirm={handleConfirmBulkDelete}
       />
+
+      <ImportServantsModal
+        isOpen={showImportModal}
+        onClose={() => setShowImportModal(false)}
+      />
     </div>
   );
 }
