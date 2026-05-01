@@ -312,6 +312,18 @@ export function ImportServantsModal({ isOpen, onClose, fixedDepartmentId, onImpo
             <UsersIcon className="w-4 h-4" />
             Depuis les utilisateurs
           </button>
+          <button
+            type="button"
+            onClick={() => setTab('manual')}
+            className={`flex items-center gap-2 px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+              tab === 'manual'
+                ? 'border-[#00665C] text-[#00665C]'
+                : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            <UserPlus className="w-4 h-4" />
+            Créer manuellement
+          </button>
         </div>
 
         <div className="relative">
