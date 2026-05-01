@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.7.30] - Import en masse d'âmes depuis Excel
+
+### Added
+- Nouveau bouton **« Importer Excel »** dans la page Gestion des Âmes (réservé aux rôles ADN, Admin et Super Admin).
+- Modal d'import en 3 étapes : sélection du fichier, aperçu/validation ligne par ligne, import par batch avec barre de progression.
+- Téléchargement d'un **modèle Excel vierge** avec en-têtes, exemples et listes déroulantes (Genre, Provenance, Âme indécise, Famille).
+- Détection automatique des doublons de téléphone et des familles de service introuvables.
+
 ## [1.7.29] - Restriction des champs Provenance et Famille de service
 
 ### Fixed
