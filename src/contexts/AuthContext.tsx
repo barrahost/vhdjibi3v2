@@ -391,6 +391,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     
     localStorage.removeItem('user');
+    localStorage.removeItem('activeProfileType');
     setState({
       user: null,
       loading: false,
