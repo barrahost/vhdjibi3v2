@@ -2,13 +2,16 @@ import { useState, useEffect } from 'react';
 import { doc, updateDoc, query, where, getDocs, collection } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { Modal } from '../ui/Modal';
+import { useUsersByProfile } from '../../hooks/useUsersByProfile';
 import toast from 'react-hot-toast';
 
 interface ServiceFamily {
   id: string;
   name: string;
   description: string;
-  leader: string;
+  leader?: string;
+  leaderId?: string;
+  shepherdIds?: string[];
 }
 
 interface EditServiceFamilyModalProps {
@@ -21,19 +24,37 @@ export default function EditServiceFamilyModal({ family, isOpen, onClose }: Edit
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    leader: ''
+    leaderId: '',
+    shepherdIds: [] as string[],
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const { users: leaderCandidates, loading: loadingLeaders } = useUsersByProfile([
+    'family_leader',
+    'shepherd',
+    'department_leader',
+  ]);
+  const { users: shepherds, loading: loadingShepherds } = useUsersByProfile(['shepherd']);
 
   useEffect(() => {
     if (family) {
       setFormData({
         name: family.name,
-        description: family.description,
-        leader: family.leader
+        description: family.description || '',
+        leaderId: family.leaderId || '',
+        shepherdIds: family.shepherdIds || [],
       });
     }
   }, [family]);
+
+  const toggleShepherd = (id: string) => {
+    setFormData(prev => ({
+      ...prev,
+      shepherdIds: prev.shepherdIds.includes(id)
+        ? prev.shepherdIds.filter(x => x !== id)
+        : [...prev.shepherdIds, id],
+    }));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,27 +66,30 @@ export default function EditServiceFamilyModal({ family, isOpen, onClose }: Edit
         return;
       }
 
-      // Vérifier si le nom existe déjà (sauf pour la même famille)
       if (formData.name.trim() !== family.name) {
         const nameQuery = query(
           collection(db, 'serviceFamilies'),
           where('name', '==', formData.name.trim())
         );
         const nameSnapshot = await getDocs(nameQuery);
-        
         if (!nameSnapshot.empty) {
           toast.error('Une famille avec ce nom existe déjà');
           return;
         }
       }
 
+      const leaderUser = leaderCandidates.find(u => u.id === formData.leaderId);
+
       const familyRef = doc(db, 'serviceFamilies', family.id);
       await updateDoc(familyRef, {
-        ...formData,
         name: formData.name.trim(),
+        description: formData.description.trim(),
+        leader: leaderUser?.fullName || family.leader || '', // legacy compat
+        leaderId: formData.leaderId || null,
+        shepherdIds: formData.shepherdIds,
         updatedAt: new Date()
       });
-      
+
       toast.success('Famille modifiée avec succès');
       onClose();
     } catch (error: any) {
@@ -77,11 +101,7 @@ export default function EditServiceFamilyModal({ family, isOpen, onClose }: Edit
   };
 
   return (
-    <Modal
-      isOpen={isOpen}
-      onClose={onClose}
-      title="Modifier une famille"
-    >
+    <Modal isOpen={isOpen} onClose={onClose} title="Modifier une famille">
       <form onSubmit={handleSubmit} className="p-6 space-y-6">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -98,14 +118,54 @@ export default function EditServiceFamilyModal({ family, isOpen, onClose }: Edit
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Chef de famille
+            Responsable de famille
           </label>
-          <input
-            type="text"
-            value={formData.leader}
-            onChange={(e) => setFormData(prev => ({ ...prev, leader: e.target.value }))}
+          <select
+            value={formData.leaderId}
+            onChange={(e) => setFormData(prev => ({ ...prev, leaderId: e.target.value }))}
+            disabled={loadingLeaders}
             className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-[#00665C] focus:border-[#00665C]"
-          />
+          >
+            <option value="">-- Sélectionner un responsable --</option>
+            {leaderCandidates.map(u => (
+              <option key={u.id} value={u.id}>
+                {u.fullName}{u.nickname ? ` (${u.nickname})` : ''}
+              </option>
+            ))}
+          </select>
+          {!formData.leaderId && family.leader && (
+            <p className="mt-1 text-xs text-amber-600">
+              Responsable actuel (texte legacy) : <strong>{family.leader}</strong> — sélectionnez un utilisateur pour le lier
+            </p>
+          )}
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Bergers de la famille
+          </label>
+          <div className="max-h-48 overflow-y-auto border border-gray-300 rounded-md p-2 space-y-1">
+            {loadingShepherds && <p className="text-sm text-gray-500">Chargement...</p>}
+            {!loadingShepherds && shepherds.length === 0 && (
+              <p className="text-sm text-gray-500">Aucun berger disponible</p>
+            )}
+            {shepherds.map(s => (
+              <label key={s.id} className="flex items-center gap-2 px-2 py-1 hover:bg-gray-50 rounded cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={formData.shepherdIds.includes(s.id)}
+                  onChange={() => toggleShepherd(s.id)}
+                  className="rounded text-[#00665C] focus:ring-[#00665C]"
+                />
+                <span className="text-sm text-gray-700">
+                  {s.fullName}{s.nickname ? ` (${s.nickname})` : ''}
+                </span>
+              </label>
+            ))}
+          </div>
+          <p className="mt-1 text-xs text-gray-500">
+            {formData.shepherdIds.length} berger(s) sélectionné(s)
+          </p>
         </div>
 
         <div>
