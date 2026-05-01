@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.7.60] - Sections visuelles renforcées (Responsable de famille)
+
+### Changed
+- Les en-têtes des sections **« À assigner »** et **« Assignées »** du tableau de bord Responsable de famille affichent désormais un **point coloré** (ambre pulsé pour les non assignées, vert pour les assignées) avec libellé en majuscules — pour mieux distinguer visuellement les deux groupes.
+
 ## [1.7.59] - StatCards uniformes (Responsable de famille)
 
 ### Changed
