@@ -73,13 +73,14 @@ export default function BatchAssignmentModal({ isOpen, onClose, onSuccess }: Bat
             data.role === 'intern' ||
             (data.role !== 'shepherd' && data.role !== 'admin' &&
               profiles.some((p: any) => p?.type === 'intern' && p?.isActive !== false));
+          const role: string = data.role === 'admin' ? 'admin' : (isIntern ? 'intern' : 'shepherd');
           return {
             id: doc.id,
-            fullName: data.fullName || '',
-            role: data.role === 'admin' ? 'admin' : (isIntern ? 'intern' : 'shepherd'),
+            fullName: (data.fullName || '') as string,
+            role,
           };
         })
-        .filter((s): s is ShepherdOption => s !== null && !!s.fullName)
+        .filter((s): s is { id: string; fullName: string; role: string } => s !== null && !!s.fullName)
         .sort((a, b) => a.fullName.localeCompare(b.fullName)) as ShepherdOption[];
       setShepherds(shepherdData);
     });
