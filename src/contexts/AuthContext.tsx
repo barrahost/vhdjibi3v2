@@ -96,23 +96,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         let activePermissions: Permission[] = [];
         
         // Check for business profiles first (new system)
-        if (userData.businessProfiles && Array.isArray(userData.businessProfiles)) {
+        if (userData.businessProfiles && Array.isArray(userData.businessProfiles) && userData.businessProfiles.length > 0) {
           availableRoles = userData.businessProfiles.map((profile: any) => profile.type);
-          
-          // Get active profiles
-          const activeProfiles = userData.businessProfiles.filter((profile: any) => profile.isActive);
-          const activeProfileTypes = activeProfiles.map((profile: any) => profile.type as BusinessProfileType);
-          
-          if (activeProfileTypes.length > 0) {
-            // Calculate cumulative permissions
-            activePermissions = getProfilePermissions(activeProfileTypes[0]) as Permission[];
-            // Set activeRole to shepherd if present, otherwise first active profile
-            activeRole = activeProfileTypes.includes('shepherd') ? 'shepherd' : activeProfileTypes[0];
+
+          // Restore last active profile from localStorage if still available
+          const savedActiveProfile = localStorage.getItem('activeProfileType') as BusinessProfileType | null;
+          let chosenProfile: BusinessProfileType | null = null;
+
+          if (savedActiveProfile && availableRoles.includes(savedActiveProfile as BaseRole)) {
+            chosenProfile = savedActiveProfile;
           } else {
-            // No active profiles, use old system permissions
-            activePermissions = getUserPermissions(userData.role as Role);
-            activeRole = userData.role as BaseRole;
+            // Fallback to the first profile marked active, otherwise the first one in the list
+            const activeProfiles = userData.businessProfiles.filter((p: any) => p.isActive);
+            chosenProfile = (activeProfiles[0]?.type ?? userData.businessProfiles[0]?.type) as BusinessProfileType;
           }
+
+          // Sync isActive flags so a single profile is active
+          userData.businessProfiles = userData.businessProfiles.map((p: any) => ({
+            ...p,
+            isActive: p.type === chosenProfile,
+          }));
+
+          activePermissions = getProfilePermissions(chosenProfile) as Permission[];
+          activeRole = chosenProfile as BaseRole;
+          localStorage.setItem('activeProfileType', chosenProfile);
+          localStorage.setItem('user', JSON.stringify(userData));
         } else {
           // Fallback to old system
           if (userData.roles && userData.roles.primary) {
@@ -290,7 +298,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       
       // Store user data
-      const userToStore = {
+      const userToStore: any = {
         id: userDoc.id,
         uid: userData.uid || userDoc.id,
         role: userData.role as Role,
@@ -315,23 +323,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       let availableRoles: BaseRole[] = [];
       let activeRole: BaseRole | null = null;
       
-      if (userData.businessProfiles && Array.isArray(userData.businessProfiles)) {
+      if (userData.businessProfiles && Array.isArray(userData.businessProfiles) && userData.businessProfiles.length > 0) {
         availableRoles = userData.businessProfiles.map((profile: any) => profile.type as BaseRole);
-        
-        // Get active profiles
-        const activeProfiles = userData.businessProfiles.filter((profile: any) => profile.isActive);
-        const activeProfileTypes = activeProfiles.map((profile: any) => profile.type as BusinessProfileType);
-        
-        if (activeProfileTypes.length > 0) {
-          // Set activeRole to shepherd if present, otherwise first active profile
-          activeRole = activeProfileTypes.includes('shepherd') ? 'shepherd' : activeProfileTypes[0] as BaseRole;
+
+        // Restore last active profile if still available
+        const savedActiveProfile = localStorage.getItem('activeProfileType') as BusinessProfileType | null;
+        let chosenProfile: BusinessProfileType | null = null;
+
+        if (savedActiveProfile && availableRoles.includes(savedActiveProfile as BaseRole)) {
+          chosenProfile = savedActiveProfile;
         } else {
-          // No active profiles, use main role
-          activeRole = userToStore.role as BaseRole;
+          const activeProfiles = userData.businessProfiles.filter((p: any) => p.isActive);
+          chosenProfile = (activeProfiles[0]?.type ?? userData.businessProfiles[0]?.type) as BusinessProfileType;
         }
+
+        // Sync isActive flags
+        const syncedProfiles = userData.businessProfiles.map((p: any) => ({
+          ...p,
+          isActive: p.type === chosenProfile,
+        }));
+        userToStore.businessProfiles = syncedProfiles;
+
+        permissions = getProfilePermissions(chosenProfile) as Permission[];
+        activeRole = chosenProfile as BaseRole;
+        localStorage.setItem('activeProfileType', chosenProfile);
+        localStorage.setItem('user', JSON.stringify(userToStore));
       } else {
         // Fallback to old role system
-        availableRoles = userData.roles && Array.isArray(userData.roles) 
+        availableRoles = userData.roles && Array.isArray(userData.roles)
           ? userData.roles as BaseRole[]
           : [userToStore.role as BaseRole];
         activeRole = userToStore.role as BaseRole;
@@ -372,6 +391,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     
     localStorage.removeItem('user');
+    localStorage.removeItem('activeProfileType');
     setState({
       user: null,
       loading: false,
@@ -420,7 +440,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       // Update localStorage
       localStorage.setItem('user', JSON.stringify(updatedUser));
-      
+      localStorage.setItem('activeProfileType', profileType);
+
       const profileLabel = getRoleLabel(profileType as BaseRole);
       toast.success(`Profil basculé vers: ${profileLabel}`);
     } catch (error) {

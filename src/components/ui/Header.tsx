@@ -65,6 +65,10 @@ export function Header() {
         return 'Berger(e)';
       case 'adn':
         return 'ADN';
+      case 'department_leader':
+        return 'Responsable Département';
+      case 'family_leader':
+        return 'Responsable de Famille';
       default:
         return 'Utilisateur';
     }
