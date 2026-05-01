@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.7.41] - Chargement progressif des enseignements sur mobile
+
+### Changed
+- Sur la page **Replay**, la pagination Précédent/Suivant est remplacée sur mobile par un bouton **« Charger plus »** affichant le nombre d'enseignements restants (par lots de 8).
+- Le compteur se réinitialise automatiquement quand un filtre (recherche, catégorie, orateur) change.
+- Sur desktop, la pagination classique reste inchangée.
+
 ## [1.7.40] - Filtres en chips scrollables sur mobile (Replay)
 
 ### Changed
