@@ -3,7 +3,8 @@ import { collection, query, where, orderBy, onSnapshot, getDocs, doc, getDoc } f
 import { deleteDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { Soul, Shepherd } from '../types/database.types';
-import { Plus, FileSpreadsheet, File as FilePdf, Search, Pencil, Trash2, User as UserIcon } from 'lucide-react';
+import { Plus, FileSpreadsheet, File as FilePdf, Search, Pencil, Trash2, User as UserIcon, Upload } from 'lucide-react';
+import ImportSoulsModal from '../components/souls/ImportSoulsModal';
 import { exportData } from '../utils/exportUtils';
 import SoulForm from '../components/souls/SoulForm';
 import { CustomTable } from '../components/ui/CustomTable';
@@ -20,6 +21,7 @@ const ITEMS_PER_PAGE = 10;
 
 export default function SoulManagement() {
   const [showForm, setShowForm] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
   const [souls, setSouls] = useState<Soul[]>([]);
   const [shepherdNames, setShepherdNames] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
@@ -37,7 +39,12 @@ export default function SoulManagement() {
   });
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('active');
   const { hasPermission } = usePermissions();
-  const { userRole } = useAuth();
+  const { userRole, activeRole } = useAuth();
+
+  // Restriction d'accès à l'import : ADN, Admin, Super Admin uniquement
+  const canImport = ['adn', 'admin', 'super_admin'].includes(
+    (activeRole || userRole || '') as string
+  );
 
   // Vérifier si l'utilisateur peut supprimer des âmes
   const canDelete = userRole === 'super_admin' || hasPermission(PERMISSIONS.MANAGE_SOULS);
@@ -336,6 +343,15 @@ export default function SoulManagement() {
               </button>
             </div>
           )}
+          {canImport && (
+            <button
+              onClick={() => setShowImportModal(true)}
+              className="flex items-center px-4 py-2 text-sm font-medium text-[#00665C] bg-white border border-[#00665C] hover:bg-[#00665C]/10 rounded-md"
+            >
+              <Upload className="w-4 h-4 mr-2" />
+              Importer Excel
+            </button>
+          )}
           <button
             onClick={() => setShowForm(!showForm)}
             className="flex items-center px-4 py-2 text-sm font-medium text-white bg-[#00665C] hover:bg-[#00665C]/90 rounded-md"
@@ -451,6 +467,11 @@ export default function SoulManagement() {
           onClose={() => setEditingSoul(null)}
         />
       )}
+
+      <ImportSoulsModal
+        isOpen={showImportModal}
+        onClose={() => setShowImportModal(false)}
+      />
     </div>
   );
 }
