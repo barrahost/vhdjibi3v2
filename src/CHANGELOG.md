@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.7.63] - Correction du filtre Berger
+
+### Fixed
+- Le **sélecteur** et le **filtre « Berger »** (page Âmes, modale d'édition, assignation par lot) affichent désormais **tous les bergers et stagiaires**, qu'ils soient identifiés par le champ legacy `role` **ou** via le système `businessProfiles`. Les bergers récemment promus via les profils métier ne sont plus invisibles.
+
 ## [1.7.62] - Charge par berger améliorée (Responsable de famille)
 
 ### Changed
