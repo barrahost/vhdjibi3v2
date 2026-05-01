@@ -1,47 +1,57 @@
-## Amélioration UX #6 — Mémorisation des filtres
+## Problème
 
-### Problème
-Sur la page **Gestion des âmes** (`/souls`), dès qu'un utilisateur quitte la page (clique sur une âme, va au tableau de bord, etc.) puis y revient, tous les filtres sont réinitialisés : recherche, berger sélectionné, plage de dates, statut, page courante, tri. Pour des utilisateurs qui traitent plusieurs âmes en lot, c'est une friction importante.
+Dans la page **Âmes**, le filtre "Berger" n'affiche pas tous les bergers. La cause :
 
-### Solution
-Persister automatiquement l'état des filtres dans `sessionStorage` (donc effacé à la fermeture de l'onglet, mais conservé pendant toute la session) et les restaurer au retour sur la page.
+`src/components/souls/ShepherdSelect.tsx` interroge Firestore uniquement sur le champ legacy `role` :
+```ts
+where('role', 'in', ['shepherd', 'intern'])
+```
 
-### Comportement attendu
-- Au chargement de `/souls`, restaurer : `searchTerm`, `selectedShepherdId`, `dateRange`, `statusFilter`, `sortConfig`, `currentPage`.
-- À chaque changement d'un de ces états, sauvegarder dans `sessionStorage`.
-- **Exception** : si un paramètre `?filter=...` est présent dans l'URL (venant du widget Actions à traiter), il prend le dessus sur l'état mémorisé.
-- Bouton **« Réinitialiser les filtres »** affiché à côté de la barre de recherche dès qu'au moins un filtre est actif. Il efface l'état mémorisé et remet tout à zéro.
-- `unassignedFamilyOnly` (filtre via URL) n'est **pas** persisté — c'est un mode contextuel piloté par l'URL.
+Or, depuis la migration vers les profils métier, beaucoup d'utilisateurs ont leur statut de berger défini uniquement dans `businessProfiles` (avec `role` à `member` ou autre). Ils sont donc invisibles dans le sélecteur et le filtre.
 
-### Détails techniques
+Le hook `useUsersByProfile` gère déjà correctement les deux systèmes (legacy `role` + `businessProfiles`).
 
-**Fichier principal : `src/pages/SoulManagement.tsx`**
+## Correction
 
-1. Créer un petit hook utilitaire local (ou inline) `usePersistedFilters` qui :
-   - Au montage, lit la clé `souls:filters:v1` de `sessionStorage` et hydrate les états.
-   - Sérialise les `Date` en ISO string pour `dateRange.start/end`.
-   - Écrit dans `sessionStorage` à chaque changement (via un `useEffect` groupé).
+### 1. `src/components/souls/ShepherdSelect.tsx`
+Remplacer la requête actuelle par une logique hybride :
+- Charger tous les utilisateurs `status === 'active'`.
+- Filtrer côté client : un utilisateur est berger/stagiaire si
+  - `role === 'shepherd'` ou `role === 'intern'`, **OU**
+  - `businessProfiles` contient un profil actif de type `shepherd` ou `intern`.
+- Conserver le tri alphabétique sur `fullName`.
+- Garder le libellé "(Stagiaire)" si l'utilisateur est stagiaire (via legacy role ou via businessProfiles).
 
-2. Ordre d'initialisation :
-   - `useState` initialisé via une fonction lazy qui lit `sessionStorage`.
-   - L'effet existant qui lit `searchParams.get('filter')` reste prioritaire (s'exécute après).
+### 2. Vérifier les autres filtres "Berger" éventuels
+Rechercher dans `src/pages/Souls*` et `src/components/souls/` un éventuel deuxième endroit qui charge la liste des bergers pour le filtre de la page (souvent un `<select>` séparé du `ShepherdSelect`). Si trouvé, appliquer la même logique hybride (idéalement via `useUsersByProfile(['shepherd','intern'])`).
 
-3. Ajouter un bouton **« Réinitialiser »** (icône `RotateCcw` de lucide-react) visible si :
-   `searchTerm || selectedShepherdId || dateRange.start || dateRange.end || statusFilter !== 'active'`
-   
-   Action : remet les valeurs par défaut + `sessionStorage.removeItem('souls:filters:v1')`.
+### 3. Maintenance
+- Bump version → **1.7.63** dans `src/pages/Login.tsx`.
+- Entrée dans `src/CHANGELOG.md` : *"Correction : le sélecteur et le filtre Berger affichent désormais tous les bergers (legacy `role` + `businessProfiles`)."*
 
-4. Ne pas persister : `showForm`, `showImportModal`, `editingSoul`, `souls`, `loading`, `unassignedFamilyOnly`.
+## Détails techniques
 
-**Fichier : `src/pages/Login.tsx`**
-- Bumper la version à **1.7.36**.
+```ts
+const snap = await getDocs(
+  query(collection(db, 'users'), where('status', '==', 'active'))
+);
 
-**Fichier : `src/CHANGELOG.md`**
-- Ajouter une entrée pour 1.7.36 décrivant la mémorisation des filtres et le bouton de réinitialisation.
+const shepherds = snap.docs
+  .map(d => ({ id: d.id, ...d.data() } as any))
+  .filter(u => {
+    const fromRole = u.role === 'shepherd' || u.role === 'intern';
+    const fromProfiles = (u.businessProfiles || []).some(
+      (p: any) => (p.type === 'shepherd' || p.type === 'intern') && p.isActive !== false
+    );
+    return fromRole || fromProfiles;
+  })
+  .map(u => {
+    const isIntern =
+      u.role === 'intern' ||
+      (u.businessProfiles || []).some((p: any) => p.type === 'intern');
+    return { id: u.id, fullName: u.fullName, role: isIntern ? 'intern' : 'shepherd' };
+  })
+  .sort((a, b) => a.fullName.localeCompare(b.fullName));
+```
 
-### Fichiers modifiés
-- `src/pages/SoulManagement.tsx`
-- `src/pages/Login.tsx`
-- `src/CHANGELOG.md`
-
-Valide ce plan pour que je l'implémente.
+Aucun changement de schéma ni de règles Firestore requis.
