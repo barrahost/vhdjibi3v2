@@ -90,8 +90,13 @@ export function ProfileSwitcher() {
                       {getProfileIcon(profileType)}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="font-medium">
+                      <div className="font-medium flex items-center gap-2">
                         {BUSINESS_PROFILE_LABELS[profileType]}
+                        {profile.isPrimary && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[#F2B636]/20 text-[#7a5a00] font-semibold">
+                            ★ Principal
+                          </span>
+                        )}
                       </div>
                       <div className="text-xs text-muted-foreground">
                         {BUSINESS_PROFILE_DESCRIPTIONS[profileType]}

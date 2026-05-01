@@ -10,6 +10,7 @@ export interface BusinessProfile {
   departmentId?: string; // For department leaders
   serviceFamilyId?: string; // For family leaders
   isActive?: boolean;
+  isPrimary?: boolean; // Default profile used at login
 }
 
 export interface UserBusinessProfiles {

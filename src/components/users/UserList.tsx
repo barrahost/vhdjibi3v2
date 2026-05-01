@@ -364,11 +364,12 @@ export default function UserList({ filter, statusFilter, selectedUserIds = [], o
     },
     {
       key: 'role',
-      title: 'Rôle',
-      render: (value: string) => {
-        const getRoleBadgeColor = (role: string) => {
-          switch (role) {
+      title: 'Rôles',
+      render: (value: string, user: User) => {
+        const profileBadgeColor = (type: string) => {
+          switch (type) {
             case 'admin':
+            case 'super_admin':
               return 'bg-blue-100 text-blue-800';
             case 'pasteur':
               return 'bg-indigo-100 text-indigo-800';
@@ -376,29 +377,52 @@ export default function UserList({ filter, statusFilter, selectedUserIds = [], o
               return 'bg-green-100 text-green-800';
             case 'adn':
               return 'bg-amber-100 text-amber-800';
+            case 'department_leader':
+              return 'bg-indigo-100 text-indigo-800';
+            case 'family_leader':
+              return 'bg-teal-100 text-teal-800';
             default:
               return 'bg-gray-100 text-gray-800';
           }
         };
 
-        const getRoleLabel = (role: string) => {
-          switch (role) {
-            case 'admin':
-              return 'Administrateur';
-            case 'pasteur':
-              return 'Pasteur';
-            case 'shepherd':
-              return 'Berger(e)';
-            case 'adn':
-              return 'ADN';
-            default:
-              return role;
+        const profileLabel = (type: string) => {
+          switch (type) {
+            case 'admin': return 'Administrateur';
+            case 'super_admin': return 'Super Admin';
+            case 'pasteur': return 'Pasteur';
+            case 'shepherd': return 'Berger(e)';
+            case 'adn': return 'ADN';
+            case 'department_leader': return 'Resp. Département';
+            case 'family_leader': return 'Resp. Famille';
+            default: return type;
           }
         };
 
+        const profiles = (user as any).businessProfiles as Array<{ type: string; isPrimary?: boolean }> | undefined;
+
+        if (profiles && profiles.length > 0) {
+          return (
+            <div className="flex flex-wrap gap-1">
+              {profiles.map((p) => (
+                <span
+                  key={p.type}
+                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${profileBadgeColor(p.type)} ${
+                    p.isPrimary ? 'ring-2 ring-[#F2B636]' : ''
+                  }`}
+                  title={p.isPrimary ? 'Profil principal (par défaut à la connexion)' : ''}
+                >
+                  {p.isPrimary && <span className="text-[#F2B636]">★</span>}
+                  {profileLabel(p.type)}
+                </span>
+              ))}
+            </div>
+          );
+        }
+
         return (
-          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getRoleBadgeColor(value)}`}>
-            {getRoleLabel(value)}
+          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${profileBadgeColor(value)}`}>
+            {profileLabel(value)}
           </span>
         );
       }

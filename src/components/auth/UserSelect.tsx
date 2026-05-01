@@ -19,35 +19,7 @@ interface UserSelectProps {
   onChange: (phone: string, userType: UserType) => void;
 }
 
-const getRoleBadgeColor = (role: string) => {
-  switch (role) {
-    case 'super_admin':
-      return 'bg-purple-100 text-purple-800';
-    case 'admin':
-      return 'bg-red-100 text-red-800';
-    case 'shepherd':
-      return 'bg-green-100 text-green-800';
-    case 'adn':
-      return 'bg-yellow-100 text-yellow-800';
-    default:
-      return 'bg-gray-100 text-gray-800';
-  }
-};
-
-const getRoleDisplayName = (role: string) => {
-  switch (role) {
-    case 'super_admin':
-      return 'Super Admin';
-    case 'admin':
-      return 'Admin';
-    case 'shepherd':
-      return 'Berger';
-    case 'adn':
-      return 'ADN';
-    default:
-      return role;
-  }
-};
+// Role badges intentionally removed from the login selector for privacy/cleanliness.
 
 const getUserType = (role: string): UserType => {
   switch (role) {
@@ -234,14 +206,9 @@ export default function UserSelect({ value, onChange }: UserSelectProps) {
       >
         <div className="flex-1">
           {selectedUser ? (
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="font-medium text-gray-900">{selectedUser.fullName}</div>
-                <div className="text-sm text-gray-500">{selectedUser.displayPhone}</div>
-              </div>
-              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getRoleBadgeColor(selectedUser.role)}`}>
-                {getRoleDisplayName(selectedUser.role)}
-              </span>
+            <div>
+              <div className="font-medium text-gray-900">{selectedUser.fullName}</div>
+              <div className="text-sm text-gray-500">{selectedUser.displayPhone}</div>
             </div>
           ) : (
             <span className="text-gray-500">Sélectionner un utilisateur</span>
@@ -283,19 +250,14 @@ export default function UserSelect({ value, onChange }: UserSelectProps) {
                   onClick={() => handleUserSelect(user)}
                   className="w-full text-left p-3 hover:bg-gray-50 focus:bg-gray-50 focus:outline-none border-b border-gray-100 last:border-b-0"
                 >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
-                        <User className="w-4 h-4 text-gray-400" />
-                      </div>
-                      <div>
-                        <div className="font-medium text-gray-900">{user.fullName}</div>
-                        <div className="text-sm text-gray-500">{user.displayPhone}</div>
-                      </div>
+                  <div className="flex items-center space-x-3">
+                    <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
+                      <User className="w-4 h-4 text-gray-400" />
                     </div>
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getRoleBadgeColor(user.role)}`}>
-                      {getRoleDisplayName(user.role)}
-                    </span>
+                    <div>
+                      <div className="font-medium text-gray-900">{user.fullName}</div>
+                      <div className="text-sm text-gray-500">{user.displayPhone}</div>
+                    </div>
                   </div>
                 </button>
               ))

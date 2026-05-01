@@ -143,8 +143,8 @@ export function SoulEvolutionChart() {
               borderRadius: '6px',
               boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
             }}
-            formatter={(value: number, name: string) => [
-              value,
+            formatter={(value, name) => [
+              value as number,
               name === 'cumulative' ? 'Total cumulé' : 'Nouvelles cette semaine'
             ]}
             labelFormatter={(label) => `Semaine : ${label}`}
