@@ -9,6 +9,7 @@ import { usePermissions } from '../hooks/usePermissions';
 import { PERMISSIONS } from '../constants/roles';
 import ShepherdFilter from '../components/souls/filters/ShepherdFilter';
 import { CustomPagination } from '../components/ui/CustomPagination';
+import { isShepherdUser } from '../utils/roleHelpers';
 import toast from 'react-hot-toast';
 
 const ITEMS_PER_PAGE = 10;
@@ -119,18 +120,18 @@ export default function InteractionsManagement() {
       try {
         let shepherdId = null;
 
-        // Si c'est un berger, récupérer son ID
+        // Si ce n'est pas un admin, identifier le berger (incl. multi-casquettes)
         if (!hasPermission(PERMISSIONS.MANAGE_USERS)) {
           const userQuery = query(
             collection(db, 'users'),
             where('uid', '==', user.uid),
-            where('role', 'in', ['shepherd', 'intern']),
             where('status', '==', 'active')
           );
           const userDoc = await getDocs(userQuery);
-          
-          if (!userDoc.empty) {
-            shepherdId = userDoc.docs[0].id;
+          const matched = userDoc.docs.find(d => isShepherdUser(d.data() as any));
+
+          if (matched) {
+            shepherdId = matched.id;
             console.log('Found user ID for interactions:', shepherdId);
           }
         }

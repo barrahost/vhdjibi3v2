@@ -11,6 +11,7 @@ import { formatDateForInput } from '../../utils/dateUtils';
 import { useAuth } from '../../contexts/AuthContext';
 import { PhotoUpload } from '../ui/PhotoUpload';
 import { StorageService } from '../../services/storage.service';
+import { isShepherdUser } from '../../utils/roleHelpers';
 import toast from 'react-hot-toast';
 
 interface EditSoulModalProps {
@@ -53,13 +54,13 @@ export default function EditSoulModal({ soul, isOpen, onClose, onUpdate }: EditS
         const shepherdsQuery = query(
           collection(db, 'users'),
           where('uid', '==', user.uid),
-          where('role', '==', 'shepherd'),
           where('status', '==', 'active')
         );
         const shepherdDoc = await getDocs(shepherdsQuery);
-        
-        if (!shepherdDoc.empty) {
-          setCurrentShepherdId(shepherdDoc.docs[0].id);
+        const matched = shepherdDoc.docs.find(d => isShepherdUser(d.data() as any));
+
+        if (matched) {
+          setCurrentShepherdId(matched.id);
         }
       } catch (error) {
         console.error('Error loading shepherd info:', error);
