@@ -127,6 +127,13 @@ function AppContent() {
             </PrivateRoute>
           } />
 
+          {/* English route for backwards compatibility with dashboard links */}
+          <Route path="souls" element={
+            <PrivateRoute requiredPermissions={[PERMISSIONS.MANAGE_SOULS]}>
+              <SoulManagement />
+            </PrivateRoute>
+          } />
+
           {/* Gestion des interactions */}
           <Route path="interactions" element={
             <PrivateRoute requiredPermissions={[PERMISSIONS.MANAGE_INTERACTIONS]}>
@@ -276,7 +283,7 @@ function AppContent() {
           } />
 
           {/* Route par défaut */}
-         <Route path="*" element={<Navigate to="/\" replace />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>
       <Toaster />
