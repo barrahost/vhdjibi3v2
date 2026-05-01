@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.7.34] - Fiche récapitulative après ajout d'une âme
+
+### Added
+- Après l'enregistrement réussi d'une nouvelle âme, le formulaire est remplacé par une **carte de confirmation** présentant les informations clés (Nom, Surnom, Téléphone, Famille de service, Provenance, statut du SMS de bienvenue).
+- Boutons d'enchaînement **« + Enregistrer une autre âme »** et **« Voir la liste »** pour accélérer le travail de l'ADN.
+- En cas de crédit SMS insuffisant, l'âme reste enregistrée et le statut « SMS non envoyé » est affiché clairement sur la fiche.
+
 ## [1.7.33] - Tri et charge par berger pour le responsable de famille
 
 ### Added
