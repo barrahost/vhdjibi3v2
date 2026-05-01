@@ -358,19 +358,47 @@ export default function ReplayTeachings() {
         />
 
         <div className="flex flex-col lg:flex-row gap-8 relative">
-          {/* Mobile view: Show teaching details at the top when selected */}
-          {isMobile && selectedTeaching && (
-            <div className="mb-6 bg-white rounded-lg shadow-md border p-4">
-              <TeachingDetails teaching={selectedTeaching} />
-              <div className="mt-4 flex justify-center">
-                <button
-                  onClick={() => setSelectedTeaching(null)}
-                  className="px-4 py-2 text-sm font-medium text-[#00665C] border border-[#00665C] rounded-lg hover:bg-[#00665C]/10 transition-colors"
-                >
-                  Retour à la liste
-                </button>
+          {/* Mobile view: bottom sheet for selected teaching detail */}
+          {isMobile && (
+            <>
+              {/* Overlay */}
+              <div
+                onClick={() => setSelectedTeaching(null)}
+                className={`fixed inset-0 z-30 bg-black/40 transition-opacity duration-300 ${
+                  selectedTeaching ? 'opacity-100' : 'opacity-0 pointer-events-none'
+                }`}
+                aria-hidden="true"
+              />
+              {/* Sheet */}
+              <div
+                role="dialog"
+                aria-modal="true"
+                className={`fixed inset-x-0 bottom-0 z-40 bg-white rounded-t-2xl shadow-2xl transform transition-transform duration-300 ${
+                  selectedTeaching ? 'translate-y-0' : 'translate-y-full'
+                }`}
+                style={{
+                  maxHeight: '85vh',
+                  overflowY: 'auto',
+                  paddingBottom: isAudioPlayerVisible ? '80px' : '16px'
+                }}
+              >
+                {/* Drag handle */}
+                <div className="sticky top-0 bg-white pt-3 pb-2 flex justify-center z-10 rounded-t-2xl">
+                  <div className="w-10 h-1 bg-gray-300 rounded-full" />
+                </div>
+                <div className="px-4 pb-4">
+                  {selectedTeaching && <TeachingDetails teaching={selectedTeaching} />}
+                  <div className="mt-4 flex justify-center">
+                    <button
+                      onClick={() => setSelectedTeaching(null)}
+                      className="px-4 py-2 text-sm font-medium text-[#00665C] border border-[#00665C] rounded-lg hover:bg-[#00665C]/10 transition-colors"
+                    >
+                      Fermer
+                    </button>
+                  </div>
+                </div>
               </div>
-            </div>
+            </>
           )}
           
           <div className="w-full lg:w-2/3 space-y-8">
