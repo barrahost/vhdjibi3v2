@@ -343,6 +343,15 @@ export default function SoulManagement() {
               </button>
             </div>
           )}
+          {canImport && (
+            <button
+              onClick={() => setShowImportModal(true)}
+              className="flex items-center px-4 py-2 text-sm font-medium text-[#00665C] bg-white border border-[#00665C] hover:bg-[#00665C]/10 rounded-md"
+            >
+              <Upload className="w-4 h-4 mr-2" />
+              Importer Excel
+            </button>
+          )}
           <button
             onClick={() => setShowForm(!showForm)}
             className="flex items-center px-4 py-2 text-sm font-medium text-white bg-[#00665C] hover:bg-[#00665C]/90 rounded-md"
