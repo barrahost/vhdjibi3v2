@@ -124,6 +124,8 @@ export function ADNDashboard() {
     <div className="space-y-6">
       <h1 className="text-2xl font-bold text-gray-900">Tableau de bord ADN</h1>
 
+      <PendingActionsWidget role="adn" />
+
       {/* Première ligne de statistiques */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <StatCard
