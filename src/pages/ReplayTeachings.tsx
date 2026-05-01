@@ -358,6 +358,11 @@ export default function ReplayTeachings() {
           onPresetSelect={handlePresetSelect}
         />
 
+        <RecentlyPlayedBar
+          allTeachings={teachings}
+          onSelect={(t) => setSelectedTeaching(t)}
+        />
+
         <div className="flex flex-col lg:flex-row gap-8 relative">
           {/* Mobile view: bottom sheet for selected teaching detail */}
           {isMobile && (
