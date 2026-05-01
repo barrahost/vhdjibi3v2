@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { FamilyLeaderService } from '../../services/familyLeader.service';
 import type { ServiceFamily, Soul } from '../../types/database.types';
-import { Heart, Users, UserPlus, AlertCircle } from 'lucide-react';
+import { Heart, Users, UserPlus, AlertCircle, BarChart3 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function FamilyLeaderDashboard() {
@@ -48,6 +48,38 @@ export default function FamilyLeaderDashboard() {
     return { total, assigned, unassigned: total - assigned };
   }, [souls]);
 
+  // Tri : non assignées en premier, puis assignées (ordre alphabétique dans chaque groupe)
+  const unassignedSouls = useMemo(
+    () =>
+      souls
+        .filter(s => !s.shepherdId)
+        .sort((a, b) => a.fullName.localeCompare(b.fullName)),
+    [souls]
+  );
+  const assignedSouls = useMemo(
+    () =>
+      souls
+        .filter(s => s.shepherdId)
+        .sort((a, b) => a.fullName.localeCompare(b.fullName)),
+    [souls]
+  );
+
+  // Charge par berger (calculée côté client)
+  const shepherdLoad = useMemo(() => {
+    const counts = new Map<string, number>();
+    souls.forEach(s => {
+      if (s.shepherdId) counts.set(s.shepherdId, (counts.get(s.shepherdId) || 0) + 1);
+    });
+    const rows = shepherds.map(sh => ({
+      id: sh.id,
+      fullName: sh.fullName,
+      count: counts.get(sh.id) || 0,
+    }));
+    rows.sort((a, b) => b.count - a.count || a.fullName.localeCompare(b.fullName));
+    const max = rows.reduce((m, r) => Math.max(m, r.count), 0);
+    return { rows, max };
+  }, [souls, shepherds]);
+
   const handleAssign = async (soulId: string, shepherdId: string) => {
     try {
       setSavingId(soulId);
@@ -78,6 +110,40 @@ export default function FamilyLeaderDashboard() {
     );
   }
 
+  const renderSoulRow = (soul: Soul) => (
+    <div key={soul.id} className="p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+      <div className="flex-1">
+        <div className="font-medium text-gray-900">
+          {soul.fullName}
+          {soul.nickname && <span className="text-gray-500 font-normal"> ({soul.nickname})</span>}
+        </div>
+        <div className="text-xs text-gray-500 flex flex-wrap gap-2 mt-1">
+          {soul.originSource && (
+            <span className="px-2 py-0.5 bg-gray-100 rounded">
+              {soul.originSource === 'culte' ? 'Culte' : 'Évangélisation'}
+            </span>
+          )}
+          <span>📞 {soul.phone}</span>
+          <span>📍 {soul.location}</span>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-2">
+        <select
+          value={soul.shepherdId || ''}
+          onChange={(e) => handleAssign(soul.id, e.target.value)}
+          disabled={savingId === soul.id || shepherds.length === 0}
+          className="px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-[#00665C] focus:border-[#00665C]"
+        >
+          <option value="">-- Non assigné --</option>
+          {shepherds.map(sh => (
+            <option key={sh.id} value={sh.id}>{sh.fullName}</option>
+          ))}
+        </select>
+      </div>
+    </div>
+  );
+
   return (
     <div className="space-y-6">
       <div>
@@ -101,6 +167,44 @@ export default function FamilyLeaderDashboard() {
         </div>
       </div>
 
+      {/* Répartition des bergers */}
+      {shepherds.length > 0 && (
+        <div className="bg-white border rounded-lg overflow-hidden">
+          <div className="px-4 py-3 border-b bg-gray-50 flex items-center gap-2">
+            <BarChart3 className="w-4 h-4 text-[#00665C]" />
+            <h2 className="font-semibold text-gray-900">Répartition des bergers</h2>
+          </div>
+          <div className="divide-y">
+            {shepherdLoad.rows.map(r => {
+              const pct = shepherdLoad.max > 0 ? Math.round((r.count / shepherdLoad.max) * 100) : 0;
+              return (
+                <div key={r.id} className="px-4 py-3 flex items-center gap-3">
+                  <div className="w-40 sm:w-56 truncate text-sm text-gray-900">{r.fullName}</div>
+                  <div className="w-16 text-sm text-gray-600 tabular-nums">{r.count} âme{r.count > 1 ? 's' : ''}</div>
+                  <div className="flex-1 h-2 bg-gray-100 rounded overflow-hidden">
+                    <div
+                      className="h-full bg-[#00665C] transition-all"
+                      style={{ width: `${pct}%` }}
+                    />
+                  </div>
+                  <div className="w-12 text-right text-xs text-gray-500 tabular-nums">{pct}%</div>
+                </div>
+              );
+            })}
+            {stats.unassigned > 0 && (
+              <div className="px-4 py-3 flex items-center gap-3 bg-amber-50/40">
+                <div className="w-40 sm:w-56 truncate text-sm text-gray-700 italic">(Non assignées)</div>
+                <div className="w-16 text-sm text-amber-700 tabular-nums">
+                  {stats.unassigned} âme{stats.unassigned > 1 ? 's' : ''}
+                </div>
+                <div className="flex-1" />
+                <div className="w-12" />
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Liste des âmes */}
       <div className="bg-white border rounded-lg overflow-hidden">
         <div className="px-4 py-3 border-b bg-gray-50">
@@ -112,41 +216,28 @@ export default function FamilyLeaderDashboard() {
             Aucune âme assignée à cette famille pour le moment.
           </div>
         ) : (
-          <div className="divide-y">
-            {souls.map(soul => (
-              <div key={soul.id} className="p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                <div className="flex-1">
-                  <div className="font-medium text-gray-900">
-                    {soul.fullName}
-                    {soul.nickname && <span className="text-gray-500 font-normal"> ({soul.nickname})</span>}
-                  </div>
-                  <div className="text-xs text-gray-500 flex flex-wrap gap-2 mt-1">
-                    {soul.originSource && (
-                      <span className="px-2 py-0.5 bg-gray-100 rounded">
-                        {soul.originSource === 'culte' ? 'Culte' : 'Évangélisation'}
-                      </span>
-                    )}
-                    <span>📞 {soul.phone}</span>
-                    <span>📍 {soul.location}</span>
-                  </div>
+          <>
+            {unassignedSouls.length > 0 && (
+              <div>
+                <div className="px-4 py-2 bg-amber-50 border-b border-amber-200 text-sm font-medium text-amber-900">
+                  À assigner ({unassignedSouls.length})
                 </div>
-
-                <div className="flex items-center gap-2">
-                  <select
-                    value={soul.shepherdId || ''}
-                    onChange={(e) => handleAssign(soul.id, e.target.value)}
-                    disabled={savingId === soul.id || shepherds.length === 0}
-                    className="px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-[#00665C] focus:border-[#00665C]"
-                  >
-                    <option value="">-- Non assigné --</option>
-                    {shepherds.map(sh => (
-                      <option key={sh.id} value={sh.id}>{sh.fullName}</option>
-                    ))}
-                  </select>
+                <div className="divide-y">
+                  {unassignedSouls.map(renderSoulRow)}
                 </div>
               </div>
-            ))}
-          </div>
+            )}
+            {assignedSouls.length > 0 && (
+              <div>
+                <div className="px-4 py-2 bg-gray-50 border-b border-t text-sm font-medium text-gray-700">
+                  Assignées ({assignedSouls.length})
+                </div>
+                <div className="divide-y">
+                  {assignedSouls.map(renderSoulRow)}
+                </div>
+              </div>
+            )}
+          </>
         )}
 
         {shepherds.length === 0 && (

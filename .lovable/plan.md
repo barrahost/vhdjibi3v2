@@ -1,53 +1,59 @@
-# Amélioration #2 — Stats cliquables sur le dashboard ADN
+# Amélioration #3 — Tri des âmes + charge par berger (Responsable de famille)
 
-Objectif : chaque chiffre clé du dashboard ADN devient un raccourci direct vers la liste filtrée correspondante, afin d'éviter à l'ADN de naviguer manuellement puis de re-filtrer.
+Objectif : sur le dashboard du responsable de famille, faire ressortir les âmes à assigner en priorité et donner une vue d'ensemble de la charge de travail de chaque berger.
 
-## Ce qui change pour l'utilisateur (ADN)
+## Ce qui change pour l'utilisateur (Responsable de famille)
 
-Sur le **Tableau de bord ADN**, les cartes de statistiques deviennent cliquables :
+### A. Liste des âmes réorganisée
+La section unique « Âmes de la famille » est scindée en **deux sous-sections** :
 
-| Carte                              | Action au clic                                       |
-|------------------------------------|------------------------------------------------------|
-| Âmes actives et non assignées      | Ouvre **Gestion des âmes** filtrée « Non assigné »   |
-| Nouvelles âmes (Mois)              | Ouvre **Gestion des âmes** filtrée « 30 derniers jours » |
-| Total des âmes indécises           | Ouvre la page **Âmes indécises**                     |
+- **À assigner** (en haut, fond orange clair) — toutes les âmes sans berger.
+- **Assignées** (en bas, fond normal) — toutes les âmes ayant un berger.
 
-- Apparition d'un libellé **« Voir la liste → »** en bas des cartes cliquables.
-- Effet visuel discret au survol (ombre + accent jaune sur la barre gauche), curseur main, focus clavier accessible.
-- Les autres cartes (totaux purement informatifs) restent inchangées.
+Les âmes sont triées alphabétiquement dans chaque groupe. Si une sous-section est vide, elle n'apparaît pas. Le sélecteur de berger reste fonctionnel et fait basculer automatiquement l'âme d'un groupe à l'autre.
+
+### B. Nouveau bloc « Répartition des bergers »
+Inséré au-dessus de la liste des âmes :
+
+```text
+Répartition des bergers
+  Kouassi Jean    8 âmes  ████████░░  80%
+  Marie Dupont    3 âmes  ███░░░░░░░  30%
+  (Non assigné)   4 âmes
+```
+
+- Une ligne par berger rattaché à la famille, triée par nombre d'âmes décroissant.
+- Barre horizontale proportionnelle au berger le plus chargé (référence = `max`).
+- Pourcentage = `count / max`.
+- Une ligne finale grise « Non assigné » indique le nombre d'âmes sans berger (sans barre).
+
+Aucune requête supplémentaire : tout est calculé côté client à partir des données déjà chargées (`souls`, `shepherds`).
 
 ## Détails techniques
 
-### 1. `src/components/dashboard/stats/StatCard.tsx`
-Ajouter deux props optionnelles :
-- `onClick?: () => void`
-- `linkLabel?: string` (ex. « Voir la liste »)
+### Fichier : `src/components/dashboard/FamilyLeaderDashboard.tsx`
 
-Si `onClick` est fourni :
-- la carte devient un élément interactif (`role="button"`, `tabIndex={0}`, gestion `Enter` / `Espace`),
-- styles : `cursor-pointer`, `hover:shadow-md`, transition légère sur la bordure gauche,
-- affichage de `linkLabel` avec une icône `ArrowRight`.
+1. Ajouter trois `useMemo` :
+   - `unassignedSouls` : `souls.filter(s => !s.shepherdId)` triées par `fullName`.
+   - `assignedSouls` : `souls.filter(s => s.shepherdId)` triées par `fullName`.
+   - `shepherdLoad` : tableau `{ id, fullName, count }` (un par berger), trié par `count` décroissant, plus `max` pour la normalisation des barres.
 
-Le bouton chevron des `details` doit appeler `e.stopPropagation()` pour ne pas déclencher la navigation.
+2. Avant la liste des âmes, insérer un bloc « Répartition des bergers » (`bg-white border rounded-lg`). Chaque ligne :
+   - nom du berger, nombre d'âmes, barre de progression (`<div>` avec largeur calculée), pourcentage.
+   - barre couleur primaire `#00665C`, fond `bg-gray-100`.
+   - ligne « Non assigné » en gris sans barre, affichée uniquement si `unassigned > 0`.
+   - Si aucun berger n'est rattaché à la famille, ne pas afficher le bloc.
 
-### 2. `src/components/dashboard/ADNDashboard.tsx`
-- Importer `useNavigate` de `react-router-dom`.
-- Passer `onClick` + `linkLabel` aux 3 cartes ciblées :
-  - « Âmes actives et non assignées » → `navigate('/souls?filter=unassigned')`
-  - « Nouvelles âmes (Mois) » → `navigate('/souls?filter=this_month')`
-  - « Total des âmes indécises » → `navigate('/undecided-souls')` (page dédiée déjà existante)
+3. Dans la liste des âmes, remplacer le `souls.map(...)` actuel par deux sections successives :
+   - En-tête « À assigner (N) » avec fond `bg-amber-50` et bordure inférieure, suivi des `unassignedSouls.map(...)`.
+   - En-tête « Assignées (N) » avec fond `bg-gray-50`, suivi des `assignedSouls.map(...)`.
+   - La carte d'une âme reste identique à l'existante (mêmes infos, même `<select>` d'assignation).
 
-### 3. `src/pages/SoulManagement.tsx`
-- Lire `useSearchParams` au montage.
-- Si `filter=unassigned` : appliquer `setSelectedShepherdId('unassigned')` (le filtre existe déjà dans `ShepherdFilter`).
-- Si `filter=this_month` : pré-remplir `dateRange.startDate` avec la date d'il y a 30 jours et `dateRange.endDate` avec aujourd'hui (format `YYYY-MM-DD`). Forcer `statusFilter = 'active'` (déjà la valeur par défaut).
-- Le paramètre est consommé une seule fois (au premier rendu) pour ne pas écraser les choix manuels ultérieurs de l'utilisateur.
-
-### 4. Versionnage
-- `src/pages/Login.tsx` : version `1.7.31` → `1.7.32`.
-- `src/CHANGELOG.md` : nouvelle entrée `[1.7.32] - Stats cliquables sur le dashboard ADN`.
+### Versionnage
+- `src/pages/Login.tsx` : version `1.7.32` → `1.7.33`.
+- `src/CHANGELOG.md` : nouvelle entrée `[1.7.33] - Tri et charge par berger pour le responsable de famille`.
 
 ## Hors périmètre
+- Pas de modification du service `FamilyLeaderService`.
+- Pas de modification des autres dashboards.
 - Pas de changement de schéma Firestore.
-- Pas de modification des autres dashboards (Berger, Responsable de famille, Admin).
-- Pas de filtre URL pour les autres pages (`/undecided-souls` est déjà ciblée et n'a pas besoin de paramètre).
