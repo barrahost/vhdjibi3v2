@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.7.51] - Slider « À la une » multi-cartes selon l'écran (Replay)
+
+### Changed
+- Le carrousel **« À la une »** affiche désormais **1 carte sur mobile, 2 sur tablette, 3 sur desktop** simultanément, au lieu d'une largeur fixe de 320px qui sous-utilisait les grands écrans.
+- Le snap horizontal et le swipe tactile restent actifs sur tous les formats.
+
 ## [1.7.50] - Sidebar filtres en panneau gauche fixe (Replay desktop XL)
 
 ### Added
