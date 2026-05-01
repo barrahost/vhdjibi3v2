@@ -1,220 +1,81 @@
+## Permettre à un utilisateur de basculer entre plusieurs profils/rôles
 
-# Plan d'implémentation — Évolutions ADN & Familles de Service
+### Constat
 
-Implémentation en 5 étapes selon l'ordre suggéré dans le brief. Chaque étape est livrable et testable indépendamment.
+L'infrastructure multi-profils existe déjà partiellement :
+- `BusinessProfile[]` est stocké sur l'utilisateur (Berger, Resp. Département, Resp. Famille, ADN, Admin)
+- `BusinessProfileAssignment` permet déjà de cocher plusieurs profils à la création/édition
+- `AuthContext.switchToProfile()` met à jour le profil actif et ses permissions
+- `ProfileSwitcher` est affiché dans le `Header`
 
----
+Mais **plusieurs problèmes empêchent un usage correct** quand un utilisateur a plusieurs casquettes :
 
-## ÉTAPE 1 — Mise à jour des types & rôles
+1. **Le menu de gauche ne se met pas à jour** au changement de profil. Dans `Navigation.tsx`, des conditions comme `activeRole === SHEPHERD || userRole === SHEPHERD` font que les menus du rôle "principal" restent toujours visibles, peu importe le profil actif.
+2. **Le `Dashboard` ne route pas dynamiquement** selon `activeRole` — il se base sur `userRole` (rôle principal stocké).
+3. **Le contexte "départment / famille" n'est pas géré** lors du switch : si une personne est responsable de 2 départements ou d'une famille ET berger, on ne sait pas quel `departmentId` / `serviceFamilyId` est actif.
+4. **Le profil actif n'est pas restauré au rechargement** correctement : le `useEffect` initial choisit shepherd en priorité au lieu du dernier profil utilisé.
+5. **Le `ProfileSwitcher` est masqué pour le super_admin** (pas de `businessProfiles`), ce qui est ok, mais **il ne s'affiche pas non plus si l'utilisateur a un seul `businessProfile`** alors qu'on veut au minimum afficher l'identité du profil courant. Cas mineur.
+6. **Le label "Profils disponibles" est correct** mais il manque un indicateur visuel clair sur le badge utilisateur du Header (le rôle affiché est encore basé sur `activeRole || userRole` mais ne couvre pas `department_leader` / `family_leader`).
 
-**Objectif :** poser les fondations TypeScript avant tout changement UI.
+### Objectif
 
-### Fichiers modifiés
+Une personne connectée doit pouvoir, depuis le `ProfileSwitcher` du Header, basculer instantanément entre TOUS ses profils métier. Le menu, le tableau de bord, les permissions et le contexte (département/famille actif) doivent suivre.
 
-**`src/types/database.types.ts`**
-- Ajouter à l'interface `Soul` :
-  - `originSource?: 'culte' | 'evangelisation'` (optionnel pour compat. avec données existantes, mais marqué obligatoire dans l'UI)
-  - `serviceFamilyId?: string`
-- Ajouter une nouvelle interface `ServiceFamily` :
-  ```ts
-  export interface ServiceFamily {
-    id: string;
-    name: string;
-    description?: string;
-    leader?: string;        // legacy texte (compat)
-    leaderId?: string;      // nouvelle référence user
-    shepherdIds?: string[]; // nouveaux bergers
-    order: number;
-    status: 'active' | 'inactive';
-    createdAt: Date;
-    updatedAt: Date;
-  }
-  ```
+### Étapes d'implémentation
 
-**`src/constants/roles.ts`**
-- Ajouter `FAMILY_LEADER: 'family_leader'` dans `ROLES`
-- Ajouter le bloc de permissions `[ROLES.FAMILY_LEADER]` dans `ROLE_PERMISSIONS` :
-  ```
-  MANAGE_SOULS, MANAGE_INTERACTIONS, MANAGE_PROFILE,
-  MANAGE_SMS, VIEW_REPLAY_TEACHINGS
-  ```
+#### 1. Corriger la sélection du profil actif au login & au reload (`AuthContext.tsx`)
+- Persister `activeProfileType` dans `localStorage` à chaque `switchToProfile`.
+- Au reload (`useEffect` initial) et au login : restaurer `activeProfileType` sauvegardé s'il existe et fait partie des profils disponibles ; sinon prendre le premier profil de la liste (ordre conservé tel que défini par l'admin), pas forcément `shepherd`.
+- Marquer un seul profil comme `isActive: true` à la fois (cohérent avec `switchToProfile`).
 
-**`src/types/permission.types.ts`**
-- Ajouter `'family_leader'` dans le type `BaseRole`.
+#### 2. Rendre le menu réactif à `activeRole` uniquement (`src/components/ui/Navigation.tsx`)
+- Remplacer toutes les conditions `activeRole === X || userRole === X` par `activeRole === X`.
+- Le `userRole` (rôle "racine" stocké) ne doit plus piloter l'affichage du menu : seul le profil **actuellement sélectionné** compte.
+- Vérifier que les permissions (`hasPermission`) sont bien recalculées par `usePermissions` à chaque changement de `permissions` dans le contexte (déjà le cas via `useAuth`).
 
-**`src/types/businessProfile.types.ts`**
-- Ajouter `'family_leader'` dans `BusinessProfileType`
-- Ajouter labels, descriptions et permissions dans `PROFILE_PERMISSIONS`
+#### 3. Router le tableau de bord selon le profil actif (`src/pages/Dashboard.tsx`)
+- Utiliser `activeRole` (et non `userRole`) pour décider quel dashboard afficher : `ShepherdDashboard`, `DepartmentLeaderDashboard`, `FamilyLeaderDashboard`, dashboard ADN/Admin.
+- Si l'utilisateur a plusieurs profils, le dashboard suit le switch sans rechargement.
 
-**`src/contexts/AuthContext.tsx`**
-- Ajouter `case 'family_leader': return 'Responsable de Famille'` dans `getRoleLabel`.
+#### 4. Gérer le contexte département / famille actif
+- Étendre `BusinessProfile` (déjà présent) pour bien exploiter `departmentId` / `serviceFamilyId` lors du switch.
+- Dans `AuthContext.switchToProfile`, exposer un `activeContext: { departmentId?, serviceFamilyId? }` dérivé du profil sélectionné.
+- Si un utilisateur est responsable de **plusieurs départements** : ajouter un sous-sélecteur (étape ultérieure) ; pour cette itération, on suppose un département / une famille par profil (ce qui correspond au modèle actuel).
 
----
+#### 5. Améliorer le `ProfileSwitcher` (`src/components/ui/ProfileSwitcher.tsx`)
+- Afficher la liste de TOUS les profils (déjà ok), mettre en évidence l'actif via un check, conserver les libellés et descriptions.
+- Ajouter une icône `family_leader` (actuellement non gérée dans le `switch` des icônes).
+- Toaster "Profil basculé vers X" (déjà fait dans `AuthContext`).
+- S'assurer que le composant est visible pour TOUT utilisateur ayant ≥ 2 `businessProfiles` (cas déjà géré, vérifier).
 
-## ÉTAPE 2 — Formulaire d'enregistrement d'âme (ADN)
+#### 6. Mettre à jour le label du Header (`src/components/ui/Header.tsx`)
+- Compléter `getRoleLabel()` pour inclure `department_leader` et `family_leader`.
+- Afficher le profil actif (pas le rôle stocké) dans la pastille sous le nom.
 
-**Objectif :** ADN saisit la provenance et choisit une famille (au lieu d'un berger).
+#### 7. Backfill / migration légère
+- Pour les utilisateurs existants n'ayant que `role` (sans `businessProfiles`), `AuthContext` doit déjà construire un `businessProfiles` virtuel à la volée — vérifier que c'est le cas et le compléter si besoin pour que le `ProfileSwitcher` apparaisse dès qu'on coche plusieurs profils dans `BusinessProfileAssignment`.
 
-### Fichiers modifiés
+#### 8. Changelog & version
+- Ajouter une entrée dans le CHANGELOG ("Multi-profils : bascule complète entre rôles depuis le header") et bumper le numéro de version affiché dans le header.
 
-**`src/components/souls/tabs/GeneralInfoTab.tsx`**
-- Étendre l'interface `data` props avec `originSource` et `serviceFamilyId`
-- Ajouter un bloc radio « Provenance de l'âme * » avec 2 options : `Culte` / `Campagne d'évangélisation`
-- Ajouter un `<select>` « Famille de service » chargé via `useEffect` depuis la collection Firestore `serviceFamilies` (status = active)
-- Conserver le `ShepherdSelect` mais :
-  - L'afficher uniquement si l'utilisateur n'est pas ADN (admins peuvent toujours assigner)
-  - Pour ADN → masquer ou désactiver, avec note explicative
+### Fichiers impactés
 
-**`src/components/souls/SoulForm.tsx`**
-- Ajouter `originSource: ''` et `serviceFamilyId: undefined` dans `formData.general` (état initial + reset)
-- Validation : `originSource` obligatoire avant submit
-- Inclure les deux champs dans l'objet `soulData` envoyé à Firestore
+- `src/contexts/AuthContext.tsx` — persistance `activeProfileType`, restauration au reload, exposition du contexte actif
+- `src/components/ui/Navigation.tsx` — conditions basées uniquement sur `activeRole`
+- `src/pages/Dashboard.tsx` — routing dashboard selon `activeRole`
+- `src/components/ui/ProfileSwitcher.tsx` — icône `family_leader`, polish
+- `src/components/ui/Header.tsx` — labels complets pour tous les profils
+- `src/types/businessProfile.types.ts` — éventuelle exposition de `getActiveProfileContext` helper
+- `CHANGELOG.md` + composant version dans le header
 
-**`src/components/souls/EditSoulModal.tsx`** (à inspecter rapidement)
-- Pré-remplir les nouveaux champs à l'édition + sauvegarder
+### Hors-scope (pour itération future)
 
-**Nouveau hook `src/hooks/useServiceFamilies.ts`** (mutualisable)
-- Retourne la liste des familles actives, utilisable dans GeneralInfoTab et le futur Dashboard.
+- Sélection multi-département quand un utilisateur dirige plusieurs départements (UI dédiée)
+- Cumul de permissions multi-profils simultanés (actuellement on bascule entre profils, on ne les cumule pas)
+- Audit trail des changements de profil
 
----
+### Points techniques
 
-## ÉTAPE 3 — Formulaire des Familles de Service
-
-**Objectif :** lier les familles à des utilisateurs réels (responsable + bergers).
-
-### Fichiers modifiés
-
-**`src/components/serviceFamilies/ServiceFamilyForm.tsx`**
-- Remplacer l'input texte « Chef de famille » par un `<select>` listant les utilisateurs ayant le profil métier `family_leader` ou `shepherd` (chargé depuis `users`)
-- Ajouter un multi-select « Bergers de la famille » listant les utilisateurs avec profil `shepherd`
-  - Composant simple basé sur des checkboxes ou `MultiSelect` shadcn
-- Sauvegarde : remplacer `leader` par `leaderId` + `shepherdIds: string[]`
-- Conserver `leader` (texte) pour rétro-compatibilité jusqu'à la migration
-
-**`src/components/serviceFamilies/EditServiceFamilyModal.tsx`**
-- Mêmes modifications que `ServiceFamilyForm`
-- Pré-remplissage : si `leaderId` absent mais `leader` présent → afficher en mode legacy
-
-**`src/components/serviceFamilies/ServiceFamilyListItem.tsx`** (à inspecter)
-- Afficher le nom du responsable depuis `leaderId` (lookup user) au lieu du texte brut
-
-**Nouveau hook `src/hooks/useUsersByProfile.ts`**
-- Retourne la liste filtrée des utilisateurs par type de profil métier.
-
----
-
-## ÉTAPE 4 — Rôle `family_leader` (intégration complète)
-
-**Objectif :** rendre le rôle utilisable (assignation, login, menus, navigation).
-
-### Fichiers modifiés
-
-**`src/components/users/BusinessProfileAssignment.tsx`**
-- Ajouter le profil `family_leader` dans la liste des profils sélectionnables lors de la création/édition d'un utilisateur.
-
-**`src/constants/auth.ts`**
-- Ajouter un mot de passe par défaut pour `family_leader` (ex : `@123456`).
-
-**`src/contexts/AuthContext.tsx`**
-- Dans la fonction `login`, gérer la validation du mot de passe pour le profil `family_leader`.
-
-**`src/components/users/UserForm.tsx`**
-- Inclure `family_leader` dans la logique `updatePasswordForProfiles`.
-
-**`src/components/ui/Navigation.tsx` / `AccordionMenu.tsx`** (à inspecter)
-- Ajouter un menu visible pour `family_leader` (« Mes âmes de famille »).
-
-**`src/components/auth/PrivateRoute.tsx`**
-- Ajouter la redirection par défaut pour `family_leader` → `/family-souls` (ou dashboard).
-
----
-
-## ÉTAPE 5 — Dashboard Responsable de Famille
-
-**Objectif :** permettre au responsable de voir ses âmes et d'assigner un berger.
-
-### Fichiers créés / modifiés
-
-**Nouveau `src/components/dashboard/FamilyLeaderDashboard.tsx`**
-Sections :
-1. **En-tête** : nom de la famille du responsable
-2. **Statistiques** : total âmes, assignées / non assignées, répartition par berger
-3. **Liste des âmes de la famille** (filtre `serviceFamilyId === famille du user`) :
-   - Colonnes : Nom, Provenance, Date 1ère visite, Berger assigné, Action
-   - Pour chaque âme non assignée → `<select>` listant uniquement les `shepherdIds` de la famille + bouton « Assigner »
-   - Pour les âmes déjà assignées → possibilité de réassigner
-
-**Nouveau service `src/services/familyLeader.service.ts`**
-- `getFamilyByLeaderId(userId)` → retourne la `ServiceFamily`
-- `getSoulsByFamilyId(familyId)` → liste des âmes
-- `assignShepherdToSoul(soulId, shepherdId)` → met à jour `souls/{id}.shepherdId`
-- `getShepherdsOfFamily(familyId)` → utilisateurs `shepherd` listés dans `shepherdIds`
-
-**`src/pages/Dashboard.tsx`**
-- Ajouter `case 'family_leader': return <FamilyLeaderDashboard />`
-
-**Nouvelle page (optionnelle) `src/pages/FamilySouls.tsx`**
-- Vue détaillée des âmes de la famille avec filtres, accessible depuis le menu.
-
-**`src/App.tsx`**
-- Ajouter la route `/family-souls` protégée par `PrivateRoute` avec permission `MANAGE_SOULS`.
-
----
-
-## Récapitulatif des fichiers touchés
-
-```text
-TYPES & ROLES (Étape 1)
-- src/types/database.types.ts
-- src/types/permission.types.ts
-- src/types/businessProfile.types.ts
-- src/constants/roles.ts
-- src/contexts/AuthContext.tsx
-
-FORMULAIRE AME (Étape 2)
-- src/components/souls/tabs/GeneralInfoTab.tsx
-- src/components/souls/SoulForm.tsx
-- src/components/souls/EditSoulModal.tsx
-- src/hooks/useServiceFamilies.ts (nouveau)
-
-FORMULAIRE FAMILLE (Étape 3)
-- src/components/serviceFamilies/ServiceFamilyForm.tsx
-- src/components/serviceFamilies/EditServiceFamilyModal.tsx
-- src/components/serviceFamilies/ServiceFamilyListItem.tsx
-- src/hooks/useUsersByProfile.ts (nouveau)
-
-ROLE FAMILY_LEADER (Étape 4)
-- src/components/users/BusinessProfileAssignment.tsx
-- src/components/users/UserForm.tsx
-- src/constants/auth.ts
-- src/components/ui/Navigation.tsx
-- src/components/auth/PrivateRoute.tsx
-
-DASHBOARD (Étape 5)
-- src/components/dashboard/FamilyLeaderDashboard.tsx (nouveau)
-- src/services/familyLeader.service.ts (nouveau)
-- src/pages/Dashboard.tsx
-- src/pages/FamilySouls.tsx (nouveau, optionnel)
-- src/App.tsx
-```
-
----
-
-## Notes techniques importantes
-
-- **Backend** : ce projet utilise **Firebase Firestore** (pas Supabase). Aucune migration SQL requise — Firestore étant schemaless, les nouveaux champs sont ajoutés au moment de l'écriture. Les documents existants restent valides (champs nouveaux = `undefined`).
-- **Compatibilité ascendante** : `leader` (texte) est conservé en lecture seule pour les anciennes familles. Affichage de fallback : `family.leaderId ? lookupUser(leaderId).fullName : family.leader`.
-- **Sécurité** : la vérification "responsable d'une famille = peut voir uniquement ses âmes" se fait côté client (filtrage Firestore par `serviceFamilyId`). Pour renforcer, prévoir des **règles Firestore** dans une étape ultérieure si nécessaire.
-- **Changelog** : à mettre à jour à la fin (CHANGELOG.md + version dans le header).
-
----
-
-## Recommandation d'exécution
-
-Je recommande de **livrer les étapes une par une** plutôt qu'en bloc, pour pouvoir tester chaque évolution :
-1. Étape 1 (types) → invisible mais permet la suite
-2. Étapes 2 + 3 → visibles immédiatement par ADN et admins
-3. Étape 4 → permet de créer un user `family_leader`
-4. Étape 5 → rend le rôle réellement utile
-
-Veux-tu que je commence par **toute l'étape 1 + 2** dans une seule itération ou préfères-tu un découpage différent ?
+- `switchToProfile` recalcule déjà `permissions` via `getProfilePermissions(profileType)` — toute la chaîne `usePermissions` réagit donc automatiquement.
+- Aucune migration Firebase nécessaire : le champ `businessProfiles` existe déjà sur les utilisateurs.
+- `super_admin` reste un cas spécial (pas de `businessProfiles`, accès `*` direct) — le `ProfileSwitcher` reste masqué pour lui, ce qui est le comportement souhaité.
