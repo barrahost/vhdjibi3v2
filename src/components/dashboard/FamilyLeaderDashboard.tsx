@@ -152,6 +152,8 @@ export default function FamilyLeaderDashboard() {
         {family.description && <p className="text-sm text-gray-500 mt-1">{family.description}</p>}
       </div>
 
+      <PendingActionsWidget role="family_leader" familyId={family.id} />
+
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="bg-white border rounded-lg p-4">
