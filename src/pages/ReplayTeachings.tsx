@@ -59,7 +59,8 @@ export default function ReplayTeachings() {
   const [showInfoModal, setShowInfoModal] = useState(false);
   const [currentSlide, setCurrentSlide] = useState(0);
   const featuredSliderRef = useRef<HTMLDivElement>(null);
-  const isMobile = useMediaQuery('(max-width: 768px)');
+  const isMobile = useMediaQuery('(max-width: 767px)');
+  const isTablet = useMediaQuery('(min-width: 768px) and (max-width: 1023px)');
   const ITEMS_PER_PAGE = 12;
   
   // Audio Player state
