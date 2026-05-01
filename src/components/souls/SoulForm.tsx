@@ -41,7 +41,7 @@ const initialFormData = {
     isBaptized: false,
     isEnrolledInAcademy: false,
     isEnrolledInLifeBearers: false,
-    departments: [] as string[],
+    departments: [] as { name: string; startDate: Date }[],
   },
 };
 
