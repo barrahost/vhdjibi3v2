@@ -363,7 +363,7 @@ export default function ReplayTeachings() {
           onSelect={(t) => setSelectedTeaching(t)}
         />
 
-        <div className="flex flex-col lg:flex-row gap-8 relative">
+        <div className="flex flex-col lg:grid lg:grid-cols-[1fr_400px] lg:gap-6 lg:items-start gap-8 relative">
           {/* Mobile view: bottom sheet for selected teaching detail */}
           {isMobile && (
             <>
