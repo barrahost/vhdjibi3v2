@@ -235,13 +235,29 @@ export default function FamilyLeaderDashboard() {
 
       {/* Liste des âmes */}
       <div className="bg-white border rounded-lg overflow-hidden">
-        <div className="px-4 py-3 border-b bg-gray-50">
+        <div className="px-4 py-3 border-b bg-gray-50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <h2 className="font-semibold text-gray-900">Âmes de la famille</h2>
+          {souls.length > 0 && (
+            <div className="relative w-full sm:w-72">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Rechercher par nom ou téléphone..."
+                className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-1 focus:ring-[#00665C] focus:border-[#00665C]"
+              />
+            </div>
+          )}
         </div>
 
         {souls.length === 0 ? (
           <div className="p-6 text-center text-gray-500 text-sm">
             Aucune âme assignée à cette famille pour le moment.
+          </div>
+        ) : filteredSouls.length === 0 ? (
+          <div className="p-6 text-center text-gray-500 text-sm">
+            Aucune âme ne correspond à « {search} ».
           </div>
         ) : (
           <>
