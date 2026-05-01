@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.7.45] - Layout deux colonnes desktop sur la page Replay
+
+### Changed
+- Sur desktop (≥ 1024px), la **fiche détail** s'affiche désormais dans une colonne droite **fixe (400px) et sticky**, à côté de la liste — fini le scroll vers le haut à chaque sélection.
+- État vide : un placeholder « Sélectionnez un enseignement » est affiché tant qu'aucun audio n'est sélectionné, pour clarifier l'usage du panneau.
+- Bouton de fermeture (X) en haut à droite de la fiche pour revenir à la vue liste pleine.
+
 ## [1.7.44] - Section « Récemment écoutés » sur la page Replay
 
 ### Added

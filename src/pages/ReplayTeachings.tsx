@@ -363,7 +363,7 @@ export default function ReplayTeachings() {
           onSelect={(t) => setSelectedTeaching(t)}
         />
 
-        <div className="flex flex-col lg:flex-row gap-8 relative">
+        <div className="flex flex-col lg:grid lg:grid-cols-[1fr_400px] lg:gap-6 lg:items-start gap-8 relative">
           {/* Mobile view: bottom sheet for selected teaching detail */}
           {isMobile && (
             <>
@@ -407,7 +407,7 @@ export default function ReplayTeachings() {
             </>
           )}
           
-          <div className="w-full lg:w-2/3 space-y-8">
+          <div className="w-full min-w-0 space-y-8">
             {/* Featured Teachings Section */}
             {featuredTeachings.length > 0 && (
               <div className="bg-white rounded-lg shadow-sm border p-6">
@@ -506,21 +506,29 @@ export default function ReplayTeachings() {
             />
           </div>
 
-          <div className="w-full lg:w-1/3 hidden lg:block">
-            {selectedTeaching && !isMobile ? (
-              <div className="sticky top-4">
-                <TeachingDetails teaching={selectedTeaching} />
-                <div className="mt-4 flex justify-center">
+          <aside className="hidden lg:block w-full">
+            <div className="sticky top-4">
+              {selectedTeaching && !isMobile ? (
+                <div className="relative">
                   <button
                     onClick={() => setSelectedTeaching(null)}
-                    className="px-4 py-2 text-sm font-medium text-[#00665C] border border-[#00665C] rounded-lg hover:bg-[#00665C]/10 transition-colors"
+                    className="absolute -top-2 -right-2 z-10 w-8 h-8 rounded-full bg-white shadow-md border border-gray-200 flex items-center justify-center text-gray-500 hover:text-[#00665C] hover:border-[#00665C] transition-colors"
+                    title="Fermer la fiche"
+                    aria-label="Fermer la fiche"
                   >
-                    Retour à la liste
+                    <X className="w-4 h-4" />
                   </button>
+                  <TeachingDetails teaching={selectedTeaching} />
                 </div>
-              </div>
-            ) : null}
-          </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center h-80 rounded-2xl border-2 border-dashed border-gray-200 bg-white/40 text-gray-400 p-6 text-center">
+                  <Headphones className="w-10 h-10 mb-3 opacity-50" />
+                  <p className="text-sm font-medium">Sélectionnez un enseignement</p>
+                  <p className="text-xs mt-1">pour voir les détails ici</p>
+                </div>
+              )}
+            </div>
+          </aside>
         </div>
 
         {showShareModal && (
