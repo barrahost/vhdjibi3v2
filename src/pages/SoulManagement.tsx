@@ -3,7 +3,8 @@ import { collection, query, where, orderBy, onSnapshot, getDocs, doc, getDoc } f
 import { deleteDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { Soul, Shepherd } from '../types/database.types';
-import { Plus, FileSpreadsheet, File as FilePdf, Search, Pencil, Trash2, User as UserIcon } from 'lucide-react';
+import { Plus, FileSpreadsheet, File as FilePdf, Search, Pencil, Trash2, User as UserIcon, Upload } from 'lucide-react';
+import ImportSoulsModal from '../components/souls/ImportSoulsModal';
 import { exportData } from '../utils/exportUtils';
 import SoulForm from '../components/souls/SoulForm';
 import { CustomTable } from '../components/ui/CustomTable';
