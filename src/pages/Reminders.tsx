@@ -6,6 +6,7 @@ import { Soul, Interaction } from '../types/database.types';
 import { Calendar } from '../components/reminders/Calendar';
 import { RemindersList } from '../components/reminders/RemindersList';
 import { ReminderStats } from '../components/reminders/ReminderStats';
+import { isShepherdUser } from '../utils/roleHelpers';
 import toast from 'react-hot-toast';
 
 export default function Reminders() {
@@ -20,17 +21,17 @@ export default function Reminders() {
 
     const loadData = async () => {
       try {
-        // Récupérer l'ID du berger depuis la collection users
+        // Récupérer l'ID de l'utilisateur (berger ou multi-casquettes incluant berger)
         const shepherdsQuery = query(
           collection(db, 'users'),
-          where('uid', '==', user.uid), 
-          where('role', '==', 'shepherd'),
+          where('uid', '==', user.uid),
           where('status', '==', 'active')
         );
         const shepherdDoc = await getDocs(shepherdsQuery);
-        
-        if (!shepherdDoc.empty) {
-          const shepherdId = shepherdDoc.docs[0].id;
+        const matched = shepherdDoc.docs.find(d => isShepherdUser(d.data() as any));
+
+        if (matched) {
+          const shepherdId = matched.id;
           
           // Récupérer les âmes assignées
           const soulsQuery = query(

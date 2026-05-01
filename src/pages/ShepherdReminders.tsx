@@ -5,6 +5,7 @@ import type { Soul } from '../types/database.types';
 import { formatDate } from '../utils/dateUtils';
 import { AlertTriangle, ChevronDown, ChevronUp, MessageCircle, Users, Clock } from 'lucide-react';
 import { StatCard } from '../components/dashboard/stats/StatCard';
+import { isShepherdUser } from '../utils/roleHelpers';
 import toast from 'react-hot-toast';
 
 interface ShepherdReminder {
@@ -35,18 +36,16 @@ export default function ShepherdReminders() {
   useEffect(() => {
     const loadReminders = async () => {
       try {
-        // Créer un index composé dans Firestore pour optimiser les requêtes
-        // role, status, createdAt DESC
+        // Charger tous les utilisateurs actifs puis filtrer côté client
+        // afin d'inclure les bergers multi-casquettes (businessProfiles)
         const shepherdsQuery = query(
           collection(db, 'users'),
-          where('role', '==', 'shepherd'),
           where('status', '==', 'active')
         );
         const shepherdsSnapshot = await getDocs(shepherdsQuery);
-        const shepherds = shepherdsSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
+        const shepherds = shepherdsSnapshot.docs
+          .map(doc => ({ id: doc.id, ...doc.data() } as any))
+          .filter(u => isShepherdUser(u));
 
         const remindersData: ShepherdReminder[] = [];
         let totalSouls = 0;

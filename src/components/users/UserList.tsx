@@ -16,6 +16,7 @@ import { Checkbox } from '../ui/checkbox';
 import toast from 'react-hot-toast';
 import { UserRoleMigration } from '../../utils/migration/userRoleMigration';
 import { useServantStatus } from '../../hooks/useServantStatus';
+import { isShepherdUser, isADNUser, isAdminUser } from '../../utils/roleHelpers';
 
 interface UserListProps {
   filter: 'all' | 'shepherds' | 'adn' | 'admins';
@@ -259,11 +260,14 @@ export default function UserList({ filter, statusFilter, selectedUserIds = [], o
 
         if (filter !== 'all') {
           if (filter === 'admins') {
-            filteredUsers = filteredUsers.filter(user => ['admin', 'super_admin'].includes(user.role || ''));
+            // Inclure les admins legacy ET ceux ayant un businessProfile admin
+            filteredUsers = filteredUsers.filter(user => isAdminUser(user));
           } else if (filter === 'shepherds') {
-            filteredUsers = filteredUsers.filter(user => user.role === 'shepherd');
+            // Inclure bergers + stagiaires (legacy ET businessProfiles)
+            filteredUsers = filteredUsers.filter(user => isShepherdUser(user));
           } else if (filter === 'adn') {
-            filteredUsers = filteredUsers.filter(user => user.role === 'adn');
+            // Inclure ADN legacy ET ceux ayant un businessProfile adn
+            filteredUsers = filteredUsers.filter(user => isADNUser(user));
           }
         }
 

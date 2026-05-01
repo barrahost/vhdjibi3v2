@@ -8,6 +8,7 @@ import { SMSService } from '../services/sms.service';
 import { SMSTest } from '../components/sms/SMSTest';
 import BulkSMSUndecided from '../components/sms/BulkSMSUndecided';
 import { Plus, MessageCircle, CreditCard, AlertTriangle } from 'lucide-react';
+import { isShepherdUser } from '../utils/roleHelpers';
 import toast from 'react-hot-toast';
 
 export default function SMSManagement() {
@@ -29,17 +30,17 @@ export default function SMSManagement() {
       if (!user) return;
 
       try {
-        // Récupérer l'ID du berger depuis la collection users
+        // Récupérer l'utilisateur (incluant bergers multi-casquettes)
         const shepherdsQuery = query(
           collection(db, 'users'),
           where('uid', '==', user.uid),
-          where('role', '==', 'shepherd'),
           where('status', '==', 'active')
         );
         const shepherdDoc = await getDocs(shepherdsQuery);
-        
-        if (!shepherdDoc.empty) {
-          const currentShepherdId = shepherdDoc.docs[0].id;
+        const matched = shepherdDoc.docs.find(d => isShepherdUser(d.data() as any));
+
+        if (matched) {
+          const currentShepherdId = matched.id;
           setShepherdId(currentShepherdId);
 
           // Récupérer les âmes assignées

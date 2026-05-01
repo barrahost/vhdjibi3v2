@@ -1,5 +1,26 @@
 # Changelog
 
+## [1.7.65] - Visibilité unifiée des bergers multi-casquettes
+
+### Fixed
+Tous les filtres, sélecteurs et compteurs de bergers de l'application reconnaissent désormais les utilisateurs ayant **plusieurs casquettes** (`businessProfiles`), pas uniquement le champ legacy `role`. Concrètement :
+
+- **Page Utilisateurs** — le filtre **« Berger(e)s »** affiche maintenant tous les bergers, y compris les stagiaires et les bergers ayant aussi un autre profil (Resp. Département, ADN, Resp. Famille, etc.). Les filtres **« Administrateurs »** et **« ADN »** appliquent la même logique étendue.
+- **Page Rappels (Berger)** — un berger multi-casquettes voit désormais ses âmes assignées et ses rappels.
+- **Page Rappels par berger** (`/shepherd-reminders`) — la liste des bergers à relancer inclut tous les bergers actifs.
+- **Carte des âmes** (`SoulMap`) — le sélecteur et la liste des bergers sont complets.
+- **Statistiques générales** (Tableau de bord) — le compteur **« Bergers actifs »** prend en compte les multi-casquettes.
+- **Gestion des menus utilisateurs** (Paramètres) — la liste des bergers/stagiaires affiche tous les utilisateurs concernés.
+- **SMS** — un berger multi-casquettes accède bien à l'onglet « Mes âmes » au lieu d'être renvoyé vers « Test SMS ».
+- **Interactions** — un berger multi-casquettes voit ses propres interactions filtrées correctement.
+- **Édition d'une âme** — la pré-sélection automatique du berger courant fonctionne pour les multi-casquettes.
+
+### Added
+- Nouveau module utilitaire **`src/utils/roleHelpers.ts`** centralisant la détection des rôles (`isShepherdUser`, `isInternUser`, `isADNUser`, `isAdminUser`, `isDepartmentLeaderUser`, `isFamilyLeaderUser`, `hasAnyRole`). À utiliser systématiquement à la place des comparaisons `user.role === '…'`.
+
+### Technical
+Les requêtes Firestore qui filtraient sur `where('role', '==', 'shepherd')` ont été remplacées par un chargement de tous les utilisateurs actifs suivi d'un filtrage côté client via `isShepherdUser()`, car Firestore ne permet pas de combiner un filtre sur `role` avec un filtre sur `businessProfiles[].type` en une seule requête.
+
 ## [1.7.64] - Corrections du système SMS
 
 ### Fixed

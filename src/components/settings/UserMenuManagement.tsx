@@ -3,6 +3,7 @@ import { collection, query, where, getDocs, doc, updateDoc } from 'firebase/fire
 import { db } from '../../lib/firebase';
 import { Search, Save } from 'lucide-react';
 import { MenuAssignment } from '../users/MenuAssignment';
+import { isShepherdUser, isInternUser } from '../../utils/roleHelpers';
 import toast from 'react-hot-toast';
 
 export default function UserMenuManagement() {
@@ -17,19 +18,21 @@ export default function UserMenuManagement() {
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        // Fetch all shepherds and interns
+        // Charger tous les utilisateurs actifs puis filtrer côté client
+        // pour inclure les bergers/stagiaires multi-casquettes
         const usersQuery = query(
           collection(db, 'users'),
-          where('role', 'in', ['shepherd', 'intern']),
           where('status', '==', 'active')
         );
         
         const snapshot = await getDocs(usersQuery);
-        const usersData = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data(),
-          additionalMenus: doc.data().additionalMenus || []
-        }));
+        const usersData = snapshot.docs
+          .map(doc => ({
+            id: doc.id,
+            ...doc.data(),
+            additionalMenus: doc.data().additionalMenus || []
+          }))
+          .filter((u: any) => isShepherdUser(u));
         
         setUsers(usersData);
         setFilteredUsers(usersData);
@@ -155,7 +158,7 @@ export default function UserMenuManagement() {
                       <div className="font-medium text-gray-900">{user.fullName}</div>
                       <div className="text-sm text-gray-500">{user.email}</div>
                       <div className="text-xs text-gray-500 mt-1">
-                        {user.role === 'shepherd' ? 'Berger(e)' : 'Stagiaire'}
+                        {isInternUser(user) ? 'Stagiaire' : 'Berger(e)'}
                         {user.additionalMenus?.length > 0 && ` • ${user.additionalMenus.length} menu(s) additionnel(s)`}
                       </div>
                     </button>
