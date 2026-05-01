@@ -139,9 +139,6 @@ export function ShepherdDashboard() {
     };
   }, [souls, recentInteractions]);
 
-    loadDashboardData();
-  }, [user]);
-
   const soulsWithLastContact = useMemo(() => {
     return souls.map(soul => {
       const soulInteractions = recentInteractions.filter(i => i.soulId === soul.id);
