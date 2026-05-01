@@ -110,8 +110,8 @@ export function TeachingList({
         )}
       </div>
       
-      {/* Pagination */}
-      {totalPages > 1 && (
+      {/* Pagination — desktop only (mobile uses "Charger plus") */}
+      {!isMobile && totalPages > 1 && (
         <div className="mt-6 flex items-center justify-between border-t border-gray-200 bg-white px-4 py-3 sm:px-6">
           <div className="flex flex-1 justify-between sm:hidden">
             <button
