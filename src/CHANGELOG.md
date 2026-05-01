@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.7.28] - Verrouillage de l'import basé sur le profil actif
+
+### Fixed
+- La cible d'import des serviteurs est désormais verrouillée sur le département du **profil actif** dès lors que l'utilisateur agit en tant que « Responsable de Département », même s'il dispose par ailleurs de droits admin. Pour importer dans un autre département, basculer sur le profil admin via le sélecteur de profils.
+
+
 ## [1.7.27] - Verrouillage du département cible à l'import (responsables)
 
 ### Fixed

@@ -27,11 +27,17 @@ export default function ServantManagement() {
   const canManageDepartmentServants = hasPermission('MANAGE_DEPARTMENT_SERVANTS');
   const isAdmin = hasPermission('*') || canManageServants;
 
-  // Département du responsable connecté (verrouille la cible d'import pour les non-admins)
-  const leaderDepartmentId = (user as any)?.businessProfiles?.find(
-    (p: any) => p.type === 'department_leader' && p.departmentId
-  )?.departmentId as string | undefined;
-  const canShowImportButton = isAdmin || (canManageDepartmentServants && !!leaderDepartmentId);
+  // Profil actuellement actif (sélectionné via le sélecteur de profils)
+  const activeProfile = (user as any)?.businessProfiles?.find((p: any) => p.isActive);
+  const isActingAsDepartmentLeader =
+    activeProfile?.type === 'department_leader' && !!activeProfile?.departmentId;
+  const leaderDepartmentId: string | undefined = isActingAsDepartmentLeader
+    ? (activeProfile.departmentId as string)
+    : undefined;
+  const canShowImportButton =
+    (isAdmin && !isActingAsDepartmentLeader) ||
+    (canManageDepartmentServants && !!leaderDepartmentId) ||
+    isAdmin;
 
   const handleBulkDelete = async () => {
     // Get all servants data from the window object (set by ServantList)
@@ -183,7 +189,7 @@ export default function ServantManagement() {
       <ImportServantsModal
         isOpen={showImportModal}
         onClose={() => setShowImportModal(false)}
-        fixedDepartmentId={isAdmin ? undefined : leaderDepartmentId}
+        fixedDepartmentId={isActingAsDepartmentLeader ? leaderDepartmentId : undefined}
       />
     </div>
   );
