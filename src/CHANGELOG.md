@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.7.61] - Recherche d'âmes (Responsable de famille)
+
+### Added
+- Nouvelle **barre de recherche** dans la liste des âmes du tableau de bord Responsable de famille : filtre instantané par **nom, surnom ou téléphone**.
+- Message dédié quand aucun résultat ne correspond à la recherche.
+
 ## [1.7.60] - Sections visuelles renforcées (Responsable de famille)
 
 ### Changed
