@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.7.52] - Tableau de bord ADN en temps réel
+
+### Changed
+- Le **tableau de bord ADN** se met désormais à jour **en temps réel** dès qu'une âme est ajoutée, modifiée ou supprimée — plus besoin de recharger la page.
+- Remplacement de `getDocs` par `onSnapshot` côté Firestore avec nettoyage propre du listener au démontage.
+
 ## [1.7.51] - Slider « À la une » multi-cartes selon l'écran (Replay)
 
 ### Changed
