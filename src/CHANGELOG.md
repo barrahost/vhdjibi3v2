@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.7.31] - Indicateur de dernier contact pour les bergers
+
+### Added
+- Nouvelle colonne **« Dernier contact »** dans la page **Mes Âmes Assignées** avec un badge coloré (vert ≤ 7 j, jaune 8–14 j, rouge > 14 j, gris si jamais contactée).
+- Tri par défaut sur le dernier contact (les âmes sans contact récent apparaissent en premier). Sélecteur permettant aussi de trier par nom.
+- Bouton **« Contacter »** explicite sur chaque ligne (remplace l'icône) — ouvre directement la modale d'interaction (type Appel pré-sélectionné).
+
+### Changed
+- Après la fermeture de la modale d'interaction, la liste des derniers contacts est rechargée automatiquement.
+
 ## [1.7.30] - Import en masse d'âmes depuis Excel
 
 ### Added
