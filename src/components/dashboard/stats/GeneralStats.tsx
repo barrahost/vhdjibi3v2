@@ -4,6 +4,7 @@ import { db } from '../../../lib/firebase';
 import { Soul } from '../../../types/database.types';
 import { Users, UserCheck, User, AlertTriangle } from 'lucide-react';
 import { StatCard } from './StatCard';
+import { isShepherdUser } from '../../../utils/roleHelpers';
 import toast from 'react-hot-toast';
 import { SoulEvolutionChart } from './SoulEvolutionChart';
 
@@ -30,13 +31,15 @@ export function GeneralStats() {
           ...doc.data()
         })) as Soul[];
         
-        // Récupérer les bergers actifs
+        // Récupérer les bergers actifs (incl. multi-casquettes)
         const shepherdsQuery = query(
           collection(db, 'users'),
-          where('role', 'in', ['shepherd', 'intern']),
           where('status', '==', 'active')
         );
         const shepherdsSnapshot = await getDocs(shepherdsQuery);
+        const activeShepherds = shepherdsSnapshot.docs
+          .map(d => d.data() as any)
+          .filter(u => isShepherdUser(u));
         
         // Calculer les statistiques
         const totalSouls = souls.length;
@@ -57,6 +60,8 @@ export function GeneralStats() {
         const assignedActiveFemaleCount = souls.filter(soul => 
           soul.shepherdId && soul.status === 'active' && soul.gender === 'female'
         ).length;
+        
+        const totalShepherds = activeShepherds.length;
         
         const totalShepherds = shepherdsSnapshot.size;
         
