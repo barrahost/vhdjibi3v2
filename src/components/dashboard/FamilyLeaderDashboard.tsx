@@ -3,6 +3,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { FamilyLeaderService } from '../../services/familyLeader.service';
 import type { ServiceFamily, Soul } from '../../types/database.types';
 import { Heart, Users, UserPlus, AlertCircle, BarChart3 } from 'lucide-react';
+import PendingActionsWidget from './PendingActionsWidget';
 import toast from 'react-hot-toast';
 
 export default function FamilyLeaderDashboard() {
@@ -150,6 +151,8 @@ export default function FamilyLeaderDashboard() {
         <h1 className="text-2xl font-bold text-gray-900">Famille : {family.name}</h1>
         {family.description && <p className="text-sm text-gray-500 mt-1">{family.description}</p>}
       </div>
+
+      <PendingActionsWidget role="family_leader" familyId={family.id} />
 
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

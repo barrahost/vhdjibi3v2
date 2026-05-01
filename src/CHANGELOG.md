@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.7.35] - Widget « Actions en attente » sur les dashboards
+
+### Added
+- Nouveau widget **« Actions en attente »** affiché en haut de chaque tableau de bord, calculé à la volée :
+  - **ADN** : nombre d'âmes actives sans famille de service + âmes indécises à recontacter (chaque ligne cliquable vers la liste filtrée).
+  - **Responsable de famille** : nombre d'âmes de la famille sans berger.
+  - **Berger** : nombre d'âmes sans interaction depuis plus de 14 jours (lien vers « Mes Âmes Assignées »).
+- Si tout est à jour, message positif **« Tout est à jour, beau travail ! »**.
+- Nouveau filtre URL `?filter=unassigned_family` sur la page Gestion des Âmes, avec bandeau visible permettant de retirer le filtre.
+
 ## [1.7.34] - Fiche récapitulative après ajout d'une âme
 
 ### Added

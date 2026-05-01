@@ -6,6 +6,7 @@ import { Soul, Interaction } from '../../types/database.types';
 import { StatCard } from './stats/StatCard';
 import { Users, MessageSquare, AlertTriangle } from 'lucide-react';
 import { formatDate } from '../../utils/dateUtils';
+import PendingActionsWidget from './PendingActionsWidget';
 import toast from 'react-hot-toast';
 
 export function ShepherdDashboard() {
@@ -17,6 +18,7 @@ export function ShepherdDashboard() {
   });
   const [recentInteractions, setRecentInteractions] = useState<Interaction[]>([]);
   const [souls, setSouls] = useState<Soul[]>([]);
+  const [shepherdId, setShepherdId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -43,6 +45,7 @@ export function ShepherdDashboard() {
 
         const userData = userSnapshot.docs[0].data();
         const currentShepherdId = userSnapshot.docs[0].id;
+        setShepherdId(currentShepherdId);
         
         console.log('🔍 [ShepherdDashboard] User data:', {
           id: currentShepherdId,
@@ -149,6 +152,8 @@ export function ShepherdDashboard() {
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold text-gray-900">Mon Tableau de bord</h1>
+
+      {shepherdId && <PendingActionsWidget role="shepherd" shepherdId={shepherdId} />}
 
       {/* Statistiques */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

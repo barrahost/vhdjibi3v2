@@ -6,6 +6,7 @@ import { StatCard } from './stats/StatCard';
 import { Users, UserCheck, UserX, User, AlertTriangle } from 'lucide-react';
 import { RecentActivity } from './stats/RecentActivity';
 import { SoulEvolutionChart } from './stats/SoulEvolutionChart';
+import PendingActionsWidget from './PendingActionsWidget';
 import toast from 'react-hot-toast';
 
 export function ADNDashboard() {
@@ -122,6 +123,8 @@ export function ADNDashboard() {
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold text-gray-900">Tableau de bord ADN</h1>
+
+      <PendingActionsWidget role="adn" />
 
       {/* Première ligne de statistiques */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
