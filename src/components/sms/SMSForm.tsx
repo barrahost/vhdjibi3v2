@@ -297,27 +297,36 @@ export default function SMSForm({ assignedSouls }: SMSFormProps) {
         <div className="relative">
           <textarea
             value={message}
-            onChange={(e) => {
-              const text = e.target.value;
-              if (text.length <= MAX_SMS_LENGTH) {
-                setMessage(text);
-                setCharacterCount(text.length);
-              }
-            }}
+            onChange={(e) => setMessage(e.target.value)}
             rows={4}
             className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-[#00665C] focus:border-[#00665C]"
             placeholder="Votre message..."
           />
-          <div className={`mt-1 text-sm ${
-            characterCount > MAX_SMS_LENGTH - 20 ? 'text-red-500' : 'text-gray-500'
-          }`}>
-            {characterCount}/{MAX_SMS_LENGTH} caractères
-          </div>
           <div className="mt-1 text-sm text-gray-500">
             Votre nom et numéro seront automatiquement ajoutés à la fin du message.
           </div>
         </div>
       </div>
+
+      {message && (
+        <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+          <p className="text-xs font-medium text-gray-500 mb-2">
+            📱 Aperçu du message reçu par le destinataire :
+          </p>
+          <div className="bg-white rounded-lg border p-3 text-sm text-gray-800 whitespace-pre-wrap font-mono">
+            {messagePreview}
+          </div>
+          <p className={`mt-2 text-xs ${previewCharCount > SMS_HARD_LIMIT ? 'text-red-600 font-semibold' : 'text-gray-500'}`}>
+            Message final : {previewCharCount}/{SMS_HARD_LIMIT} caractères
+            {previewCharCount > SMS_HARD_LIMIT && ' ⚠️ Trop long — raccourcir le message'}
+          </p>
+          {selectedRecipients.size > 1 && (
+            <p className="mt-1 text-xs text-gray-400 italic">
+              * Aperçu basé sur le premier destinataire sélectionné
+            </p>
+          )}
+        </div>
+      )}
 
       <div className="flex justify-end space-x-3">
         <button
