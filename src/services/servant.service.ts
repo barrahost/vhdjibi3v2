@@ -1,8 +1,13 @@
-import { collection, query, where, getDocs, doc, getDoc, addDoc, updateDoc, deleteDoc, writeBatch } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, getDoc, addDoc, updateDoc, deleteDoc, writeBatch, documentId } from 'firebase/firestore';
 import { db } from '../lib/firebase';
-import { Servant, ServantFormData } from '../types/servant.types';
+import { Servant, ServantFormData, ServantSourceType } from '../types/servant.types';
 import { validatePhoneNumber } from '../utils/phoneValidation';
 import toast from 'react-hot-toast';
+
+export interface ImportResult {
+  imported: number;
+  skipped: Array<{ name: string; reason: string }>;
+}
 
 export class ServantService {
   /**
