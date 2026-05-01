@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.7.43] - Fiche détail en bottom sheet sur mobile (Replay)
+
+### Changed
+- Sur la page **Replay**, la fiche détaillée d'un enseignement s'ouvre désormais sous forme de **panneau glissant depuis le bas** (bottom sheet, 85 vh) avec **overlay assombri** et **poignée de glissement**.
+- Tap sur l'overlay ou le bouton **« Fermer »** pour revenir à la liste — plus besoin de scroller en haut de page.
+- L'espace en bas est ajusté automatiquement quand le lecteur audio est actif.
+
 ## [1.7.42] - Slider « À la une » swipable au doigt sur mobile
 
 ### Fixed
