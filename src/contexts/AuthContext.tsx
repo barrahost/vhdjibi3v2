@@ -106,9 +106,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           if (savedActiveProfile && availableRoles.includes(savedActiveProfile as BaseRole)) {
             chosenProfile = savedActiveProfile;
           } else {
-            // Fallback to the first profile marked active, otherwise the first one in the list
-            const activeProfiles = userData.businessProfiles.filter((p: any) => p.isActive);
-            chosenProfile = (activeProfiles[0]?.type ?? userData.businessProfiles[0]?.type) as BusinessProfileType;
+            // Priority: isPrimary > isActive > first profile
+            const primary = userData.businessProfiles.find((p: any) => p.isPrimary);
+            const active = userData.businessProfiles.find((p: any) => p.isActive);
+            chosenProfile = (primary?.type ?? active?.type ?? userData.businessProfiles[0]?.type) as BusinessProfileType;
           }
 
           // Sync isActive flags so a single profile is active
@@ -326,11 +327,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (userData.businessProfiles && Array.isArray(userData.businessProfiles) && userData.businessProfiles.length > 0) {
         availableRoles = userData.businessProfiles.map((profile: any) => profile.type as BaseRole);
 
-        // Restore last active profile if still available
+        // At login: prefer the primary profile (default at connection).
+        // The saved activeProfileType is used only as a fallback if no primary is set.
         const savedActiveProfile = localStorage.getItem('activeProfileType') as BusinessProfileType | null;
+        const primary = userData.businessProfiles.find((p: any) => p.isPrimary);
         let chosenProfile: BusinessProfileType | null = null;
 
-        if (savedActiveProfile && availableRoles.includes(savedActiveProfile as BaseRole)) {
+        if (primary) {
+          chosenProfile = primary.type as BusinessProfileType;
+        } else if (savedActiveProfile && availableRoles.includes(savedActiveProfile as BaseRole)) {
           chosenProfile = savedActiveProfile;
         } else {
           const activeProfiles = userData.businessProfiles.filter((p: any) => p.isActive);
