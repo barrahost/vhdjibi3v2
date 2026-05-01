@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.7.49] - Mini-player et badge « En cours » sur les cartes (Replay)
+
+### Added
+- **Overlay play au survol** des cartes d'enseignement (desktop/tablette) : un bouton play apparaît sur la vignette pour suggérer la lecture rapide.
+- **Badge « En cours »** affiché en haut à gauche de la vignette pour l'enseignement actuellement chargé dans le lecteur, avec un point vert pulsé.
+- Léger zoom de la vignette au survol pour une sensation plus vivante.
+
 ## [1.7.48] - Raccourcis clavier sur le lecteur audio
 
 ### Added
