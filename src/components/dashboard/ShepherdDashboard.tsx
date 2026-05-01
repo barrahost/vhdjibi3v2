@@ -153,6 +153,8 @@ export function ShepherdDashboard() {
     <div className="space-y-6">
       <h1 className="text-2xl font-bold text-gray-900">Mon Tableau de bord</h1>
 
+      {shepherdId && <PendingActionsWidget role="shepherd" shepherdId={shepherdId} />}
+
       {/* Statistiques */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <StatCard
