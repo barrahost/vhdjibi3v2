@@ -3,6 +3,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { FamilyLeaderService } from '../../services/familyLeader.service';
 import type { ServiceFamily, Soul } from '../../types/database.types';
 import { Heart, Users, UserPlus, AlertCircle, BarChart3 } from 'lucide-react';
+import PendingActionsWidget from './PendingActionsWidget';
 import toast from 'react-hot-toast';
 
 export default function FamilyLeaderDashboard() {
