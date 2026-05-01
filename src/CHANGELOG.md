@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.7.33] - Tri et charge par berger pour le responsable de famille
+
+### Added
+- Nouveau bloc **« Répartition des bergers »** sur le dashboard du responsable de famille : nombre d'âmes par berger avec barre de charge proportionnelle et pourcentage. Une ligne « Non assignées » récapitule les âmes en attente.
+- Liste des âmes scindée en deux sections : **« À assigner »** (fond orange clair, en haut) et **« Assignées »** (en bas). Tri alphabétique dans chaque groupe.
+
+### Changed
+- Les âmes sans berger remontent désormais automatiquement en haut de la liste pour faciliter leur prise en charge.
+
 ## [1.7.32] - Statistiques cliquables sur le dashboard ADN
 
 ### Added
