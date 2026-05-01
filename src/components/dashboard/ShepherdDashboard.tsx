@@ -1,12 +1,13 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { useAuth } from '../../contexts/AuthContext';
 import { Soul, Interaction } from '../../types/database.types';
 import { StatCard } from './stats/StatCard';
-import { Users, MessageSquare, AlertTriangle } from 'lucide-react';
+import { Users, MessageSquare, AlertTriangle, Phone } from 'lucide-react';
 import { formatDate } from '../../utils/dateUtils';
 import PendingActionsWidget from './PendingActionsWidget';
+import InteractionModal from '../interactions/InteractionModal';
 import toast from 'react-hot-toast';
 
 export function ShepherdDashboard() {
@@ -20,6 +21,7 @@ export function ShepherdDashboard() {
   const [souls, setSouls] = useState<Soul[]>([]);
   const [shepherdId, setShepherdId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [interactionSoul, setInteractionSoul] = useState<Soul | null>(null);
 
   useEffect(() => {
     const loadDashboardData = async () => {
@@ -113,10 +115,9 @@ export function ShepherdDashboard() {
           return lastInteraction < attentionThreshold;
         }).length;
 
-        // Récupérer les interactions récentes
+        // Trier toutes les interactions (utilisé pour le calcul du dernier contact)
         const sortedInteractions = [...interactionsData]
-          .sort((a, b) => b.date.getTime() - a.date.getTime())
-          .slice(0, 5);
+          .sort((a, b) => b.date.getTime() - a.date.getTime());
 
         setStats({
           totalSouls,
@@ -140,6 +141,32 @@ export function ShepherdDashboard() {
 
     loadDashboardData();
   }, [user]);
+
+  const soulsWithLastContact = useMemo(() => {
+    return souls.map(soul => {
+      const soulInteractions = recentInteractions.filter(i => i.soulId === soul.id);
+      const lastContact = soulInteractions.length > 0
+        ? new Date(Math.max(...soulInteractions.map(i => i.date.getTime())))
+        : null;
+      const daysSince = lastContact
+        ? Math.floor((Date.now() - lastContact.getTime()) / (1000 * 60 * 60 * 24))
+        : null;
+      return { ...soul, lastContact, daysSince };
+    }).sort((a, b) => {
+      if (a.daysSince === null && b.daysSince === null) return 0;
+      if (a.daysSince === null) return -1;
+      if (b.daysSince === null) return 1;
+      return b.daysSince - a.daysSince;
+    });
+  }, [souls, recentInteractions]);
+
+  const getContactBadge = (daysSince: number | null) => {
+    if (daysSince === null) return { label: 'Jamais contacté', color: 'bg-gray-100 text-gray-600' };
+    if (daysSince === 0) return { label: "Aujourd'hui", color: 'bg-green-100 text-green-700' };
+    if (daysSince <= 7) return { label: `Il y a ${daysSince} j`, color: 'bg-green-100 text-green-700' };
+    if (daysSince <= 14) return { label: `Il y a ${daysSince} j`, color: 'bg-yellow-100 text-yellow-700' };
+    return { label: `Il y a ${daysSince} j`, color: 'bg-red-100 text-red-700' };
+  };
 
   if (loading) {
     return (
@@ -189,46 +216,54 @@ export function ShepherdDashboard() {
         />
       </div>
 
-      {/* Interactions récentes */}
+      {/* Mes âmes — suivi par urgence de contact */}
       <div className="bg-white rounded-lg shadow-sm border">
-        <div className="p-4 border-b">
-          <h2 className="text-lg font-semibold text-[#00665C]">
-            Interactions récentes
-          </h2>
+        <div className="p-4 border-b flex items-center justify-between gap-2">
+          <h2 className="text-lg font-semibold text-[#00665C]">Mes âmes — suivi</h2>
+          <span className="text-xs text-gray-500 flex-shrink-0">
+            {stats.soulsNeedingAttention} à contacter
+          </span>
         </div>
-        <div className="divide-y">
-          {recentInteractions.length === 0 ? (
+        <div className="divide-y max-h-[600px] overflow-y-auto">
+          {soulsWithLastContact.length === 0 ? (
             <div className="p-4 text-center text-gray-500">
-              Aucune interaction récente
+              Aucune âme assignée pour le moment
             </div>
           ) : (
-            recentInteractions.map(interaction => {
-              const soul = souls.find(s => s.id === interaction.soulId);
+            soulsWithLastContact.map(soul => {
+              const badge = getContactBadge(soul.daysSince);
               return (
-                <div key={interaction.id} className="p-4">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <p className="font-medium text-gray-900">
-                        {soul?.fullName || 'Âme inconnue'}
-                      </p>
-                      <p className="text-sm text-gray-500">
-                        {interaction.type === 'call' ? 'Appel' :
-                         interaction.type === 'visit' ? 'Visite' : 'Message'}
-                      </p>
-                    </div>
-                    <span className="text-sm text-gray-500">
-                      {formatDate(interaction.date)}
-                    </span>
+                <div key={soul.id} className="p-4 flex items-center justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-gray-900 truncate">{soul.fullName}</p>
+                    <p className="text-xs text-gray-500 truncate">{soul.phone || '—'}</p>
                   </div>
-                  <p className="mt-1 text-sm text-gray-600">
-                    {interaction.notes}
-                  </p>
+                  <span className={`text-xs px-2 py-1 rounded-full font-medium flex-shrink-0 ${badge.color}`}>
+                    {badge.label}
+                  </span>
+                  <button
+                    onClick={() => setInteractionSoul(soul)}
+                    className="flex-shrink-0 inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-[#00665C] text-white rounded-lg hover:bg-[#00554C] transition-colors"
+                  >
+                    <Phone className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">Contacter</span>
+                  </button>
                 </div>
               );
             })
           )}
         </div>
       </div>
+
+      {interactionSoul && shepherdId && (
+        <InteractionModal
+          isOpen={!!interactionSoul}
+          onClose={() => setInteractionSoul(null)}
+          soulId={interactionSoul.id}
+          shepherdId={shepherdId}
+          soulName={interactionSoul.fullName}
+        />
+      )}
     </div>
   );
 }

@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.7.57] - Liste des âmes avec dernier contact (Berger)
+
+### Changed
+- La section « Interactions récentes » du tableau de bord **Berger** est remplacée par **« Mes âmes — suivi »** : liste de toutes les âmes triée par urgence (jamais contacté → > 14 j → récents).
+- Chaque ligne affiche un **badge coloré** indiquant la dernière interaction (vert ≤ 7 j, jaune ≤ 14 j, rouge > 14 j, gris si jamais).
+- Bouton **« Contacter »** sur chaque ligne ouvrant directement la modale d'interaction préremplie avec l'âme.
+
 ## [1.7.56] - Seuil « nécessite attention » aligné à 14 jours (Berger)
 
 ### Changed
