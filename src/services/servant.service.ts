@@ -55,16 +55,19 @@ export class ServantService {
       }
 
       // Create the servant document
-      const servantData = {
+      const servantData: any = {
         fullName: data.fullName.trim(),
         nickname: data.nickname?.trim() || null,
         gender: data.gender,
-       phone: data.phone, // Use the already validated and formatted phone
+        phone: data.phone,
         email: data.email?.trim() || null,
         departmentId: data.departmentId,
         isHead: data.isHead,
         isShepherd: data.isShepherd || false,
         shepherdId: data.shepherdId || null,
+        sourceType: data.sourceType || 'manual',
+        sourceId: data.sourceId || null,
+        originalSoulId: data.originalSoulId || (data.sourceType === 'soul' ? data.sourceId : null) || null,
         status: 'active',
         createdAt: new Date(),
         updatedAt: new Date()
