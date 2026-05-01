@@ -405,7 +405,7 @@ export default function ReplayTeachings() {
                 
                 <div 
                   ref={featuredSliderRef}
-                  className={`${featuredTeachings.length > 2 ? 'flex overflow-x-hidden pb-4 space-x-4 snap-x scroll-smooth' : 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'}`}
+                  className={`${featuredTeachings.length > 2 ? 'flex overflow-x-auto pb-4 space-x-4 snap-x snap-mandatory scroll-smooth scrollbar-hide' : 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'}`}
                   onScroll={featuredTeachings.length > 2 ? handleManualScroll : undefined}
                 >
                   {featuredTeachings.map((teaching, index) => (

@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.7.42] - Slider « À la une » swipable au doigt sur mobile
+
+### Fixed
+- Sur la page **Replay**, le carrousel des enseignements à la une est désormais **scrollable horizontalement au doigt** sur mobile (le `overflow-x` était bloqué auparavant). Le snap-mandatory aligne automatiquement la carte la plus proche.
+- La barre de défilement native est masquée pour un rendu propre.
+
 ## [1.7.41] - Chargement progressif des enseignements sur mobile
 
 ### Changed
