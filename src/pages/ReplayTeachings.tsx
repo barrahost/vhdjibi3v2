@@ -485,7 +485,7 @@ export default function ReplayTeachings() {
                       key={teaching.id}
                       onClick={() => setSelectedTeaching(teaching)}
                       className={`bg-white rounded-lg border shadow-sm overflow-hidden cursor-pointer hover:shadow-md transition-all duration-200 ${
-                        featuredTeachings.length > 2 ? 'flex-shrink-0 w-full md:w-80 snap-start' : ''
+                        featuredTeachings.length > 2 ? 'flex-shrink-0 snap-start basis-full sm:basis-[calc(50%-0.5rem)] lg:basis-[calc(33.333%-0.667rem)]' : ''
                       }`}
                     >
                       <div className="relative">
