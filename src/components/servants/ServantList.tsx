@@ -1,14 +1,16 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { collection, query, orderBy, onSnapshot, where } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { Servant } from '../../types/servant.types';
-import { Search, ArrowUpDown } from 'lucide-react';
+import { Search, ArrowUpDown, AlertTriangle } from 'lucide-react';
 import ServantListItem from './ServantListItem';
 import EditServantModal from './EditServantModal';
+import OrphanedServantsModal from './OrphanedServantsModal';
 import { CustomPagination } from '../ui/CustomPagination';
 import { useDepartments } from '../../hooks/useDepartments';
 import { Checkbox } from '../ui/checkbox';
 import { useAuth } from '../../contexts/AuthContext';
+import { usePermissions } from '../../hooks/usePermissions';
 import toast from 'react-hot-toast';
 
 const ITEMS_PER_PAGE = 10;
@@ -24,7 +26,10 @@ interface ServantListProps {
 
 export default function ServantList({ statusFilter, selectedServantIds = [], onSelectionChange }: ServantListProps) {
   const { user, activeRole } = useAuth();
+  const { hasPermission } = usePermissions();
+  const isAdmin = hasPermission('*') || hasPermission('MANAGE_SERVANTS');
   const [servants, setServants] = useState<Servant[]>([]);
+  const [showOrphanModal, setShowOrphanModal] = useState(false);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
@@ -164,18 +169,53 @@ export default function ServantList({ statusFilter, selectedServantIds = [], onS
     setCurrentPage(1);
   }, [searchTerm, selectedDepartmentId]);
 
-  // Filtrer les serviteurs
-  const filteredServants = servants.filter(servant =>
+  // Identifier les orphelins (département supprimé) — uniquement quand on a la liste des départements
+  const validDeptIds = useMemo(() => new Set(departments.map(d => d.id)), [departments]);
+  const departmentsLoaded = departments.length > 0;
+
+  const orphanServants = useMemo(() => {
+    if (!departmentsLoaded) return [];
+    return servants.filter(s => !s.departmentId || !validDeptIds.has(s.departmentId));
+  }, [servants, validDeptIds, departmentsLoaded]);
+
+  const validServants = useMemo(() => {
+    if (!departmentsLoaded) return servants;
+    return servants.filter(s => s.departmentId && validDeptIds.has(s.departmentId));
+  }, [servants, validDeptIds, departmentsLoaded]);
+
+  // Filtrer par recherche
+  const filteredServants = validServants.filter(servant =>
     servant.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
     servant.phone.toLowerCase().includes(searchTerm.toLowerCase()) ||
     servant.email?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Trier les serviteurs
-  const sortedServants = [...filteredServants].sort((a, b) => {
+  // Dédupliquer par téléphone en vue globale (aucun département sélectionné)
+  type ServantWithDepts = Servant & { departmentIds?: string[] };
+  const displayServants: ServantWithDepts[] = useMemo(() => {
+    if (selectedDepartmentId) return filteredServants;
+    const map = new Map<string, ServantWithDepts>();
+    for (const s of filteredServants) {
+      const key = (s.phone && s.phone.trim()) || s.id;
+      const existing = map.get(key);
+      if (existing) {
+        existing.departmentIds = existing.departmentIds || [existing.departmentId];
+        if (!existing.departmentIds.includes(s.departmentId)) {
+          existing.departmentIds.push(s.departmentId);
+        }
+        // Préférer afficher le responsable si l'un des doublons l'est
+        if (s.isHead && !existing.isHead) existing.isHead = true;
+      } else {
+        map.set(key, { ...s, departmentIds: [s.departmentId] });
+      }
+    }
+    return Array.from(map.values());
+  }, [filteredServants, selectedDepartmentId]);
+
+  // Trier
+  const sortedServants = [...displayServants].sort((a, b) => {
     const { field, direction } = sortConfig;
     const modifier = direction === 'asc' ? 1 : -1;
-
     switch (field) {
       case 'fullName':
         return a.fullName.localeCompare(b.fullName) * modifier;
@@ -216,6 +256,20 @@ export default function ServantList({ statusFilter, selectedServantIds = [], onS
 
   return (
     <div className="space-y-4">
+      {isAdmin && orphanServants.length > 0 && (
+        <div className="flex items-start gap-3 p-3 rounded-lg border border-amber-300 bg-amber-50">
+          <AlertTriangle className="w-5 h-5 text-amber-600 mt-0.5 shrink-0" />
+          <div className="flex-1 text-sm text-amber-900">
+            <strong>{orphanServants.length}</strong> serviteur{orphanServants.length > 1 ? 's sont liés' : ' est lié'} à des départements supprimés.
+          </div>
+          <button
+            onClick={() => setShowOrphanModal(true)}
+            className="text-sm font-medium text-amber-800 hover:text-amber-900 underline whitespace-nowrap"
+          >
+            Voir et nettoyer →
+          </button>
+        </div>
+      )}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
@@ -317,6 +371,11 @@ export default function ServantList({ statusFilter, selectedServantIds = [], onS
                     <ServantListItem
                       servant={servant}
                       departmentName={getDepartmentName(servant.departmentId)}
+                      departmentNames={
+                        (servant as any).departmentIds && (servant as any).departmentIds.length > 1
+                          ? (servant as any).departmentIds.map((id: string) => getDepartmentName(id))
+                          : undefined
+                      }
                       onEdit={() => setEditingServant(servant)}
                     />
                   </tr>
@@ -345,6 +404,12 @@ export default function ServantList({ statusFilter, selectedServantIds = [], onS
           departmentName={getDepartmentName(editingServant.departmentId)}
         />
       )}
+
+      <OrphanedServantsModal
+        isOpen={showOrphanModal}
+        onClose={() => setShowOrphanModal(false)}
+        orphans={orphanServants}
+      />
     </div>
   );
 }

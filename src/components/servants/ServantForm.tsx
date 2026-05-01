@@ -1,9 +1,12 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import { db } from '../../lib/firebase';
 import { validatePhoneNumber } from '../../utils/phoneValidation';
 import { GenderRadioGroup } from '../../components/ui/GenderRadioGroup';
 import { useDepartments } from '../../hooks/useDepartments';
 import { AutomaticSyncService } from '../../services/automaticSync.service';
 import { ServantService } from '../../services/servant.service';
+import { AlertTriangle } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function ServantForm({ onSuccess }: { onSuccess?: () => void }) {
@@ -17,7 +20,46 @@ export default function ServantForm({ onSuccess }: { onSuccess?: () => void }) {
     isHead: false
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [duplicateWarning, setDuplicateWarning] = useState<{ name: string; deptNames: string[] } | null>(null);
   const { departments, loading: loadingDepartments } = useDepartments();
+
+  // Vérifier si le téléphone est déjà utilisé dans d'autres départements
+  useEffect(() => {
+    const phoneValidation = validatePhoneNumber(formData.phone);
+    if (!phoneValidation.isValid || !phoneValidation.formattedNumber) {
+      setDuplicateWarning(null);
+      return;
+    }
+    let cancelled = false;
+    const check = async () => {
+      try {
+        const q = query(
+          collection(db, 'servants'),
+          where('phone', '==', phoneValidation.formattedNumber),
+          where('status', '==', 'active')
+        );
+        const snap = await getDocs(q);
+        if (cancelled) return;
+        const others = snap.docs
+          .map(d => d.data() as any)
+          .filter(d => !formData.departmentId || d.departmentId !== formData.departmentId);
+        if (others.length === 0) {
+          setDuplicateWarning(null);
+          return;
+        }
+        const deptNames = others.map(d => {
+          const dep = departments.find(x => x.id === d.departmentId);
+          return dep ? dep.name : 'département inconnu';
+        });
+        setDuplicateWarning({ name: others[0].fullName || 'Inconnu', deptNames });
+      } catch (e) {
+        if (!cancelled) setDuplicateWarning(null);
+      }
+    };
+    const t = setTimeout(check, 400);
+    return () => { cancelled = true; clearTimeout(t); };
+  }, [formData.phone, formData.departmentId, departments]);
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -191,6 +233,17 @@ export default function ServantForm({ onSuccess }: { onSuccess?: () => void }) {
           Responsable de département
         </label>
       </div>
+
+      {duplicateWarning && (
+        <div className="flex items-start gap-2 p-3 rounded-md border border-amber-300 bg-amber-50 text-sm text-amber-900">
+          <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0 text-amber-600" />
+          <div>
+            Ce numéro est déjà utilisé par <strong>{duplicateWarning.name}</strong> dans {duplicateWarning.deptNames.length > 1 ? 'les départements' : 'le département'}{' '}
+            <strong>{duplicateWarning.deptNames.join(', ')}</strong>.
+            Vous pouvez quand même l'ajouter dans ce département.
+          </div>
+        </div>
+      )}
 
       <button
         type="submit"

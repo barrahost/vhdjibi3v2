@@ -7,10 +7,11 @@ import toast from 'react-hot-toast';
 interface ServantListItemProps {
   servant: Servant;
   departmentName: string;
+  departmentNames?: string[];
   onEdit: () => void;
 }
 
-export default function ServantListItem({ servant, departmentName, onEdit }: ServantListItemProps) {
+export default function ServantListItem({ servant, departmentName, departmentNames, onEdit }: ServantListItemProps) {
   const handleDelete = async () => {
     if (window.confirm('Êtes-vous sûr de vouloir supprimer ce serviteur ?')) {
       try {
@@ -47,8 +48,21 @@ export default function ServantListItem({ servant, departmentName, onEdit }: Ser
       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
         {servant.phone}
       </td>
-      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-        {departmentName}
+      <td className="px-6 py-4 text-sm text-gray-500">
+        {departmentNames && departmentNames.length > 1 ? (
+          <div className="flex flex-wrap gap-1">
+            {departmentNames.map((name, idx) => (
+              <span
+                key={idx}
+                className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700 border border-gray-200"
+              >
+                {name}
+              </span>
+            ))}
+          </div>
+        ) : (
+          departmentName
+        )}
       </td>
       <td className="px-6 py-4 whitespace-nowrap">
         <div className="flex flex-wrap gap-1">
