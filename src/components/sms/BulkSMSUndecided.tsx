@@ -165,26 +165,15 @@ export default function BulkSMSUndecided() {
       const selectedSouls = undecidedSouls.filter(soul => selectedRecipients.has(soul.id));
       
       try {
-        // Get user surname (first part of fullName)
-        // Get first two names from user's full name (or just one if that's all they have)
-        const nameParts = userInfo.fullName.split(' ');
-        const userSignatureName = nameParts.length > 1 
-          ? `${nameParts[0]} ${nameParts[1]}`
-          : nameParts[0] || '';
-        const userPhone = userInfo.phone.replace('+225', '') || '';
-        
-        // Append user info to the message
-        const userSignature = `\n- ${userSignatureName} (${userPhone})`;
-
         // Validate message length for each recipient after personalization
         for (const soul of selectedSouls) {
           const personalizedMessage = message
             .replace(/\[nom\]/g, soul.fullName)
             .replace(/\[surnom\]/g, soul.nickname || soul.fullName.split(' ')[0])
             + userSignature;
-          
-          if (personalizedMessage.length > 160) { // Still check against 160 as that's the SMS limit
-            throw new Error(`Le message personnalisé pour ${soul.fullName} dépasse la limite de caractères`);
+
+          if (personalizedMessage.length > SMS_HARD_LIMIT) {
+            throw new Error(`Le message personnalisé pour ${soul.fullName} dépasse la limite de ${SMS_HARD_LIMIT} caractères`);
           }
         }
 
