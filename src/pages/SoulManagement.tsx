@@ -4,7 +4,7 @@ import { collection, query, where, orderBy, onSnapshot, getDocs, doc, getDoc } f
 import { deleteDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { Soul, Shepherd } from '../types/database.types';
-import { Plus, FileSpreadsheet, File as FilePdf, Search, Pencil, Trash2, User as UserIcon, Upload } from 'lucide-react';
+import { Plus, FileSpreadsheet, File as FilePdf, Search, Pencil, Trash2, User as UserIcon, Upload, RotateCcw } from 'lucide-react';
 import ImportSoulsModal from '../components/souls/ImportSoulsModal';
 import { exportData } from '../utils/exportUtils';
 import SoulForm from '../components/souls/SoulForm';
@@ -19,30 +19,94 @@ import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
 
 const ITEMS_PER_PAGE = 10;
+const FILTERS_STORAGE_KEY = 'souls:filters:v1';
+
+type PersistedFilters = {
+  searchTerm: string;
+  selectedShepherdId: string | null;
+  dateRange: { startDate: string; endDate: string };
+  statusFilter: 'all' | 'active' | 'inactive';
+  sortConfig: { field: keyof Soul; direction: 'asc' | 'desc' };
+  currentPage: number;
+};
+
+const DEFAULT_FILTERS: PersistedFilters = {
+  searchTerm: '',
+  selectedShepherdId: null,
+  dateRange: { startDate: '', endDate: '' },
+  statusFilter: 'active',
+  sortConfig: { field: 'fullName' as keyof Soul, direction: 'asc' },
+  currentPage: 1,
+};
+
+function loadPersistedFilters(): PersistedFilters {
+  if (typeof window === 'undefined') return DEFAULT_FILTERS;
+  try {
+    const raw = sessionStorage.getItem(FILTERS_STORAGE_KEY);
+    if (!raw) return DEFAULT_FILTERS;
+    const parsed = JSON.parse(raw);
+    return { ...DEFAULT_FILTERS, ...parsed };
+  } catch {
+    return DEFAULT_FILTERS;
+  }
+}
 
 export default function SoulManagement() {
+  const initialFilters = loadPersistedFilters();
   const [showForm, setShowForm] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [souls, setSouls] = useState<Soul[]>([]);
   const [shepherdNames, setShepherdNames] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
-  const [selectedShepherdId, setSelectedShepherdId] = useState<string | null>(null);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [dateRange, setDateRange] = useState({
-    startDate: '',
-    endDate: ''
-  });
+  const [selectedShepherdId, setSelectedShepherdId] = useState<string | null>(initialFilters.selectedShepherdId);
+  const [searchTerm, setSearchTerm] = useState(initialFilters.searchTerm);
+  const [currentPage, setCurrentPage] = useState(initialFilters.currentPage);
+  const [dateRange, setDateRange] = useState(initialFilters.dateRange);
   const [editingSoul, setEditingSoul] = useState<Soul | null>(null);
-  const [sortConfig, setSortConfig] = useState({
-    field: 'fullName' as keyof Soul,
-    direction: 'asc' as 'asc' | 'desc'
-  });
-  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('active');
+  const [sortConfig, setSortConfig] = useState(initialFilters.sortConfig);
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>(initialFilters.statusFilter);
   const [unassignedFamilyOnly, setUnassignedFamilyOnly] = useState(false);
   const { hasPermission } = usePermissions();
   const { userRole, activeRole } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
+
+  // Persist filters in sessionStorage
+  useEffect(() => {
+    try {
+      const toSave: PersistedFilters = {
+        searchTerm,
+        selectedShepherdId,
+        dateRange,
+        statusFilter,
+        sortConfig,
+        currentPage,
+      };
+      sessionStorage.setItem(FILTERS_STORAGE_KEY, JSON.stringify(toSave));
+    } catch {
+      // ignore storage errors
+    }
+  }, [searchTerm, selectedShepherdId, dateRange, statusFilter, sortConfig, currentPage]);
+
+  const hasActiveFilters =
+    searchTerm !== '' ||
+    selectedShepherdId !== null ||
+    dateRange.startDate !== '' ||
+    dateRange.endDate !== '' ||
+    statusFilter !== 'active';
+
+  const resetAllFilters = () => {
+    setSearchTerm('');
+    setSelectedShepherdId(null);
+    setDateRange({ startDate: '', endDate: '' });
+    setStatusFilter('active');
+    setSortConfig({ field: 'fullName' as keyof Soul, direction: 'asc' });
+    setCurrentPage(1);
+    try {
+      sessionStorage.removeItem(FILTERS_STORAGE_KEY);
+    } catch {
+      // ignore
+    }
+  };
 
   // Application des filtres venant de l'URL (one-shot au montage)
   useEffect(() => {
@@ -472,15 +536,27 @@ export default function SoulManagement() {
           </div>
           
           <div className="relative">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Rechercher une âme par nom, téléphone ou lieu d'habitation..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-[#00665C] focus:border-[#00665C]"
-              />
+            <div className="flex flex-col sm:flex-row gap-2">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Rechercher une âme par nom, téléphone ou lieu d'habitation..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-[#00665C] focus:border-[#00665C]"
+                />
+              </div>
+              {hasActiveFilters && (
+                <button
+                  onClick={resetAllFilters}
+                  className="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-[#00665C] bg-white border border-[#00665C] rounded-lg hover:bg-[#00665C] hover:text-white transition-colors whitespace-nowrap"
+                  title="Réinitialiser tous les filtres"
+                >
+                  <RotateCcw className="h-4 w-4" />
+                  Réinitialiser les filtres
+                </button>
+              )}
             </div>
             <p className="mt-1 text-sm text-gray-500">
               {filteredSouls.length} résultat{filteredSouls.length !== 1 ? 's' : ''} trouvé{filteredSouls.length !== 1 ? 's' : ''}

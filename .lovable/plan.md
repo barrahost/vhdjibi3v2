@@ -1,69 +1,47 @@
-# Amélioration #4 — Fiche récapitulative après ajout d'une âme
+## Amélioration UX #6 — Mémorisation des filtres
 
-Objectif : remplacer le simple toast par une carte de confirmation visible et actionnable, qui rappelle ce qui a été enregistré et propose d'enchaîner.
+### Problème
+Sur la page **Gestion des âmes** (`/souls`), dès qu'un utilisateur quitte la page (clique sur une âme, va au tableau de bord, etc.) puis y revient, tous les filtres sont réinitialisés : recherche, berger sélectionné, plage de dates, statut, page courante, tri. Pour des utilisateurs qui traitent plusieurs âmes en lot, c'est une friction importante.
 
-## Ce qui change pour l'utilisateur (ADN)
+### Solution
+Persister automatiquement l'état des filtres dans `sessionStorage` (donc effacé à la fermeture de l'onglet, mais conservé pendant toute la session) et les restaurer au retour sur la page.
 
-Après avoir cliqué sur **« Ajouter une âme »** et que l'enregistrement réussit :
+### Comportement attendu
+- Au chargement de `/souls`, restaurer : `searchTerm`, `selectedShepherdId`, `dateRange`, `statusFilter`, `sortConfig`, `currentPage`.
+- À chaque changement d'un de ces états, sauvegarder dans `sessionStorage`.
+- **Exception** : si un paramètre `?filter=...` est présent dans l'URL (venant du widget Actions à traiter), il prend le dessus sur l'état mémorisé.
+- Bouton **« Réinitialiser les filtres »** affiché à côté de la barre de recherche dès qu'au moins un filtre est actif. Il efface l'état mémorisé et remet tout à zéro.
+- `unassignedFamilyOnly` (filtre via URL) n'est **pas** persisté — c'est un mode contextuel piloté par l'URL.
 
-- Le formulaire **disparaît** et est remplacé par une **carte de confirmation** sur la même page :
+### Détails techniques
 
-```text
-✅ Âme enregistrée avec succès !
-─────────────────────────────────────
-Nom        : Lago Grâce Victoire
-Surnom     : Grâce            (si renseigné)
-Téléphone  : +225 0707000001  (si renseigné)
-Famille    : Arbre de vie     (si renseignée)
-Provenance : Culte
-SMS de bienvenue : Envoyé ✓ / Non envoyé ⚠
+**Fichier principal : `src/pages/SoulManagement.tsx`**
 
-[ + Enregistrer une autre âme ]   [ Voir la liste ]
-```
+1. Créer un petit hook utilitaire local (ou inline) `usePersistedFilters` qui :
+   - Au montage, lit la clé `souls:filters:v1` de `sessionStorage` et hydrate les états.
+   - Sérialise les `Date` en ISO string pour `dateRange.start/end`.
+   - Écrit dans `sessionStorage` à chaque changement (via un `useEffect` groupé).
 
-- **« + Enregistrer une autre âme »** : revient au formulaire vide.
-- **« Voir la liste »** : navigue vers `/souls`.
+2. Ordre d'initialisation :
+   - `useState` initialisé via une fonction lazy qui lit `sessionStorage`.
+   - L'effet existant qui lit `searchParams.get('filter')` reste prioritaire (s'exécute après).
 
-Si le SMS n'a pas pu être envoyé (crédit insuffisant), la ligne « SMS de bienvenue » l'indique clairement, mais l'âme reste enregistrée.
+3. Ajouter un bouton **« Réinitialiser »** (icône `RotateCcw` de lucide-react) visible si :
+   `searchTerm || selectedShepherdId || dateRange.start || dateRange.end || statusFilter !== 'active'`
+   
+   Action : remet les valeurs par défaut + `sessionStorage.removeItem('souls:filters:v1')`.
 
-## Détails techniques
+4. Ne pas persister : `showForm`, `showImportModal`, `editingSoul`, `souls`, `loading`, `unassignedFamilyOnly`.
 
-### Fichier : `src/components/souls/SoulForm.tsx`
+**Fichier : `src/pages/Login.tsx`**
+- Bumper la version à **1.7.36**.
 
-1. Nouvel état local :
-   ```ts
-   const [lastAddedSoul, setLastAddedSoul] = useState<{
-     fullName: string;
-     nickname?: string;
-     phone?: string;
-     serviceFamilyName?: string;
-     originSource?: 'culte' | 'evangelisation';
-     smsSent: boolean;
-   } | null>(null);
-   ```
+**Fichier : `src/CHANGELOG.md`**
+- Ajouter une entrée pour 1.7.36 décrivant la mémorisation des filtres et le bouton de réinitialisation.
 
-2. Importer `useServiceFamilies` (`../../hooks/useServiceFamilies`) pour résoudre `serviceFamilyId` → nom lisible (utilisé uniquement pour l'affichage de la confirmation).
+### Fichiers modifiés
+- `src/pages/SoulManagement.tsx`
+- `src/pages/Login.tsx`
+- `src/CHANGELOG.md`
 
-3. À la fin de `handleSubmit` (cas succès), au lieu d'appeler `toast.success` puis de réinitialiser uniquement `formData`, faire :
-   - `setLastAddedSoul({ ... smsSent: true/false })`
-   - réinitialiser `formData` et `selectedTemplate` comme aujourd'hui.
-   - Conserver le `toast.success` court pour le feedback immédiat.
-
-4. Dans le cas « crédit SMS insuffisant », passer `smsSent: false` et tout de même afficher la fiche de confirmation (l'âme est bien créée).
-
-5. Rendu conditionnel : si `lastAddedSoul` est non-null, retourner la carte de confirmation à la place du `<form>`.
-
-6. Carte de confirmation :
-   - Style cohérent : `bg-white border rounded-lg shadow-sm p-6`, bandeau de succès vert clair (`bg-green-50 border-green-200`), icône `CheckCircle2`.
-   - Liste des informations en `<dl>` (responsive : empilé en mobile, deux colonnes en sm+).
-   - Deux boutons en bas : « + Enregistrer une autre âme » (primaire `#00665C`) qui fait `setLastAddedSoul(null)`, et « Voir la liste » (secondaire) qui fait `useNavigate()` vers `/souls`.
-   - Les champs vides (surnom, téléphone, famille) ne sont pas affichés.
-
-### Versionnage
-- `src/pages/Login.tsx` : `1.7.33` → `1.7.34`.
-- `src/CHANGELOG.md` : entrée `[1.7.34] - Fiche récapitulative après ajout d'une âme`.
-
-## Hors périmètre
-- Pas de modification du flow d'envoi SMS ni de la création Firestore.
-- Pas de changement sur la modale d'édition (`EditSoulModal`).
-- Pas de modification du schéma de données.
+Valide ce plan pour que je l'implémente.

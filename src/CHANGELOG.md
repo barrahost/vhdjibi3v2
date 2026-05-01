@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.7.36] - Mémorisation des filtres de la liste des âmes
+
+### Added
+- Les filtres de la page **Gestion des âmes** (recherche, berger, plage de dates, statut, tri, page) sont maintenant **mémorisés pendant la session** : en quittant puis revenant sur la page, l'utilisateur retrouve exactement la même vue.
+- Nouveau bouton **« Réinitialiser les filtres »** affiché à côté de la barre de recherche dès qu'au moins un filtre est actif, pour tout remettre à zéro en un clic.
+- Les filtres contextuels venant des widgets (`?filter=...`) restent prioritaires sur l'état mémorisé.
+
 ## [1.7.35] - Widget « Actions en attente » sur les dashboards
 
 ### Added
