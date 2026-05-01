@@ -1,8 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { TeachingFilters } from './TeachingFilters';
 import { AudioTeaching as Teaching } from '../../types/audio.types';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { TeachingCard } from './TeachingCard';
+import { useMediaQuery } from '../../hooks/useMediaQuery';
+
+const MOBILE_PAGE_SIZE = 8;
 
 interface TeachingListProps {
   teachings: Teaching[];
