@@ -6,6 +6,7 @@ import { StatCard } from './stats/StatCard';
 import { Users, UserCheck, UserX, User, AlertTriangle } from 'lucide-react';
 import { RecentActivity } from './stats/RecentActivity';
 import { SoulEvolutionChart } from './stats/SoulEvolutionChart';
+import PendingActionsWidget from './PendingActionsWidget';
 import toast from 'react-hot-toast';
 
 export function ADNDashboard() {
