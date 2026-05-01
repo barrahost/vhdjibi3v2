@@ -1,8 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { TeachingFilters } from './TeachingFilters';
 import { AudioTeaching as Teaching } from '../../types/audio.types';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { TeachingCard } from './TeachingCard';
+import { useMediaQuery } from '../../hooks/useMediaQuery';
+
+const MOBILE_PAGE_SIZE = 8;
 
 interface TeachingListProps {
   teachings: Teaching[];
@@ -24,6 +27,8 @@ export function TeachingList({
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
   const [selectedSpeaker, setSelectedSpeaker] = useState('');
+  const isMobile = useMediaQuery('(max-width: 768px)');
+  const [visibleCount, setVisibleCount] = useState(MOBILE_PAGE_SIZE);
 
   // Get unique categories and speakers
   const categories = [...new Set(teachings.map(t => t.category))];
@@ -40,6 +45,17 @@ export function TeachingList({
 
     return matchesSearch && matchesCategory && matchesSpeaker;
   });
+
+  // Reset mobile pagination when filters change
+  useEffect(() => {
+    setVisibleCount(MOBILE_PAGE_SIZE);
+  }, [searchTerm, selectedCategory, selectedSpeaker, isMobile]);
+
+  // On mobile: show progressive slice. On desktop: keep parent pagination.
+  const displayedTeachings = isMobile
+    ? filteredTeachings.slice(0, visibleCount)
+    : filteredTeachings;
+  const remaining = Math.max(0, filteredTeachings.length - visibleCount);
 
   return (
     <div className="space-y-6 w-full">
@@ -60,29 +76,42 @@ export function TeachingList({
             <p className="text-gray-500">Aucun audio trouvé</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-1 gap-4">
-            {filteredTeachings.map(teaching => (
-              <TeachingCard
-                key={teaching.id}
-                id={teaching.id}
-                title={teaching.title}
-                speaker={teaching.speaker}
-                date={teaching.date}
-                duration={teaching.duration}
-                category={teaching.category}
-                theme={teaching.theme}
-                thumbnail_url={teaching.thumbnail_url}
-                plays={teaching.plays}
-                isSelected={selectedTeaching?.id === teaching.id}
-                onClick={() => onSelect(teaching)}
-              />
-            ))}
-          </div>
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-1 gap-4">
+              {displayedTeachings.map(teaching => (
+                <TeachingCard
+                  key={teaching.id}
+                  id={teaching.id}
+                  title={teaching.title}
+                  speaker={teaching.speaker}
+                  date={teaching.date}
+                  duration={teaching.duration}
+                  category={teaching.category}
+                  theme={teaching.theme}
+                  thumbnail_url={teaching.thumbnail_url}
+                  plays={teaching.plays}
+                  isSelected={selectedTeaching?.id === teaching.id}
+                  onClick={() => onSelect(teaching)}
+                />
+              ))}
+            </div>
+
+            {/* Mobile only: load more */}
+            {isMobile && remaining > 0 && (
+              <button
+                type="button"
+                onClick={() => setVisibleCount((c) => c + MOBILE_PAGE_SIZE)}
+                className="w-full py-3 text-sm font-medium text-[#00665C] border border-[#00665C] rounded-xl mt-4 hover:bg-[#00665C]/5 transition-colors"
+              >
+                Charger plus ({remaining} restant{remaining > 1 ? 's' : ''})
+              </button>
+            )}
+          </>
         )}
       </div>
       
-      {/* Pagination */}
-      {totalPages > 1 && (
+      {/* Pagination — desktop only (mobile uses "Charger plus") */}
+      {!isMobile && totalPages > 1 && (
         <div className="mt-6 flex items-center justify-between border-t border-gray-200 bg-white px-4 py-3 sm:px-6">
           <div className="flex flex-1 justify-between sm:hidden">
             <button
