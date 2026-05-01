@@ -291,6 +291,12 @@ export default function DepartmentLeaderDashboard() {
           )}
         </CardContent>
       </Card>
+
+      <ImportServantsModal
+        isOpen={showImportModal}
+        onClose={() => setShowImportModal(false)}
+        fixedDepartmentId={department.id}
+      />
     </div>
   );
 }
