@@ -169,18 +169,53 @@ export default function ServantList({ statusFilter, selectedServantIds = [], onS
     setCurrentPage(1);
   }, [searchTerm, selectedDepartmentId]);
 
-  // Filtrer les serviteurs
-  const filteredServants = servants.filter(servant =>
+  // Identifier les orphelins (département supprimé) — uniquement quand on a la liste des départements
+  const validDeptIds = useMemo(() => new Set(departments.map(d => d.id)), [departments]);
+  const departmentsLoaded = departments.length > 0;
+
+  const orphanServants = useMemo(() => {
+    if (!departmentsLoaded) return [];
+    return servants.filter(s => !s.departmentId || !validDeptIds.has(s.departmentId));
+  }, [servants, validDeptIds, departmentsLoaded]);
+
+  const validServants = useMemo(() => {
+    if (!departmentsLoaded) return servants;
+    return servants.filter(s => s.departmentId && validDeptIds.has(s.departmentId));
+  }, [servants, validDeptIds, departmentsLoaded]);
+
+  // Filtrer par recherche
+  const filteredServants = validServants.filter(servant =>
     servant.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
     servant.phone.toLowerCase().includes(searchTerm.toLowerCase()) ||
     servant.email?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Trier les serviteurs
-  const sortedServants = [...filteredServants].sort((a, b) => {
+  // Dédupliquer par téléphone en vue globale (aucun département sélectionné)
+  type ServantWithDepts = Servant & { departmentIds?: string[] };
+  const displayServants: ServantWithDepts[] = useMemo(() => {
+    if (selectedDepartmentId) return filteredServants;
+    const map = new Map<string, ServantWithDepts>();
+    for (const s of filteredServants) {
+      const key = (s.phone && s.phone.trim()) || s.id;
+      const existing = map.get(key);
+      if (existing) {
+        existing.departmentIds = existing.departmentIds || [existing.departmentId];
+        if (!existing.departmentIds.includes(s.departmentId)) {
+          existing.departmentIds.push(s.departmentId);
+        }
+        // Préférer afficher le responsable si l'un des doublons l'est
+        if (s.isHead && !existing.isHead) existing.isHead = true;
+      } else {
+        map.set(key, { ...s, departmentIds: [s.departmentId] });
+      }
+    }
+    return Array.from(map.values());
+  }, [filteredServants, selectedDepartmentId]);
+
+  // Trier
+  const sortedServants = [...displayServants].sort((a, b) => {
     const { field, direction } = sortConfig;
     const modifier = direction === 'asc' ? 1 : -1;
-
     switch (field) {
       case 'fullName':
         return a.fullName.localeCompare(b.fullName) * modifier;
