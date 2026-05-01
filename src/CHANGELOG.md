@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.7.48] - Raccourcis clavier sur le lecteur audio
+
+### Added
+- Nouveaux **raccourcis clavier** actifs dès qu'un audio est ouvert :
+  - `Espace` : Lecture / Pause
+  - `←` / `→` : Reculer / Avancer de 10 s
+  - `↑` / `↓` : Volume +/− 10 %
+  - `N` / `P` : Enseignement suivant / précédent
+  - `M` : Couper / rétablir le son
+- Désactivés automatiquement quand le focus est sur un champ de saisie (input, textarea, select) pour ne pas perturber la frappe.
+
 ## [1.7.47] - Contrôles volume visibles dès la tablette (Lecteur audio)
 
 ### Changed
