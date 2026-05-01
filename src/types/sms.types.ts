@@ -33,6 +33,7 @@ export const SMS_VARIABLES: SMSVariable[] = [
 ];
 
 export const SMS_CATEGORIES = [
+  'Bienvenue',
   'Culte',
   'Évangélisation',
   'Anniversaire',

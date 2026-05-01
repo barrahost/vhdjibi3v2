@@ -1,5 +1,21 @@
 # Changelog
 
+## [1.7.64] - Corrections du système SMS
+
+### Fixed
+- **Critique** : la création d'une âme n'est plus annulée si l'envoi du SMS de bienvenue échoue (erreur réseau, numéro invalide, etc.). L'âme est conservée et un avertissement invite à renvoyer le SMS manuellement depuis la liste.
+- L'**indicatif `+225`** est désormais conservé dans la signature automatique des SMS (numéro complet pour le destinataire).
+
+### Added
+- **Aperçu en temps réel** du message final tel qu'il sera reçu par le destinataire (avec personnalisation `[nom]` / `[surnom]` et signature automatique) dans : envoi aux âmes assignées, envoi aux âmes indécises, et message individuel.
+- Compteur de caractères basé sur la **vraie limite SMS de 160 caractères** (signature incluse), au lieu de l'ancienne limite trompeuse de 125.
+- Nouvelle catégorie de modèle SMS **« Bienvenue »** pour les messages d'accueil des nouvelles âmes (à utiliser dans la console Firebase pour reclasser les modèles concernés).
+
+### Changed
+- Le formulaire d'ajout d'âme charge désormais les modèles de la catégorie **« Bienvenue »** (au lieu de « Suivi »).
+- La modale d'envoi individuel aux âmes indécises charge désormais les modèles de la catégorie **« Suivi »** (au lieu de tous les modèles).
+- `SMSService.getTemplates(category?)` accepte un paramètre optionnel pour filtrer par catégorie.
+
 ## [1.7.63] - Correction du filtre Berger
 
 ### Fixed

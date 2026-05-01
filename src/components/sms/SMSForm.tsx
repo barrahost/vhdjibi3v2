@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { collection, query, where, orderBy, getDocs } from 'firebase/firestore';
+import { useState, useEffect, useMemo } from 'react';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 import { Send, X, Search } from 'lucide-react';
 import { db } from '../../lib/firebase';
 import { SMSService } from '../../services/sms.service';
@@ -11,7 +11,7 @@ interface SMSFormProps {
   assignedSouls: SMSRecipient[];
 }
 
-const MAX_SMS_LENGTH = 125; // Reduced to 125 to allow for appending user info
+const SMS_HARD_LIMIT = 160;
 
 export default function SMSForm({ assignedSouls }: SMSFormProps) {
   const { user } = useAuth();
@@ -20,7 +20,6 @@ export default function SMSForm({ assignedSouls }: SMSFormProps) {
   const [selectedTemplate, setSelectedTemplate] = useState('');
   const [templates, setTemplates] = useState<SMSTemplate[]>([]);
   const [isSending, setIsSending] = useState(false);
-  const [characterCount, setCharacterCount] = useState(0);
   const [searchTerm, setSearchTerm] = useState('');
   const [userInfo, setUserInfo] = useState({ fullName: '', phone: '' });
 
@@ -52,21 +51,12 @@ export default function SMSForm({ assignedSouls }: SMSFormProps) {
     loadUserInfo();
   }, [user]);
 
-  // Charger les modèles actifs
+  // Charger les modèles actifs (tous, pour la flexibilité des bergers)
   useEffect(() => {
     const loadTemplates = async () => {
       try {
-        const templatesQuery = query(
-          collection(db, 'smsTemplates'),
-          where('status', '==', 'active'),
-          orderBy('title', 'asc')
-        );
-        
-        const snapshot = await getDocs(templatesQuery);
-        setTemplates(snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        } as SMSTemplate)));
+        const data = await SMSService.getTemplates();
+        setTemplates(data as SMSTemplate[]);
       } catch (error) {
         console.error('Error loading templates:', error);
         toast.error('Erreur lors du chargement des modèles');
@@ -99,9 +89,33 @@ export default function SMSForm({ assignedSouls }: SMSFormProps) {
     if (template) {
       setSelectedTemplate(templateId);
       setMessage(template.content);
-      setCharacterCount(template.content.length);
     }
   };
+
+  // Signature (avec indicatif +225 conservé)
+  const userSignature = useMemo(() => {
+    const nameParts = userInfo.fullName.split(' ').filter(Boolean);
+    const signatureName = nameParts.slice(0, 2).join(' ');
+    const signaturePhone = userInfo.phone || '';
+    return `\n- ${signatureName} (${signaturePhone})`;
+  }, [userInfo]);
+
+  // Aperçu basé sur le 1er destinataire sélectionné (ou exemple par défaut)
+  const messagePreview = useMemo(() => {
+    if (!message) return '';
+    const firstSelectedId = Array.from(selectedRecipients)[0];
+    const previewSoul = firstSelectedId
+      ? assignedSouls.find(s => s.id === firstSelectedId)
+      : undefined;
+    const exampleName = previewSoul?.fullName || 'Jean Kouassi';
+    const exampleNickname = previewSoul?.nickname || exampleName.split(' ')[0];
+    return message
+      .replace(/\[nom\]/g, exampleName)
+      .replace(/\[surnom\]/g, exampleNickname)
+      + userSignature;
+  }, [message, userSignature, selectedRecipients, assignedSouls]);
+
+  const previewCharCount = messagePreview.length;
 
   const replaceVariables = (text: string, soul: SMSRecipient) => {
     let result = text;
@@ -137,26 +151,15 @@ export default function SMSForm({ assignedSouls }: SMSFormProps) {
       const selectedSouls = assignedSouls.filter(soul => selectedRecipients.has(soul.id));
       
       try {
-        // Get user surname (first part of fullName)
-        // Get first two names from user's full name (or just one if that's all they have)
-        const nameParts = userInfo.fullName.split(' ');
-        const userSignatureName = nameParts.length > 1 
-          ? `${nameParts[0]} ${nameParts[1]}`
-          : nameParts[0] || '';
-        const userPhone = userInfo.phone.replace('+225', '') || '';
-        
-        // Append user info to the message
-        const userSignature = `\n- ${userSignatureName} (${userPhone})`;
-
         // Validate message length for each recipient after personalization
         for (const soul of selectedSouls) {
           const personalizedMessage = message
             .replace(/\[nom\]/g, soul.fullName)
             .replace(/\[surnom\]/g, soul.nickname || soul.fullName.split(' ')[0])
             + userSignature;
-          
-          if (personalizedMessage.length > 160) { // Still check against 160 as that's the SMS limit
-            throw new Error(`Le message personnalisé pour ${soul.fullName} dépasse la limite de caractères`);
+
+          if (personalizedMessage.length > SMS_HARD_LIMIT) {
+            throw new Error(`Le message personnalisé pour ${soul.fullName} dépasse la limite de ${SMS_HARD_LIMIT} caractères`);
           }
         }
 
@@ -294,27 +297,36 @@ export default function SMSForm({ assignedSouls }: SMSFormProps) {
         <div className="relative">
           <textarea
             value={message}
-            onChange={(e) => {
-              const text = e.target.value;
-              if (text.length <= MAX_SMS_LENGTH) {
-                setMessage(text);
-                setCharacterCount(text.length);
-              }
-            }}
+            onChange={(e) => setMessage(e.target.value)}
             rows={4}
             className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-[#00665C] focus:border-[#00665C]"
             placeholder="Votre message..."
           />
-          <div className={`mt-1 text-sm ${
-            characterCount > MAX_SMS_LENGTH - 20 ? 'text-red-500' : 'text-gray-500'
-          }`}>
-            {characterCount}/{MAX_SMS_LENGTH} caractères
-          </div>
           <div className="mt-1 text-sm text-gray-500">
             Votre nom et numéro seront automatiquement ajoutés à la fin du message.
           </div>
         </div>
       </div>
+
+      {message && (
+        <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+          <p className="text-xs font-medium text-gray-500 mb-2">
+            📱 Aperçu du message reçu par le destinataire :
+          </p>
+          <div className="bg-white rounded-lg border p-3 text-sm text-gray-800 whitespace-pre-wrap font-mono">
+            {messagePreview}
+          </div>
+          <p className={`mt-2 text-xs ${previewCharCount > SMS_HARD_LIMIT ? 'text-red-600 font-semibold' : 'text-gray-500'}`}>
+            Message final : {previewCharCount}/{SMS_HARD_LIMIT} caractères
+            {previewCharCount > SMS_HARD_LIMIT && ' ⚠️ Trop long — raccourcir le message'}
+          </p>
+          {selectedRecipients.size > 1 && (
+            <p className="mt-1 text-xs text-gray-400 italic">
+              * Aperçu basé sur le premier destinataire sélectionné
+            </p>
+          )}
+        </div>
+      )}
 
       <div className="flex justify-end space-x-3">
         <button

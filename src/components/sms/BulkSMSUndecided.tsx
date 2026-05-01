@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { SMSService } from '../../services/sms.service';
@@ -7,7 +7,7 @@ import { Search, Send, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuth } from '../../contexts/AuthContext';
 
-const MAX_SMS_LENGTH = 125; // Reduced to 125 to allow for appending user info
+const SMS_HARD_LIMIT = 160;
 
 export default function BulkSMSUndecided() {
   const { user } = useAuth();
@@ -94,11 +94,11 @@ export default function BulkSMSUndecided() {
     loadUndecidedSouls();
   }, []);
 
-  // Load SMS templates
+  // Load SMS templates (catégorie "Suivi")
   useEffect(() => {
     const loadTemplates = async () => {
       try {
-        const templatesData = await SMSService.getTemplates();
+        const templatesData = await SMSService.getTemplates('Suivi');
         setTemplates(templatesData);
       } catch (error) {
         console.error('Error loading templates:', error);
@@ -116,6 +116,31 @@ export default function BulkSMSUndecided() {
       setMessage(template.content);
     }
   };
+
+  // Signature (avec indicatif +225 conservé)
+  const userSignature = useMemo(() => {
+    const nameParts = userInfo.fullName.split(' ').filter(Boolean);
+    const signatureName = nameParts.slice(0, 2).join(' ');
+    const signaturePhone = userInfo.phone || '';
+    return `\n- ${signatureName} (${signaturePhone})`;
+  }, [userInfo]);
+
+  // Aperçu basé sur le 1er destinataire sélectionné
+  const messagePreview = useMemo(() => {
+    if (!message) return '';
+    const firstSelectedId = Array.from(selectedRecipients)[0];
+    const previewSoul = firstSelectedId
+      ? undecidedSouls.find(s => s.id === firstSelectedId)
+      : undefined;
+    const exampleName = previewSoul?.fullName || 'Jean Kouassi';
+    const exampleNickname = previewSoul?.nickname || exampleName.split(' ')[0];
+    return message
+      .replace(/\[nom\]/g, exampleName)
+      .replace(/\[surnom\]/g, exampleNickname)
+      + userSignature;
+  }, [message, userSignature, selectedRecipients, undecidedSouls]);
+
+  const previewCharCount = messagePreview.length;
 
   const handleSend = async () => {
     if (selectedRecipients.size === 0) {
@@ -140,26 +165,15 @@ export default function BulkSMSUndecided() {
       const selectedSouls = undecidedSouls.filter(soul => selectedRecipients.has(soul.id));
       
       try {
-        // Get user surname (first part of fullName)
-        // Get first two names from user's full name (or just one if that's all they have)
-        const nameParts = userInfo.fullName.split(' ');
-        const userSignatureName = nameParts.length > 1 
-          ? `${nameParts[0]} ${nameParts[1]}`
-          : nameParts[0] || '';
-        const userPhone = userInfo.phone.replace('+225', '') || '';
-        
-        // Append user info to the message
-        const userSignature = `\n- ${userSignatureName} (${userPhone})`;
-
         // Validate message length for each recipient after personalization
         for (const soul of selectedSouls) {
           const personalizedMessage = message
             .replace(/\[nom\]/g, soul.fullName)
             .replace(/\[surnom\]/g, soul.nickname || soul.fullName.split(' ')[0])
             + userSignature;
-          
-          if (personalizedMessage.length > 160) { // Still check against 160 as that's the SMS limit
-            throw new Error(`Le message personnalisé pour ${soul.fullName} dépasse la limite de caractères`);
+
+          if (personalizedMessage.length > SMS_HARD_LIMIT) {
+            throw new Error(`Le message personnalisé pour ${soul.fullName} dépasse la limite de ${SMS_HARD_LIMIT} caractères`);
           }
         }
 
@@ -336,20 +350,34 @@ export default function BulkSMSUndecided() {
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
                 rows={4}
-                maxLength={MAX_SMS_LENGTH}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-[#00665C] focus:border-[#00665C]"
                 placeholder="Votre message..."
               />
-              <div className={`mt-1 text-sm ${
-                message.length > MAX_SMS_LENGTH - 20 ? 'text-red-500' : 'text-gray-500'
-              }`}>
-                {message.length}/{MAX_SMS_LENGTH} caractères
-              </div>
               <div className="mt-1 text-sm text-gray-500">
                 Votre nom et numéro seront automatiquement ajoutés à la fin du message.
               </div>
             </div>
           </div>
+
+          {message && (
+            <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+              <p className="text-xs font-medium text-gray-500 mb-2">
+                📱 Aperçu du message reçu par le destinataire :
+              </p>
+              <div className="bg-white rounded-lg border p-3 text-sm text-gray-800 whitespace-pre-wrap font-mono">
+                {messagePreview}
+              </div>
+              <p className={`mt-2 text-xs ${previewCharCount > SMS_HARD_LIMIT ? 'text-red-600 font-semibold' : 'text-gray-500'}`}>
+                Message final : {previewCharCount}/{SMS_HARD_LIMIT} caractères
+                {previewCharCount > SMS_HARD_LIMIT && ' ⚠️ Trop long — raccourcir le message'}
+              </p>
+              {selectedRecipients.size > 1 && (
+                <p className="mt-1 text-xs text-gray-400 italic">
+                  * Aperçu basé sur le premier destinataire sélectionné
+                </p>
+              )}
+            </div>
+          )}
 
           <div className="flex justify-end space-x-3">
             <button
