@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { SMSService } from '../../services/sms.service';
@@ -7,7 +7,7 @@ import { Search, Send, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuth } from '../../contexts/AuthContext';
 
-const MAX_SMS_LENGTH = 125; // Reduced to 125 to allow for appending user info
+const SMS_HARD_LIMIT = 160;
 
 export default function BulkSMSUndecided() {
   const { user } = useAuth();
@@ -94,11 +94,11 @@ export default function BulkSMSUndecided() {
     loadUndecidedSouls();
   }, []);
 
-  // Load SMS templates
+  // Load SMS templates (catégorie "Suivi")
   useEffect(() => {
     const loadTemplates = async () => {
       try {
-        const templatesData = await SMSService.getTemplates();
+        const templatesData = await SMSService.getTemplates('Suivi');
         setTemplates(templatesData);
       } catch (error) {
         console.error('Error loading templates:', error);
@@ -116,6 +116,31 @@ export default function BulkSMSUndecided() {
       setMessage(template.content);
     }
   };
+
+  // Signature (avec indicatif +225 conservé)
+  const userSignature = useMemo(() => {
+    const nameParts = userInfo.fullName.split(' ').filter(Boolean);
+    const signatureName = nameParts.slice(0, 2).join(' ');
+    const signaturePhone = userInfo.phone || '';
+    return `\n- ${signatureName} (${signaturePhone})`;
+  }, [userInfo]);
+
+  // Aperçu basé sur le 1er destinataire sélectionné
+  const messagePreview = useMemo(() => {
+    if (!message) return '';
+    const firstSelectedId = Array.from(selectedRecipients)[0];
+    const previewSoul = firstSelectedId
+      ? undecidedSouls.find(s => s.id === firstSelectedId)
+      : undefined;
+    const exampleName = previewSoul?.fullName || 'Jean Kouassi';
+    const exampleNickname = previewSoul?.nickname || exampleName.split(' ')[0];
+    return message
+      .replace(/\[nom\]/g, exampleName)
+      .replace(/\[surnom\]/g, exampleNickname)
+      + userSignature;
+  }, [message, userSignature, selectedRecipients, undecidedSouls]);
+
+  const previewCharCount = messagePreview.length;
 
   const handleSend = async () => {
     if (selectedRecipients.size === 0) {
