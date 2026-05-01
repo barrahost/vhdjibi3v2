@@ -153,7 +153,9 @@ export default function SoulForm() {
             shepherdId: undefined,
             isUndecided: false,
             photo: null,
-            status: 'active' as 'active' | 'inactive'
+            status: 'active' as 'active' | 'inactive',
+            originSource: '' as '' | 'culte' | 'evangelisation',
+            serviceFamilyId: undefined,
             },
             spiritual: {
               isBornAgain: false,
@@ -206,7 +208,9 @@ export default function SoulForm() {
           shepherdId: undefined,
           isUndecided: false,
           photo: null,
-          status: 'active' as 'active' | 'inactive'
+          status: 'active' as 'active' | 'inactive',
+          originSource: '' as '' | 'culte' | 'evangelisation',
+          serviceFamilyId: undefined,
         },
         spiritual: {
           isBornAgain: false,
