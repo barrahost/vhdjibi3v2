@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.7.55] - Répartition par famille de service (ADN)
+
+### Added
+- Nouveau bloc **« Répartition par famille de service »** sur le tableau de bord ADN, avec barres de progression vertes affichant le nombre et le pourcentage d'âmes par famille.
+- Ligne dédiée **« Sans famille »** (couleur ambre) pour identifier les âmes non rattachées.
+
 ## [1.7.54] - Filtre par période sur le tableau de bord ADN
 
 ### Added
