@@ -49,6 +49,9 @@ export function AudioPlayer({
   const playTrackedRef = useRef(false);
   const [waveformPathData, setWaveformPathData] = useState<string>('');
   const [loadingWaveform, setLoadingWaveform] = useState(false);
+  const isMobile = useMediaQuery('(max-width: 768px)');
+  const [isExpanded, setIsExpanded] = useState(false);
+  const progressPercent = duration ? (currentTime / duration) * 100 : 0;
   
   // Gérer les propriétés de l'audio et les événements de base lors du premier montage
   // Initialize audio element once and reuse it throughout the component's lifecycle
