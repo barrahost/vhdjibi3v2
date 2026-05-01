@@ -1,143 +1,143 @@
 import { useState, useEffect, useMemo } from 'react';
-import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, onSnapshot } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { useAuth } from '../../contexts/AuthContext';
 import { Soul, Interaction } from '../../types/database.types';
 import { StatCard } from './stats/StatCard';
 import { Users, MessageSquare, AlertTriangle, Phone } from 'lucide-react';
-import { formatDate } from '../../utils/dateUtils';
 import PendingActionsWidget from './PendingActionsWidget';
 import InteractionModal from '../interactions/InteractionModal';
 import toast from 'react-hot-toast';
 
 export function ShepherdDashboard() {
   const { user } = useAuth();
-  const [stats, setStats] = useState({
-    totalSouls: 0,
-    totalInteractions: 0,
-    soulsNeedingAttention: 0
-  });
   const [recentInteractions, setRecentInteractions] = useState<Interaction[]>([]);
   const [souls, setSouls] = useState<Soul[]>([]);
   const [shepherdId, setShepherdId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [interactionSoul, setInteractionSoul] = useState<Soul | null>(null);
 
+  // 1) Identifier le berger une seule fois
   useEffect(() => {
-    const loadDashboardData = async () => {
-      if (!user) return;
+    if (!user) return;
+    let cancelled = false;
 
+    (async () => {
       try {
-        console.log('🔍 [ShepherdDashboard] Loading data for user:', user.uid);
-        
-        // Récupérer le document utilisateur
         const usersQuery = query(
           collection(db, 'users'),
           where('uid', '==', user.uid),
           where('status', '==', 'active')
         );
         const userSnapshot = await getDocs(usersQuery);
-        
+
         if (userSnapshot.empty) {
-          console.error('🔍 [ShepherdDashboard] User not found in users collection');
-          toast.error('Utilisateur non trouvé');
-          setLoading(false);
+          if (!cancelled) {
+            toast.error('Utilisateur non trouvé');
+            setLoading(false);
+          }
           return;
         }
 
         const userData = userSnapshot.docs[0].data();
         const currentShepherdId = userSnapshot.docs[0].id;
-        setShepherdId(currentShepherdId);
-        
-        console.log('🔍 [ShepherdDashboard] User data:', {
-          id: currentShepherdId,
-          role: userData.role,
-          businessProfiles: userData.businessProfiles
-        });
 
-        // Vérifier si l'utilisateur est un berger (nouveau ou ancien système)
         const hasShepherdProfile = userData.businessProfiles?.some(
           (profile: any) => profile.type === 'shepherd'
         );
         const hasLegacyShepherdRole = userData.role === 'shepherd' || userData.role === 'intern';
-        
+
         if (!hasShepherdProfile && !hasLegacyShepherdRole) {
-          console.error('🔍 [ShepherdDashboard] User is not a shepherd');
-          toast.error('Vous devez avoir un profil Berger pour accéder à ce tableau de bord');
-          setLoading(false);
+          if (!cancelled) {
+            toast.error('Vous devez avoir un profil Berger pour accéder à ce tableau de bord');
+            setLoading(false);
+          }
           return;
         }
 
-        console.log('🔍 [ShepherdDashboard] User is a shepherd, loading data...');
-
-        // Récupérer les âmes
-        const soulsQuery = query(
-          collection(db, 'souls'),
-          where('shepherdId', '==', currentShepherdId),
-          where('status', '==', 'active')
-        );
-        const soulsSnapshot = await getDocs(soulsQuery);
-        const soulsData = soulsSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as Soul[];
-        
-        console.log('🔍 [ShepherdDashboard] Found souls:', soulsData.length);
-        setSouls(soulsData);
-
-        // Récupérer les interactions
-        const interactionsQuery = query(
-          collection(db, 'interactions'),
-          where('shepherdId', '==', currentShepherdId)
-        );
-        const interactionsSnapshot = await getDocs(interactionsQuery);
-        const interactionsData = interactionsSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data(),
-          date: doc.data().date.toDate()
-        })) as Interaction[];
-
-        console.log('🔍 [ShepherdDashboard] Found interactions:', interactionsData.length);
-
-        // Calculer les statistiques
-        const totalSouls = soulsData.length;
-        const totalInteractions = interactionsData.length;
-
-        // Calculer les âmes nécessitant attention (pas d'interaction depuis 14 jours)
-        const attentionThreshold = new Date();
-        attentionThreshold.setDate(attentionThreshold.getDate() - 14);
-
-        const soulsNeedingAttention = soulsData.filter(soul => {
-          const soulInteractions = interactionsData.filter(i => i.soulId === soul.id);
-          if (soulInteractions.length === 0) return true;
-
-          const lastInteraction = new Date(Math.max(...soulInteractions.map(i => i.date.getTime())));
-          return lastInteraction < attentionThreshold;
-        }).length;
-
-        // Trier toutes les interactions (utilisé pour le calcul du dernier contact)
-        const sortedInteractions = [...interactionsData]
-          .sort((a, b) => b.date.getTime() - a.date.getTime());
-
-        setStats({
-          totalSouls,
-          totalInteractions,
-          soulsNeedingAttention
-        });
-        setRecentInteractions(sortedInteractions);
-        
-        console.log('🔍 [ShepherdDashboard] Stats loaded:', {
-          totalSouls,
-          totalInteractions,
-          soulsNeedingAttention
-        });
+        if (!cancelled) setShepherdId(currentShepherdId);
       } catch (error) {
-        console.error('Error loading dashboard data:', error);
-        toast.error('Erreur lors du chargement des données');
-      } finally {
+        console.error('Error loading shepherd identity:', error);
+        if (!cancelled) {
+          toast.error('Erreur lors du chargement des données');
+          setLoading(false);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
+
+  // 2) Écoute temps réel des âmes et interactions
+  useEffect(() => {
+    if (!shepherdId) return;
+
+    const soulsQuery = query(
+      collection(db, 'souls'),
+      where('shepherdId', '==', shepherdId),
+      where('status', '==', 'active')
+    );
+    const interactionsQuery = query(
+      collection(db, 'interactions'),
+      where('shepherdId', '==', shepherdId)
+    );
+
+    const soulsUnsub = onSnapshot(
+      soulsQuery,
+      (snap) => {
+        const data = snap.docs.map(d => ({ id: d.id, ...d.data() })) as Soul[];
+        setSouls(data);
+        setLoading(false);
+      },
+      (err) => {
+        console.error('Error listening to souls:', err);
+        toast.error('Erreur de synchronisation des âmes');
         setLoading(false);
       }
+    );
+
+    const interactionsUnsub = onSnapshot(
+      interactionsQuery,
+      (snap) => {
+        const data = snap.docs.map(d => ({
+          id: d.id,
+          ...d.data(),
+          date: d.data().date.toDate(),
+        })) as Interaction[];
+        const sorted = data.sort((a, b) => b.date.getTime() - a.date.getTime());
+        setRecentInteractions(sorted);
+      },
+      (err) => {
+        console.error('Error listening to interactions:', err);
+      }
+    );
+
+    return () => {
+      soulsUnsub();
+      interactionsUnsub();
     };
+  }, [shepherdId]);
+
+  // Stats dérivées en temps réel
+  const stats = useMemo(() => {
+    const attentionThreshold = new Date();
+    attentionThreshold.setDate(attentionThreshold.getDate() - 14);
+
+    const soulsNeedingAttention = souls.filter(soul => {
+      const soulInteractions = recentInteractions.filter(i => i.soulId === soul.id);
+      if (soulInteractions.length === 0) return true;
+      const lastInteraction = new Date(Math.max(...soulInteractions.map(i => i.date.getTime())));
+      return lastInteraction < attentionThreshold;
+    }).length;
+
+    return {
+      totalSouls: souls.length,
+      totalInteractions: recentInteractions.length,
+      soulsNeedingAttention,
+    };
+  }, [souls, recentInteractions]);
 
     loadDashboardData();
   }, [user]);
