@@ -7,6 +7,7 @@ import type { Soul } from '../../types/database.types';
 import type { User } from '../../types/user.types';
 import { Filter } from 'lucide-react';
 import ShepherdSelect from '../souls/ShepherdSelect';
+import { isShepherdUser } from '../../utils/roleHelpers';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import toast from 'react-hot-toast';
 
@@ -95,18 +96,17 @@ export function SoulMap({ className = '' }: SoulMapProps) {
   useEffect(() => {
     const loadData = async () => {
       try {
-        // Charger les utilisateurs (bergers)
+        // Charger tous les utilisateurs actifs puis filtrer côté client
+        // pour inclure les bergers multi-casquettes
         const shepherdsQuery = query(
           collection(db, 'users'),
-          where('role', '==', 'shepherd'),
           where('status', '==', 'active')
         );
 
         const shepherdsSnapshot = await getDocs(shepherdsQuery);
-        const shepherdsData = shepherdsSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as User[];
+        const shepherdsData = shepherdsSnapshot.docs
+          .map(doc => ({ id: doc.id, ...doc.data() } as User))
+          .filter(u => isShepherdUser(u));
         setUsers(shepherdsData);
 
         // Charger les âmes
