@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.7.56] - Seuil « nécessite attention » aligné à 14 jours (Berger)
+
+### Changed
+- Le tableau de bord **Berger** considère désormais qu'une âme **nécessite attention** au-delà de **14 jours sans interaction** (au lieu de 5 jours), conformément aux règles métier.
+
 ## [1.7.55] - Répartition par famille de service (ADN)
 
 ### Added
