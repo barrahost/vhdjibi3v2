@@ -1,10 +1,16 @@
 import { useEffect, useState } from 'react';
 import { Play, Clock } from 'lucide-react';
-import { AudioTeaching as Teaching } from '../../types/audio.types';
 
-interface RecentlyPlayedBarProps {
-  allTeachings: Teaching[];
-  onSelect: (teaching: Teaching) => void;
+export interface RecentlyPlayedItem {
+  id: string;
+  title: string;
+  speaker: string;
+  thumbnail_url?: string | null;
+}
+
+interface RecentlyPlayedBarProps<T extends RecentlyPlayedItem> {
+  allTeachings: T[];
+  onSelect: (teaching: T) => void;
 }
 
 const STORAGE_KEY = 'recently_played';
@@ -17,7 +23,10 @@ function readRecentIds(): string[] {
   }
 }
 
-export function RecentlyPlayedBar({ allTeachings, onSelect }: RecentlyPlayedBarProps) {
+export function RecentlyPlayedBar<T extends RecentlyPlayedItem>({
+  allTeachings,
+  onSelect
+}: RecentlyPlayedBarProps<T>) {
   const [recentIds, setRecentIds] = useState<string[]>(() => readRecentIds());
 
   useEffect(() => {
@@ -32,7 +41,7 @@ export function RecentlyPlayedBar({ allTeachings, onSelect }: RecentlyPlayedBarP
 
   const recentTeachings = recentIds
     .map((id) => allTeachings.find((t) => t.id === id))
-    .filter((t): t is Teaching => Boolean(t));
+    .filter((t): t is T => Boolean(t));
 
   if (recentTeachings.length === 0) return null;
 
