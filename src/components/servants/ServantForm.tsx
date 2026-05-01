@@ -1,10 +1,9 @@
-import { useState, useEffect } from 'react';
-import { addDoc, collection, query, where, getDocs } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
+import { useState } from 'react';
 import { validatePhoneNumber } from '../../utils/phoneValidation';
 import { GenderRadioGroup } from '../../components/ui/GenderRadioGroup';
 import { useDepartments } from '../../hooks/useDepartments';
 import { AutomaticSyncService } from '../../services/automaticSync.service';
+import { ServantService } from '../../services/servant.service';
 import toast from 'react-hot-toast';
 
 export default function ServantForm({ onSuccess }: { onSuccess?: () => void }) {
