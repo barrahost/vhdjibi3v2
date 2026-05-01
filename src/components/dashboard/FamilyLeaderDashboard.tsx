@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { FamilyLeaderService } from '../../services/familyLeader.service';
 import type { ServiceFamily, Soul } from '../../types/database.types';
-import { Heart, Users, UserPlus, AlertCircle, BarChart3 } from 'lucide-react';
+import { Heart, Users, UserPlus, AlertCircle, BarChart3, Search } from 'lucide-react';
 import PendingActionsWidget from './PendingActionsWidget';
 import { StatCard } from './stats/StatCard';
 import toast from 'react-hot-toast';
@@ -14,6 +14,7 @@ export default function FamilyLeaderDashboard() {
   const [shepherds, setShepherds] = useState<{ id: string; fullName: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [savingId, setSavingId] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
 
   const userId = user?.id || user?.uid;
 
@@ -50,20 +51,31 @@ export default function FamilyLeaderDashboard() {
     return { total, assigned, unassigned: total - assigned };
   }, [souls]);
 
+  // Filtre par nom ou téléphone
+  const filteredSouls = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return souls;
+    return souls.filter(s =>
+      s.fullName?.toLowerCase().includes(q) ||
+      s.phone?.toLowerCase().includes(q) ||
+      s.nickname?.toLowerCase().includes(q)
+    );
+  }, [souls, search]);
+
   // Tri : non assignées en premier, puis assignées (ordre alphabétique dans chaque groupe)
   const unassignedSouls = useMemo(
     () =>
-      souls
+      filteredSouls
         .filter(s => !s.shepherdId)
         .sort((a, b) => a.fullName.localeCompare(b.fullName)),
-    [souls]
+    [filteredSouls]
   );
   const assignedSouls = useMemo(
     () =>
-      souls
+      filteredSouls
         .filter(s => s.shepherdId)
         .sort((a, b) => a.fullName.localeCompare(b.fullName)),
-    [souls]
+    [filteredSouls]
   );
 
   // Charge par berger (calculée côté client)
