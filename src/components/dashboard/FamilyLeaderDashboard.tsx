@@ -207,7 +207,14 @@ export default function FamilyLeaderDashboard() {
               const pct = shepherdLoad.max > 0 ? Math.round((r.count / shepherdLoad.max) * 100) : 0;
               return (
                 <div key={r.id} className="px-4 py-3 flex items-center gap-3">
-                  <div className="w-40 sm:w-56 truncate text-sm text-gray-900">{r.fullName}</div>
+                  <div className="w-40 sm:w-56 truncate text-sm text-gray-900 flex items-center gap-2">
+                    <span className="truncate">{r.fullName}</span>
+                    {r.count === 0 && (
+                      <span className="flex-shrink-0 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
+                        Disponible
+                      </span>
+                    )}
+                  </div>
                   <div className="w-16 text-sm text-gray-600 tabular-nums">{r.count} âme{r.count > 1 ? 's' : ''}</div>
                   <div className="flex-1 h-2 bg-gray-100 rounded overflow-hidden">
                     <div
@@ -221,11 +228,16 @@ export default function FamilyLeaderDashboard() {
             })}
             {stats.unassigned > 0 && (
               <div className="px-4 py-3 flex items-center gap-3 bg-amber-50/40">
-                <div className="w-40 sm:w-56 truncate text-sm text-gray-700 italic">(Non assignées)</div>
+                <div className="w-40 sm:w-56 truncate text-sm text-amber-800 italic">Non assignées</div>
                 <div className="w-16 text-sm text-amber-700 tabular-nums">
                   {stats.unassigned} âme{stats.unassigned > 1 ? 's' : ''}
                 </div>
-                <div className="flex-1" />
+                <div className="flex-1 h-2 bg-amber-100 rounded overflow-hidden">
+                  <div
+                    className="h-full bg-amber-400 rounded-full transition-all"
+                    style={{ width: `${shepherdLoad.max > 0 ? Math.min(100, Math.round((stats.unassigned / shepherdLoad.max) * 100)) : 100}%` }}
+                  />
+                </div>
                 <div className="w-12" />
               </div>
             )}
