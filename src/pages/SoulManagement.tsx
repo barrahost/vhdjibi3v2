@@ -19,30 +19,94 @@ import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
 
 const ITEMS_PER_PAGE = 10;
+const FILTERS_STORAGE_KEY = 'souls:filters:v1';
+
+type PersistedFilters = {
+  searchTerm: string;
+  selectedShepherdId: string | null;
+  dateRange: { startDate: string; endDate: string };
+  statusFilter: 'all' | 'active' | 'inactive';
+  sortConfig: { field: keyof Soul; direction: 'asc' | 'desc' };
+  currentPage: number;
+};
+
+const DEFAULT_FILTERS: PersistedFilters = {
+  searchTerm: '',
+  selectedShepherdId: null,
+  dateRange: { startDate: '', endDate: '' },
+  statusFilter: 'active',
+  sortConfig: { field: 'fullName' as keyof Soul, direction: 'asc' },
+  currentPage: 1,
+};
+
+function loadPersistedFilters(): PersistedFilters {
+  if (typeof window === 'undefined') return DEFAULT_FILTERS;
+  try {
+    const raw = sessionStorage.getItem(FILTERS_STORAGE_KEY);
+    if (!raw) return DEFAULT_FILTERS;
+    const parsed = JSON.parse(raw);
+    return { ...DEFAULT_FILTERS, ...parsed };
+  } catch {
+    return DEFAULT_FILTERS;
+  }
+}
 
 export default function SoulManagement() {
+  const initialFilters = loadPersistedFilters();
   const [showForm, setShowForm] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [souls, setSouls] = useState<Soul[]>([]);
   const [shepherdNames, setShepherdNames] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
-  const [selectedShepherdId, setSelectedShepherdId] = useState<string | null>(null);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [dateRange, setDateRange] = useState({
-    startDate: '',
-    endDate: ''
-  });
+  const [selectedShepherdId, setSelectedShepherdId] = useState<string | null>(initialFilters.selectedShepherdId);
+  const [searchTerm, setSearchTerm] = useState(initialFilters.searchTerm);
+  const [currentPage, setCurrentPage] = useState(initialFilters.currentPage);
+  const [dateRange, setDateRange] = useState(initialFilters.dateRange);
   const [editingSoul, setEditingSoul] = useState<Soul | null>(null);
-  const [sortConfig, setSortConfig] = useState({
-    field: 'fullName' as keyof Soul,
-    direction: 'asc' as 'asc' | 'desc'
-  });
-  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('active');
+  const [sortConfig, setSortConfig] = useState(initialFilters.sortConfig);
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>(initialFilters.statusFilter);
   const [unassignedFamilyOnly, setUnassignedFamilyOnly] = useState(false);
   const { hasPermission } = usePermissions();
   const { userRole, activeRole } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
+
+  // Persist filters in sessionStorage
+  useEffect(() => {
+    try {
+      const toSave: PersistedFilters = {
+        searchTerm,
+        selectedShepherdId,
+        dateRange,
+        statusFilter,
+        sortConfig,
+        currentPage,
+      };
+      sessionStorage.setItem(FILTERS_STORAGE_KEY, JSON.stringify(toSave));
+    } catch {
+      // ignore storage errors
+    }
+  }, [searchTerm, selectedShepherdId, dateRange, statusFilter, sortConfig, currentPage]);
+
+  const hasActiveFilters =
+    searchTerm !== '' ||
+    selectedShepherdId !== null ||
+    dateRange.startDate !== '' ||
+    dateRange.endDate !== '' ||
+    statusFilter !== 'active';
+
+  const resetAllFilters = () => {
+    setSearchTerm('');
+    setSelectedShepherdId(null);
+    setDateRange({ startDate: '', endDate: '' });
+    setStatusFilter('active');
+    setSortConfig({ field: 'fullName' as keyof Soul, direction: 'asc' });
+    setCurrentPage(1);
+    try {
+      sessionStorage.removeItem(FILTERS_STORAGE_KEY);
+    } catch {
+      // ignore
+    }
+  };
 
   // Application des filtres venant de l'URL (one-shot au montage)
   useEffect(() => {
