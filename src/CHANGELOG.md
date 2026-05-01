@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.7.26] - Correction de l'import de serviteurs
+
+### Fixed
+- Correction de l'erreur **« Erreur lors du chargement »** dans le modal d'import des serviteurs (onglets « Depuis les âmes » et « Depuis les utilisateurs »)
+- Suppression de la dépendance à un index composite Firestore : le tri par nom est désormais effectué côté client
+
+
 ## [1.7.25] - Création manuelle de serviteurs depuis le modal d'import
 
 ### Added
