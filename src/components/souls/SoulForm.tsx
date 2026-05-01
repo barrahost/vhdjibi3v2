@@ -22,6 +22,8 @@ export default function SoulForm() {
       isUndecided: false,
       photo: null as File | null,
       status: 'active' as 'active' | 'inactive',
+      originSource: '' as '' | 'culte' | 'evangelisation',
+      serviceFamilyId: undefined as string | undefined,
     },
     spiritual: {
       isBornAgain: false,
@@ -77,6 +79,11 @@ export default function SoulForm() {
         return;
       }
 
+      if (!formData.general.originSource) {
+        toast.error("La provenance de l'âme est obligatoire");
+        return;
+      }
+
       // Préparer les données pour Firestore
       const soulData = {
         fullName: formData.general.fullName.trim(),
@@ -88,6 +95,8 @@ export default function SoulForm() {
         coordinates: formData.general.coordinates,
         firstVisitDate: new Date(formData.general.firstVisitDate),
         shepherdId: formData.general.shepherdId,
+        originSource: formData.general.originSource,
+        serviceFamilyId: formData.general.serviceFamilyId || null,
         spiritualProfile: formData.spiritual,
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -144,7 +153,9 @@ export default function SoulForm() {
             shepherdId: undefined,
             isUndecided: false,
             photo: null,
-            status: 'active' as 'active' | 'inactive'
+            status: 'active' as 'active' | 'inactive',
+            originSource: '' as '' | 'culte' | 'evangelisation',
+            serviceFamilyId: undefined,
             },
             spiritual: {
               isBornAgain: false,
@@ -197,7 +208,9 @@ export default function SoulForm() {
           shepherdId: undefined,
           isUndecided: false,
           photo: null,
-          status: 'active' as 'active' | 'inactive'
+          status: 'active' as 'active' | 'inactive',
+          originSource: '' as '' | 'culte' | 'evangelisation',
+          serviceFamilyId: undefined,
         },
         spiritual: {
           isBornAgain: false,

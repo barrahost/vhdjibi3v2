@@ -5,9 +5,10 @@ import { LocationField } from '../form/LocationField';
 import { GenderRadioGroup } from '../../ui/GenderRadioGroup';
 import ShepherdSelect from '../ShepherdSelect';
 import { Switch } from '../../ui/switch';
-import { AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useState, useEffect } from 'react';
+import { useServiceFamilies } from '../../../hooks/useServiceFamilies';
+import { useAuth } from '../../../contexts/AuthContext';
 
 interface GeneralInfoTabProps {
   data: {
@@ -22,6 +23,8 @@ interface GeneralInfoTabProps {
     isUndecided: boolean;
     status: 'active' | 'inactive';
     photo: File | null;
+    originSource?: 'culte' | 'evangelisation' | '';
+    serviceFamilyId?: string;
   };
   onChange: (data: any) => void;
   isShepherd?: boolean;
@@ -31,6 +34,11 @@ interface GeneralInfoTabProps {
 export function GeneralInfoTab({ data, onChange, isShepherd, currentShepherdId }: GeneralInfoTabProps) {
   const [shepherdName, setShepherdName] = useState<string | null>(null);
   const [shepherdRole, setShepherdRole] = useState<string | null>(null);
+  const { families, loading: loadingFamilies } = useServiceFamilies(true);
+  const { activeRole, userRole } = useAuth();
+
+  // Un ADN n'assigne pas le berger : il assigne une famille de service
+  const isAdnOnly = (activeRole === 'adn' || userRole === 'adn') && activeRole !== 'admin' && activeRole !== 'super_admin';
 
   // Charger le nom du berger si une âme est assignée
   useEffect(() => {
@@ -61,7 +69,6 @@ export function GeneralInfoTab({ data, onChange, isShepherd, currentShepherdId }
   }, [data.shepherdId]);
 
   const handleShepherdChange = (shepherdId: string | undefined) => {
-    // Si c'est un berger, il ne peut pas changer l'assignation
     if (isShepherd && shepherdId !== currentShepherdId) {
       toast.error('En tant que berger, vous ne pouvez pas modifier l\'assignation');
       return;
@@ -129,6 +136,63 @@ export function GeneralInfoTab({ data, onChange, isShepherd, currentShepherdId }
         onCoordinatesChange={(coordinates) => onChange({ ...data, coordinates })}
       />
 
+      {/* Provenance de l'âme */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Provenance de l'âme <span className="text-red-500">*</span>
+        </label>
+        <div className="flex flex-col sm:flex-row gap-3">
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="radio"
+              name="originSource"
+              value="culte"
+              checked={data.originSource === 'culte'}
+              onChange={() => onChange({ ...data, originSource: 'culte' })}
+              className="text-[#00665C] focus:ring-[#00665C]"
+            />
+            <span className="text-sm text-gray-700">Culte</span>
+          </label>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="radio"
+              name="originSource"
+              value="evangelisation"
+              checked={data.originSource === 'evangelisation'}
+              onChange={() => onChange({ ...data, originSource: 'evangelisation' })}
+              className="text-[#00665C] focus:ring-[#00665C]"
+            />
+            <span className="text-sm text-gray-700">Campagne d'évangélisation</span>
+          </label>
+        </div>
+        <p className="mt-1 text-sm text-gray-500">
+          Précisez d'où vient cette âme
+        </p>
+      </div>
+
+      {/* Famille de service */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Famille de service
+        </label>
+        <select
+          value={data.serviceFamilyId || ''}
+          onChange={(e) => onChange({ ...data, serviceFamilyId: e.target.value || undefined })}
+          disabled={loadingFamilies}
+          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-[#00665C] focus:border-[#00665C]"
+        >
+          <option value="">-- Sélectionner une famille --</option>
+          {families.map(f => (
+            <option key={f.id} value={f.id}>{f.name}</option>
+          ))}
+        </select>
+        <p className="mt-1 text-sm text-gray-500">
+          {isAdnOnly
+            ? "Le responsable de famille assignera ensuite l'âme à un berger"
+            : "Optionnel : assigner l'âme à une famille de service"}
+        </p>
+      </div>
+
       <div className="space-y-2">
         <Switch
           checked={data.isUndecided || false}
@@ -136,7 +200,6 @@ export function GeneralInfoTab({ data, onChange, isShepherd, currentShepherdId }
             onChange({
               ...data,
               isUndecided: checked === true,
-              // Si l'âme devient indécise, on retire l'assignation du berger
               shepherdId: checked ? undefined : data.shepherdId
             });
           }}
@@ -178,26 +241,36 @@ export function GeneralInfoTab({ data, onChange, isShepherd, currentShepherdId }
         onChange={(e: React.ChangeEvent<HTMLInputElement>) => onChange({ ...data, firstVisitDate: e.target.value })}
       />
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Berger(e) ou Stagiaire assigné(e)
-        </label>
-        <ShepherdSelect
-          value={data.shepherdId}
-          onChange={handleShepherdChange}
-          disabled={isShepherd || data.isUndecided}
-        />
-        {isShepherd && (
-          <p className="mt-1 text-sm text-gray-500">
-            En tant que berger(e) ou stagiaire, vous êtes automatiquement assigné(e) aux âmes que vous modifiez
-          </p>
-        )}
-        {shepherdName && !isShepherd && (
-          <p className="mt-1 text-sm text-gray-500">
-            {shepherdRole === 'intern' ? 'Stagiaire' : 'Berger(e)'} actuel(le): {shepherdName}
-          </p>
-        )}
-      </div>
+      {/* Sélection berger : caché pour ADN seul (sauf admin) */}
+      {!isAdnOnly && (
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Berger(e) ou Stagiaire assigné(e)
+          </label>
+          <ShepherdSelect
+            value={data.shepherdId}
+            onChange={handleShepherdChange}
+            disabled={isShepherd || data.isUndecided}
+          />
+          {isShepherd && (
+            <p className="mt-1 text-sm text-gray-500">
+              En tant que berger(e) ou stagiaire, vous êtes automatiquement assigné(e) aux âmes que vous modifiez
+            </p>
+          )}
+          {shepherdName && !isShepherd && (
+            <p className="mt-1 text-sm text-gray-500">
+              {shepherdRole === 'intern' ? 'Stagiaire' : 'Berger(e)'} actuel(le): {shepherdName}
+            </p>
+          )}
+        </div>
+      )}
+
+      {isAdnOnly && (
+        <div className="bg-blue-50 border border-blue-200 rounded-md p-3 text-sm text-blue-800">
+          ℹ️ En tant qu'ADN, vous assignez une <strong>famille de service</strong>.
+          Le responsable de cette famille se chargera ensuite d'attribuer l'âme à un berger.
+        </div>
+      )}
     </div>
   );
 }

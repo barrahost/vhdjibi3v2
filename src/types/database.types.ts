@@ -63,6 +63,23 @@ export interface Soul {
   isServant?: boolean; // Indique si l'âme est devenue serviteur
   servantId?: string; // Lien vers l'enregistrement serviteur
   promotionToServantDate?: Date; // Date de promotion
+  // Nouveaux champs ADN
+  originSource?: 'culte' | 'evangelisation'; // Provenance de l'âme
+  serviceFamilyId?: string; // Famille de service assignée par ADN
+}
+
+// Types pour les familles de service
+export interface ServiceFamily {
+  id: string;
+  name: string;
+  description?: string;
+  leader?: string;        // legacy - texte libre, conservé pour compat
+  leaderId?: string;      // référence vers l'utilisateur responsable
+  shepherdIds?: string[]; // IDs des bergers membres de la famille
+  order: number;
+  status: 'active' | 'inactive';
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface ShepherdOption {

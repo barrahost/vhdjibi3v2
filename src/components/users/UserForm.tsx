@@ -39,12 +39,11 @@ export default function UserForm({ onSuccess }: UserFormProps) {
   const updatePasswordForProfiles = (profiles: BusinessProfile[]) => {
     let password = DEFAULT_PASSWORDS.ADMIN;
     
-    // Use the highest privilege profile for password
     if (profiles.some(p => p.type === 'admin')) {
       password = DEFAULT_PASSWORDS.ADMIN;
     } else if (profiles.some(p => p.type === 'adn')) {
       password = DEFAULT_PASSWORDS.ADN;
-    } else if (profiles.some(p => p.type === 'shepherd' || p.type === 'department_leader')) {
+    } else if (profiles.some(p => p.type === 'shepherd' || p.type === 'department_leader' || p.type === 'family_leader')) {
       password = DEFAULT_PASSWORDS.SHEPHERD;
     }
     
