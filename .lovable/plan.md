@@ -1,57 +1,91 @@
-## Problème
+## Problème identifié
 
-Dans la page **Âmes**, le filtre "Berger" n'affiche pas tous les bergers. La cause :
+L'application utilise **deux systèmes de rôles en parallèle** :
+1. **Legacy** : champ unique `role` (ex: `'shepherd'`, `'intern'`, `'adn'`...)
+2. **Nouveau** : tableau `businessProfiles[]` permettant **plusieurs casquettes**
 
-`src/components/souls/ShepherdSelect.tsx` interroge Firestore uniquement sur le champ legacy `role` :
+Beaucoup de filtres et requêtes n'interrogent que le champ legacy `role`, ce qui **exclut les utilisateurs multi-casquettes** (ex : un Resp. Département promu Berger, ou un Berger devenu ADN garde son `role` initial mais reçoit un nouveau `businessProfile`).
+
+Sur la capture, tous les bergers visibles sont d'anciens bergers "purs". Les bergers récents (multi-casquettes) sont absents.
+
+## Fichiers à corriger
+
+Détection unifiée à appliquer partout :
 ```ts
-where('role', 'in', ['shepherd', 'intern'])
+const isShepherd = 
+  user.role === 'shepherd' || 
+  user.role === 'intern' ||
+  user.businessProfiles?.some(p => 
+    ['shepherd','intern'].includes(p.type) && p.isActive !== false
+  );
 ```
 
-Or, depuis la migration vers les profils métier, beaucoup d'utilisateurs ont leur statut de berger défini uniquement dans `businessProfiles` (avec `role` à `member` ou autre). Ils sont donc invisibles dans le sélecteur et le filtre.
+### 1. Filtres / sélecteurs de bergers (priorité haute)
 
-Le hook `useUsersByProfile` gère déjà correctement les deux systèmes (legacy `role` + `businessProfiles`).
+| Fichier | Problème |
+|---|---|
+| `src/components/users/UserList.tsx` (l. 264) | Filtre "Berger(e)s" : `user.role === 'shepherd'` seul → manque multi-casquettes et stagiaires |
+| `src/pages/Reminders.tsx` (l. 27) | Charge bergers via `role == 'shepherd'` uniquement |
+| `src/pages/ShepherdReminders.tsx` (l. 42) | Page "Rappels par berger" : idem |
+| `src/components/map/SoulMap.tsx` (l. 101) | Carte des âmes : filtre berger incomplet |
+| `src/components/dashboard/stats/GeneralStats.tsx` (l. 36) | Statistiques générales |
+| `src/components/settings/UserMenuManagement.tsx` (l. 23) | Gestion menus utilisateurs |
+| `src/migrations/servantSchemaChanges.ts` (l. 29) | Migration (à aligner) |
 
-## Correction
+### 2. Identification de l'utilisateur courant comme berger
 
-### 1. `src/components/souls/ShepherdSelect.tsx`
-Remplacer la requête actuelle par une logique hybride :
-- Charger tous les utilisateurs `status === 'active'`.
-- Filtrer côté client : un utilisateur est berger/stagiaire si
-  - `role === 'shepherd'` ou `role === 'intern'`, **OU**
-  - `businessProfiles` contient un profil actif de type `shepherd` ou `intern`.
-- Conserver le tri alphabétique sur `fullName`.
-- Garder le libellé "(Stagiaire)" si l'utilisateur est stagiaire (via legacy role ou via businessProfiles).
+| Fichier | Problème |
+|---|---|
+| `src/pages/SMSManagement.tsx` (l. 36) | Berger connecté détecté via `role=='shepherd'` seul → un berger multi-casquettes voit "Test SMS" au lieu de ses âmes |
+| `src/pages/InteractionsManagement.tsx` (l. 127) | Idem pour les interactions |
+| `src/components/souls/EditSoulModal.tsx` (l. 56) | Récupération du `shepherdId` courant |
 
-### 2. Vérifier les autres filtres "Berger" éventuels
-Rechercher dans `src/pages/Souls*` et `src/components/souls/` un éventuel deuxième endroit qui charge la liste des bergers pour le filtre de la page (souvent un `<select>` séparé du `ShepherdSelect`). Si trouvé, appliquer la même logique hybride (idéalement via `useUsersByProfile(['shepherd','intern'])`).
+### 3. Filtre par rôle dans la liste utilisateurs
 
-### 3. Maintenance
-- Bump version → **1.7.63** dans `src/pages/Login.tsx`.
-- Entrée dans `src/CHANGELOG.md` : *"Correction : le sélecteur et le filtre Berger affichent désormais tous les bergers (legacy `role` + `businessProfiles`)."*
+`src/components/users/UserList.tsx` (l. 260-267) — étendre :
+- `'shepherds'` → inclure stagiaires + multi-casquettes
+- `'admins'` → inclure `businessProfiles.type === 'admin'`
+- `'adn'` → inclure `businessProfiles.type === 'adn'`
+- Ajouter aussi : Resp. Département, Resp. Famille déjà filtrables ? Vérifier et étendre.
 
-## Détails techniques
+### 4. Stratégie technique
 
+Pour les requêtes Firestore qui filtrent sur `role`, il n'est pas possible de faire un `OR` natif sur deux champs. Solution adoptée (déjà en place dans `ShepherdSelect.tsx` et `BatchAssignmentModal.tsx` v1.7.63) :
+- **Charger tous les utilisateurs actifs** (`status == 'active'`)
+- **Filtrer côté client** avec la logique hybride
+
+### 5. Helpers à créer
+
+Créer `src/utils/roleHelpers.ts` exportant :
 ```ts
-const snap = await getDocs(
-  query(collection(db, 'users'), where('status', '==', 'active'))
-);
-
-const shepherds = snap.docs
-  .map(d => ({ id: d.id, ...d.data() } as any))
-  .filter(u => {
-    const fromRole = u.role === 'shepherd' || u.role === 'intern';
-    const fromProfiles = (u.businessProfiles || []).some(
-      (p: any) => (p.type === 'shepherd' || p.type === 'intern') && p.isActive !== false
-    );
-    return fromRole || fromProfiles;
-  })
-  .map(u => {
-    const isIntern =
-      u.role === 'intern' ||
-      (u.businessProfiles || []).some((p: any) => p.type === 'intern');
-    return { id: u.id, fullName: u.fullName, role: isIntern ? 'intern' : 'shepherd' };
-  })
-  .sort((a, b) => a.fullName.localeCompare(b.fullName));
+export const isShepherdUser(user): boolean
+export const isInternUser(user): boolean
+export const isADNUser(user): boolean
+export const isAdminUser(user): boolean
+export const isDepartmentLeaderUser(user): boolean
+export const isFamilyLeaderUser(user): boolean
+export const hasAnyRole(user, roles[]): boolean
 ```
 
-Aucun changement de schéma ni de règles Firestore requis.
+→ Refactoriser tous les fichiers listés pour utiliser ces helpers (cohérence + maintenance).
+
+### 6. Maintenance
+
+- Bumper version → **1.7.65**
+- Mettre à jour `src/CHANGELOG.md` avec la liste des corrections
+- Mettre à jour `src/pages/Login.tsx` (numéro de version affiché)
+
+## Ce qui sera testable après
+
+1. **Page Utilisateurs** → filtre "Berger(e)s" affichera **tous** les bergers (purs + multi-casquettes + stagiaires).
+2. **Filtres berger** sur Âmes / Interactions / Carte / Rappels → liste complète.
+3. **SMS / Interactions** → un berger ayant aussi ADN/Resp. accède bien à ses âmes assignées.
+4. **Dashboard stats** → comptage correct des bergers actifs.
+
+## Hors scope
+
+- Ne touche pas à la logique de permissions (`usePermissions`) qui combine déjà les deux systèmes.
+- Ne migre pas les données : les champs `role` legacy restent intacts.
+- Ne modifie pas les Cloud Functions ni les règles Firestore.
+
+Approuvez pour que j'implémente.
