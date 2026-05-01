@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { ChevronDown, User, Shield, Settings, Crown } from 'lucide-react';
+import { ChevronDown, User, Shield, Settings, Crown, Users } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { BusinessProfileType, BUSINESS_PROFILE_LABELS, BUSINESS_PROFILE_DESCRIPTIONS, getProfilePermissions } from '../../types/businessProfile.types';
 import type { BusinessProfile } from '../../types/businessProfile.types';
