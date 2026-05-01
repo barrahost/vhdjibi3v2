@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { collection, onSnapshot } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { StatCard } from './stats/StatCard';
 import { Users, UserCheck, UserX, User, AlertTriangle } from 'lucide-react';
@@ -24,84 +24,86 @@ export function ADNDashboard() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        // Récupérer toutes les âmes enregistrées
-        const soulsRef = collection(db, 'souls');
-        const allSoulsQuery = query(soulsRef);
-        const snapshot = await getDocs(allSoulsQuery);
-        
-        if (!snapshot) {
-          throw new Error("Impossible de récupérer les données");
+    setLoading(true);
+    const soulsRef = collection(db, 'souls');
+
+    const unsubscribe = onSnapshot(
+      soulsRef,
+      (snapshot) => {
+        try {
+          const souls = snapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+              id: doc.id,
+              ...data,
+              createdAt: data.createdAt?.toDate() || new Date(),
+              shepherdId: data.shepherdId as string | undefined,
+              isUndecided: data.isUndecided as boolean,
+              gender: data.gender as string,
+              status: data.status as string,
+            };
+          });
+
+          // Total des âmes enregistrées
+          const totalSouls = souls.length;
+
+          // Total des âmes actives et assignées
+          const activeAssignedSouls = souls.filter(soul =>
+            soul.status === 'active' && soul.shepherdId && !soul.isUndecided
+          ).length;
+
+          // Total des âmes actives et non assignées
+          const activeUnassignedSouls = souls.filter(soul =>
+            soul.status === 'active' && !soul.shepherdId && !soul.isUndecided
+          ).length;
+
+          // Total des âmes indécises
+          const undecidedSouls = souls.filter(soul => soul.isUndecided).length;
+
+          // Nouvelles âmes ce mois (30 derniers jours)
+          const thirtyDaysAgo = new Date();
+          thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+          const newSoulsThisMonth = souls.filter(soul => {
+            const createdAt = soul.createdAt instanceof Date ? soul.createdAt : new Date(soul.createdAt);
+            return createdAt >= thirtyDaysAgo;
+          }).length;
+
+          // Total des âmes hommes actives et assignées
+          const activeAssignedMaleCount = souls.filter(soul =>
+            soul.status === 'active' && soul.shepherdId && !soul.isUndecided && soul.gender === 'male'
+          ).length;
+
+          // Total des âmes femmes actives et assignées
+          const activeAssignedFemaleCount = souls.filter(soul =>
+            soul.status === 'active' && soul.shepherdId && !soul.isUndecided && soul.gender === 'female'
+          ).length;
+
+          setStats({
+            totalSouls,
+            activeAssignedSouls,
+            activeUnassignedSouls,
+            undecidedSouls,
+            newSoulsThisMonth,
+            activeAssignedMaleCount,
+            activeAssignedFemaleCount
+          });
+          setError(null);
+        } catch (err) {
+          console.error('Error processing ADN snapshot:', err);
+          setError("Erreur lors du traitement des statistiques");
+        } finally {
+          setLoading(false);
         }
-
-        const souls = snapshot.docs.map(doc => {
-          const data = doc.data();
-          return {
-            id: doc.id,
-            ...data,
-            createdAt: data.createdAt?.toDate() || new Date(),
-            shepherdId: data.shepherdId as string | undefined,
-            isUndecided: data.isUndecided as boolean,
-            gender: data.gender as string,
-            status: data.status as string,
-          };
-        });
-
-        // Total des âmes enregistrées
-        const totalSouls = souls.length;
-        
-        // Total des âmes actives et assignées
-        const activeAssignedSouls = souls.filter(soul => 
-          soul.status === 'active' && soul.shepherdId && !soul.isUndecided
-        ).length;
-        
-        // Total des âmes actives et non assignées
-        const activeUnassignedSouls = souls.filter(soul => 
-          soul.status === 'active' && !soul.shepherdId && !soul.isUndecided
-        ).length;
-        
-        // Total des âmes indécises
-        const undecidedSouls = souls.filter(soul => soul.isUndecided).length;
-
-        // Nouvelles âmes ce mois (30 derniers jours)
-        const thirtyDaysAgo = new Date();
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-        const newSoulsThisMonth = souls.filter(soul => {
-          const createdAt = soul.createdAt instanceof Date ? soul.createdAt : new Date(soul.createdAt);
-          return createdAt >= thirtyDaysAgo;
-        }).length;
-
-        // Total des âmes hommes actives et assignées
-        const activeAssignedMaleCount = souls.filter(soul => 
-          soul.status === 'active' && soul.shepherdId && !soul.isUndecided && soul.gender === 'male'
-        ).length;
-        
-        // Total des âmes femmes actives et assignées
-        const activeAssignedFemaleCount = souls.filter(soul => 
-          soul.status === 'active' && soul.shepherdId && !soul.isUndecided && soul.gender === 'female'
-        ).length;
-
-        setStats({
-          totalSouls,
-          activeAssignedSouls,
-          activeUnassignedSouls,
-          undecidedSouls,
-          newSoulsThisMonth,
-          activeAssignedMaleCount,
-          activeAssignedFemaleCount
-        });
-        setError(null);
-      } catch (error) {
-        console.error('Error fetching ADN stats:', error);
-        setError("Erreur lors du chargement des statistiques");
-        toast.error("Erreur lors du chargement des statistiques");
-      } finally {
+      },
+      (error) => {
+        console.error('Error listening to souls:', error);
+        setError("Erreur de synchronisation des statistiques");
+        toast.error("Erreur de synchronisation");
         setLoading(false);
       }
-    };
+    );
 
-    fetchStats();
+    return () => unsubscribe();
   }, []);
 
   if (loading) {
