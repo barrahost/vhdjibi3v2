@@ -671,7 +671,7 @@ export function AudioPlayer({
           </div>
 
           {/* Volume */}
-          <div className="hidden lg:flex items-center space-x-3 bg-white px-4 py-3 rounded-xl shadow-md border border-gray-200">
+          <div className="hidden md:flex items-center space-x-3 bg-white px-4 py-3 rounded-xl shadow-md border border-gray-200">
             <button
               onClick={toggleMute}
               className="text-gray-600 hover:text-[#00665C] transition-all duration-200 disabled:opacity-50 hover:scale-110"
