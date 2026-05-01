@@ -7,7 +7,8 @@ import { usePermissions } from '../../hooks/usePermissions';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
-import { Users, UserCheck, UserPlus, Crown } from 'lucide-react';
+import { Users, UserCheck, UserPlus, Crown, Download } from 'lucide-react';
+import { ImportServantsModal } from './ImportServantsModal';
 import { toast } from 'react-hot-toast';
 
 interface Department {
@@ -28,6 +29,7 @@ export default function DepartmentLeaderDashboard() {
     promotedFromSouls: 0,
     shepherds: 0
   });
+  const [showImportModal, setShowImportModal] = useState(false);
 
   const canManageDepartmentServants = hasPermission('MANAGE_DEPARTMENT_SERVANTS');
 
@@ -217,13 +219,24 @@ export default function DepartmentLeaderDashboard() {
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
             <span>Serviteurs du département</span>
-            <Button 
-              onClick={() => window.location.href = '/serviteurs'}
-              variant="outline"
-              size="sm"
-            >
-              Gérer tous les serviteurs
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                onClick={() => setShowImportModal(true)}
+                variant="default"
+                size="sm"
+                className="flex items-center gap-2"
+              >
+                <Download className="w-4 h-4" />
+                Importer
+              </Button>
+              <Button
+                onClick={() => window.location.href = '/serviteurs'}
+                variant="outline"
+                size="sm"
+              >
+                Gérer tous les serviteurs
+              </Button>
+            </div>
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -278,6 +291,12 @@ export default function DepartmentLeaderDashboard() {
           )}
         </CardContent>
       </Card>
+
+      <ImportServantsModal
+        isOpen={showImportModal}
+        onClose={() => setShowImportModal(false)}
+        fixedDepartmentId={department.id}
+      />
     </div>
   );
 }

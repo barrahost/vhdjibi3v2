@@ -1,8 +1,13 @@
-import { collection, query, where, getDocs, doc, getDoc, addDoc, updateDoc, deleteDoc, writeBatch } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, getDoc, addDoc, updateDoc, deleteDoc, writeBatch, documentId } from 'firebase/firestore';
 import { db } from '../lib/firebase';
-import { Servant, ServantFormData } from '../types/servant.types';
+import { Servant, ServantFormData, ServantSourceType } from '../types/servant.types';
 import { validatePhoneNumber } from '../utils/phoneValidation';
 import toast from 'react-hot-toast';
+
+export interface ImportResult {
+  imported: number;
+  skipped: Array<{ name: string; reason: string }>;
+}
 
 export class ServantService {
   /**
@@ -10,26 +15,28 @@ export class ServantService {
    */
   static async createServant(data: ServantFormData): Promise<string> {
     try {
-      // Validate phone number
-      // Check if phone already exists (assuming it's already validated and formatted)
-      const phoneQuery = query(
-        collection(db, 'servants'),
-        where('phone', '==', data.phone)
-      );
-      const phoneSnapshot = await getDocs(phoneQuery);
-      if (!phoneSnapshot.empty) {
-        throw new Error('Ce numéro de téléphone est déjà utilisé');
-      }
-
-      // Check if email already exists (if provided)
-      if (data.email) {
-        const emailQuery = query(
+      // If a source is provided, prevent importing the same person twice in the same department
+      if (data.sourceType && data.sourceId) {
+        const dupQuery = query(
           collection(db, 'servants'),
-          where('email', '==', data.email.trim())
+          where('sourceType', '==', data.sourceType),
+          where('sourceId', '==', data.sourceId),
+          where('departmentId', '==', data.departmentId)
         );
-        const emailSnapshot = await getDocs(emailQuery);
-        if (!emailSnapshot.empty) {
-          throw new Error('Cet email est déjà utilisé');
+        const dupSnap = await getDocs(dupQuery);
+        if (!dupSnap.empty) {
+          throw new Error('Cette personne est déjà serviteur dans ce département');
+        }
+      } else {
+        // Manual entry: prevent duplicate phone within the same department
+        const phoneQuery = query(
+          collection(db, 'servants'),
+          where('phone', '==', data.phone),
+          where('departmentId', '==', data.departmentId)
+        );
+        const phoneSnap = await getDocs(phoneQuery);
+        if (!phoneSnap.empty) {
+          throw new Error('Ce numéro est déjà utilisé pour un serviteur dans ce département');
         }
       }
 
@@ -48,16 +55,19 @@ export class ServantService {
       }
 
       // Create the servant document
-      const servantData = {
+      const servantData: any = {
         fullName: data.fullName.trim(),
         nickname: data.nickname?.trim() || null,
         gender: data.gender,
-       phone: data.phone, // Use the already validated and formatted phone
+        phone: data.phone,
         email: data.email?.trim() || null,
         departmentId: data.departmentId,
         isHead: data.isHead,
         isShepherd: data.isShepherd || false,
         shepherdId: data.shepherdId || null,
+        sourceType: data.sourceType || 'manual',
+        sourceId: data.sourceId || null,
+        originalSoulId: data.originalSoulId || (data.sourceType === 'soul' ? data.sourceId : null) || null,
         status: 'active',
         createdAt: new Date(),
         updatedAt: new Date()
@@ -400,5 +410,155 @@ export class ServantService {
       console.error('Error in bulk delete servants:', error);
       throw error;
     }
+  }
+
+  /**
+   * Find existing servants for a department restricted to a list of source ids.
+   * Returns a Set of sourceId already present in the department.
+   */
+  private static async getExistingSourceIds(
+    departmentId: string,
+    sourceType: ServantSourceType,
+    sourceIds: string[]
+  ): Promise<Set<string>> {
+    const existing = new Set<string>();
+    if (sourceIds.length === 0) return existing;
+
+    // Firestore "in" supports up to 10 values; chunk it.
+    const chunks: string[][] = [];
+    for (let i = 0; i < sourceIds.length; i += 10) {
+      chunks.push(sourceIds.slice(i, i + 10));
+    }
+
+    for (const chunk of chunks) {
+      const q = query(
+        collection(db, 'servants'),
+        where('departmentId', '==', departmentId),
+        where('sourceType', '==', sourceType),
+        where('sourceId', 'in', chunk)
+      );
+      const snap = await getDocs(q);
+      snap.docs.forEach(d => {
+        const data = d.data() as any;
+        if (data.sourceId) existing.add(data.sourceId);
+      });
+    }
+    return existing;
+  }
+
+  /**
+   * Import servants from existing souls.
+   */
+  static async importFromSouls(soulIds: string[], departmentId: string): Promise<ImportResult> {
+    const result: ImportResult = { imported: 0, skipped: [] };
+    if (soulIds.length === 0 || !departmentId) return result;
+
+    const existing = await this.getExistingSourceIds(departmentId, 'soul', soulIds);
+
+    // Fetch souls in chunks of 10 (documentId in)
+    const chunks: string[][] = [];
+    for (let i = 0; i < soulIds.length; i += 10) {
+      chunks.push(soulIds.slice(i, i + 10));
+    }
+
+    for (const chunk of chunks) {
+      const snap = await getDocs(
+        query(collection(db, 'souls'), where(documentId(), 'in', chunk))
+      );
+
+      for (const soulDoc of snap.docs) {
+        const soul = soulDoc.data() as any;
+        const name = soul.fullName || 'Inconnu';
+
+        if (existing.has(soulDoc.id)) {
+          result.skipped.push({ name, reason: 'Déjà serviteur dans ce département' });
+          continue;
+        }
+
+        try {
+          await addDoc(collection(db, 'servants'), {
+            fullName: (soul.fullName || '').trim(),
+            nickname: soul.nickname?.trim() || null,
+            gender: soul.gender || 'male',
+            phone: soul.phone || '',
+            email: soul.email?.trim() || null,
+            departmentId,
+            isHead: false,
+            isShepherd: false,
+            shepherdId: null,
+            sourceType: 'soul',
+            sourceId: soulDoc.id,
+            originalSoulId: soulDoc.id,
+            promotionDate: new Date(),
+            status: 'active',
+            createdAt: new Date(),
+            updatedAt: new Date()
+          });
+          result.imported++;
+        } catch (e: any) {
+          console.error('Error importing soul as servant:', e);
+          result.skipped.push({ name, reason: e?.message || 'Erreur inconnue' });
+        }
+      }
+    }
+
+    return result;
+  }
+
+  /**
+   * Import servants from existing users (any role).
+   */
+  static async importFromUsers(userDocIds: string[], departmentId: string): Promise<ImportResult> {
+    const result: ImportResult = { imported: 0, skipped: [] };
+    if (userDocIds.length === 0 || !departmentId) return result;
+
+    const existing = await this.getExistingSourceIds(departmentId, 'user', userDocIds);
+
+    const chunks: string[][] = [];
+    for (let i = 0; i < userDocIds.length; i += 10) {
+      chunks.push(userDocIds.slice(i, i + 10));
+    }
+
+    for (const chunk of chunks) {
+      const snap = await getDocs(
+        query(collection(db, 'users'), where(documentId(), 'in', chunk))
+      );
+
+      for (const userDoc of snap.docs) {
+        const user = userDoc.data() as any;
+        const name = user.fullName || 'Inconnu';
+
+        if (existing.has(userDoc.id)) {
+          result.skipped.push({ name, reason: 'Déjà serviteur dans ce département' });
+          continue;
+        }
+
+        try {
+          await addDoc(collection(db, 'servants'), {
+            fullName: (user.fullName || '').trim(),
+            nickname: user.nickname?.trim() || null,
+            gender: user.gender || 'male',
+            phone: user.phone || '',
+            email: user.email?.trim() || null,
+            departmentId,
+            isHead: false,
+            isShepherd: user.role === 'shepherd' || !!user.businessProfiles?.some?.((p: any) => p.type === 'shepherd'),
+            shepherdId: null,
+            sourceType: 'user',
+            sourceId: userDoc.id,
+            originalSoulId: null,
+            status: 'active',
+            createdAt: new Date(),
+            updatedAt: new Date()
+          });
+          result.imported++;
+        } catch (e: any) {
+          console.error('Error importing user as servant:', e);
+          result.skipped.push({ name, reason: e?.message || 'Erreur inconnue' });
+        }
+      }
+    }
+
+    return result;
   }
 }

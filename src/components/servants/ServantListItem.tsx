@@ -51,13 +51,25 @@ export default function ServantListItem({ servant, departmentName, onEdit }: Ser
         {departmentName}
       </td>
       <td className="px-6 py-4 whitespace-nowrap">
-        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-          servant.isHead 
-            ? 'bg-purple-100 text-purple-800' 
-            : 'bg-blue-100 text-blue-800'
-        }`}>
-          {servant.isHead ? 'Responsable' : 'Serviteur'}
-        </span>
+        <div className="flex flex-wrap gap-1">
+          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+            servant.isHead
+              ? 'bg-purple-100 text-purple-800'
+              : 'bg-blue-100 text-blue-800'
+          }`}>
+            {servant.isHead ? 'Responsable' : 'Serviteur'}
+          </span>
+          {servant.sourceType === 'soul' || servant.originalSoulId ? (
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-blue-50 text-blue-700 border border-blue-200">
+              Importé d'âme
+            </span>
+          ) : null}
+          {servant.sourceType === 'user' && (
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-violet-50 text-violet-700 border border-violet-200">
+              Importé d'utilisateur
+            </span>
+          )}
+        </div>
       </td>
       <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
         <div className="flex justify-end space-x-2">

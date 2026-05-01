@@ -1,108 +1,107 @@
 ## Objectif
 
-Permettre à un utilisateur multi-rôles de définir un **profil principal** (rôle de connexion par défaut) tout en conservant la possibilité de basculer ensuite. Nettoyer la page de login (pas de badge de rôle) et afficher la liste de tous les rôles dans la table de gestion des utilisateurs.
+Permettre à un **chef de département** d'ajouter des serviteurs à son département en les **important** depuis :
+
+1. La liste des **âmes** existantes
+2. La liste des **utilisateurs** existants (n'importe quel rôle : berger, chef de famille, ADN, autre chef de département, admin…)
+
+Le serviteur reste **la même personne** que l'âme/utilisateur d'origine (lien conservé). Une personne peut être serviteur dans plusieurs départements simultanément.
 
 ---
 
-## 1. Modèle de données — `BusinessProfile`
+## Concept clé : multi-appartenance
 
-**Fichier : `src/types/businessProfile.types.ts`**
+Aujourd'hui, la collection `servants` duplique nom/téléphone/email et lie au mieux à `originalSoulId`. Pour gérer **n'importe quelle source** (âme OU utilisateur) et **plusieurs départements** par personne, on étend le modèle :
 
-- Ajouter un champ optionnel `isPrimary?: boolean` sur l'interface `BusinessProfile`.
-- Règle métier : un seul profil peut avoir `isPrimary = true`. Si aucun n'est marqué, le premier de la liste fait office de défaut.
-
-`isActive` reste utilisé pour indiquer le profil **actuellement** sélectionné dans la session ; `isPrimary` est la préférence persistée par l'utilisateur/admin.
-
----
-
-## 2. Attribution du profil principal (Admin)
-
-**Fichier : `src/components/users/BusinessProfileAssignment.tsx`**
-
-Pour chaque profil coché, ajouter un radio bouton « Principal » à droite (groupe radio unique).
-- Cocher un profil → s'il est seul, il devient automatiquement principal.
-- Décocher le profil principal → bascule automatiquement le principal sur le premier restant.
-- Visuel : étoile/badge « Profil principal » à côté du label.
-
-La sauvegarde via `UserForm.tsx` / `EditUserModal.tsx` enregistre déjà `businessProfiles` dans Firestore — aucune modification supplémentaire requise (le champ `isPrimary` sera persisté tel quel).
-
----
-
-## 3. Login par défaut sur le profil principal
-
-**Fichier : `src/contexts/AuthContext.tsx`**
-
-Dans `login()` (~ligne 326) et dans la restauration de session (~ligne 99), modifier la logique de sélection de `chosenProfile` selon cet ordre de priorité :
-
-1. `localStorage.activeProfileType` s'il existe **ET** correspond à un profil disponible (permet de garder le dernier basculement effectué dans la session précédente).
-2. Profil ayant `isPrimary === true`.
-3. Profil ayant `isActive === true` (rétro-compat).
-4. Premier profil de la liste.
-
-Cas particulier à la **première connexion** (pas de `activeProfileType` en localStorage) → on force la sélection sur le profil principal, ignorant l'étape 1.
-
----
-
-## 4. Login — suppression du badge de rôle
-
-**Fichier : `src/components/auth/UserSelect.tsx`**
-
-- Retirer l'affichage des `<span>` badges de rôle :
-  - dans le bouton-trigger (lignes 242-244)
-  - dans la liste déroulante (lignes 296-298)
-- Supprimer les helpers `getRoleBadgeColor` et `getRoleDisplayName` devenus inutiles.
-- Conserver `getUserType()` qui sert à `onChange`.
-
-Résultat : le sélecteur n'affiche plus que **nom + téléphone**.
-
----
-
-## 5. Liste des utilisateurs — colonne « Rôles »
-
-**Fichier : `src/components/users/UserList.tsx`** (colonne `role`, lignes 365-405)
-
-Remplacer le badge unique par une liste de badges :
-- Si `user.businessProfiles` existe et n'est pas vide → afficher un badge par profil, en utilisant `BUSINESS_PROFILE_LABELS`. Marquer visuellement le profil principal (étoile ★ ou bordure dorée `#F2B636`).
-- Sinon (rétro-compat) → afficher le badge unique basé sur `user.role` (comportement actuel).
-
-Couleurs des badges réutilisées par mapping :
 ```
-shepherd → vert | adn → ambre | admin/super_admin → bleu/violet
-department_leader → indigo | family_leader → teal
+Servant {
+  // … champs existants
+  sourceType?: 'soul' | 'user' | 'manual';   // origine de l'import
+  sourceId?: string;                          // id de l'âme OU de l'utilisateur source
+  originalSoulId?: string;                    // conservé pour rétro-compat (= sourceId si soul)
+}
 ```
 
-Affichage compact : `flex flex-wrap gap-1` pour rester lisible sur mobile.
+Règle : **l'unicité phone/email est levée** (un user/âme déjà serviteur ailleurs doit pouvoir rejoindre un autre département). On ajoute à la place une **unicité (sourceType, sourceId, departmentId)** vérifiée applicativement pour empêcher d'importer deux fois la même personne dans le même département.
 
 ---
 
-## 6. Detail technique — `ProfileSwitcher`
+## Étapes
 
-**Fichier : `src/components/ui/ProfileSwitcher.tsx`** (vérification, sans modification probable)
+### 1. Type & service serviteur
 
-Le switcher continue d'utiliser `switchToProfile()`. Aucune modification fonctionnelle nécessaire ; on peut simplement ajouter un libellé « (principal) » à côté du profil principal dans la liste déroulante pour clarté.
+**`src/types/servant.types.ts`**
+- Ajouter `sourceType?: 'soul' | 'user' | 'manual'` et `sourceId?: string`.
+- Garder `originalSoulId` pour la rétro-compat.
+
+**`src/services/servant.service.ts`**
+- Nouvelle méthode `importFromSouls(soulIds, departmentId)` : pour chaque âme, vérifier qu'aucun doc serviteur `(sourceType='soul', sourceId, departmentId)` n'existe ; sinon créer un serviteur avec les infos copiées (fullName, gender, phone, email) + `sourceType='soul'`, `sourceId=soul.id`, `originalSoulId=soul.id`.
+- Nouvelle méthode `importFromUsers(userIds, departmentId)` : idem avec `sourceType='user'`, `sourceId=user.id`. Récupérer fullName/phone/email depuis Firestore `users`.
+- Modifier `createServant()` : remplacer les check d'unicité phone/email **globaux** par un check `(sourceType, sourceId, departmentId)` quand source fournie ; pour les ajouts manuels (sans source), conserver l'unicité phone par département uniquement.
+- Retourne un résumé `{ imported, skipped: [{name, reason}] }`.
+
+### 2. Composant d'import (modale)
+
+**Nouveau : `src/components/servants/ImportServantsModal.tsx`**
+
+Une modale avec :
+- Onglets `Depuis les âmes` / `Depuis les utilisateurs`.
+- Recherche (nom, téléphone) + liste paginée avec checkboxes.
+- Filtres simples (par genre pour les âmes ; par rôle pour les utilisateurs).
+- Indication visuelle « déjà serviteur dans ce département » → désactivé.
+- Bouton « Importer (N) » qui appelle `importFromSouls` ou `importFromUsers` selon l'onglet.
+- Toast résumé (`X importés, Y ignorés`).
+
+Hooks utilisés :
+- `useDepartments` pour le contexte ; pour un chef de département le `departmentId` est fixé (depuis `activeRole === 'department_leader'` et son `businessProfile`).
+- Lecture directe des collections `souls` et `users` (queries Firestore avec pagination simple — 50 par page).
+
+### 3. Intégration UI
+
+**`src/pages/ServantManagement.tsx`** et **`src/components/servants/DepartmentLeaderDashboard.tsx`**
+- Ajouter à côté de « Ajouter un serviteur » un bouton **« Importer des serviteurs »** (icône `Download` ou `UserPlus2`).
+- Dans `DepartmentLeaderDashboard`, ajouter ce même bouton dans l'en-tête de la card « Serviteurs du département » (le département est connu).
+- Dans `ServantManagement` (vue admin), demander de choisir un département cible si aucun n'est sélectionné dans le filtre.
+
+### 4. Affichage de la source
+
+**`src/components/servants/ServantListItem.tsx`** (et la liste du dashboard)
+- Afficher un petit badge supplémentaire :
+  - `Importé d'âme` (bleu) — si `sourceType='soul'`
+  - `Importé d'utilisateur` (violet) — si `sourceType='user'`
+- Conserver le badge `Promu d'âme` existant pour rétro-compat (équivalent à `sourceType='soul'`).
+
+### 5. Contrôles d'accès
+
+- Les boutons d'import ne s'affichent que si `hasPermission('MANAGE_SERVANTS')` ou `hasPermission('MANAGE_DEPARTMENT_SERVANTS')`.
+- Pour un chef de département : `departmentId` forcé sur le sien, non modifiable.
+- Pour un admin : sélecteur de département cible obligatoire dans la modale.
+
+### 6. Suppression / désaffectation
+
+Aucun changement bloquant. Supprimer un serviteur n'affecte ni l'âme ni l'utilisateur source (seul le doc `servants` correspondant à ce département est supprimé). La même personne peut rester serviteur ailleurs.
+
+### 7. Changelog & version
+
+- `src/CHANGELOG.md` : entrée v1.7.24 — « Import de serviteurs depuis la liste des âmes et des utilisateurs ; multi-appartenance par département ».
+- `src/pages/Login.tsx` : version `1.7.24`.
 
 ---
 
-## 7. Changelog & version
+## Fichiers modifiés / créés (récap)
 
-- `src/CHANGELOG.md` : entrée v1.7.23 — « Profil principal multi-rôles, nettoyage page de connexion, affichage des rôles multiples dans la gestion utilisateurs ».
-- `src/pages/Login.tsx` (ligne ~106) : passer la version à `1.7.23`.
-
----
-
-## Fichiers modifiés (récap)
-
-1. `src/types/businessProfile.types.ts` — champ `isPrimary`
-2. `src/components/users/BusinessProfileAssignment.tsx` — UI radio « Principal »
-3. `src/contexts/AuthContext.tsx` — priorité `isPrimary` au login
-4. `src/components/auth/UserSelect.tsx` — suppression badges rôle
-5. `src/components/users/UserList.tsx` — colonne multi-badges
-6. `src/components/ui/ProfileSwitcher.tsx` — mention « (principal) » (mineur)
-7. `src/CHANGELOG.md` + `src/pages/Login.tsx` — version 1.7.23
+1. `src/types/servant.types.ts` — `sourceType`, `sourceId`
+2. `src/services/servant.service.ts` — `importFromSouls`, `importFromUsers`, assouplissement unicité
+3. **NOUVEAU** `src/components/servants/ImportServantsModal.tsx` — UI d'import
+4. `src/pages/ServantManagement.tsx` — bouton « Importer »
+5. `src/components/servants/DepartmentLeaderDashboard.tsx` — bouton « Importer »
+6. `src/components/servants/ServantListItem.tsx` — badge source
+7. `src/CHANGELOG.md` + `src/pages/Login.tsx` — version 1.7.24
 
 ---
 
-## Points hors scope (à confirmer si souhaités)
+## Hors scope (à confirmer si souhaité)
 
-- Permettre à l'utilisateur lui-même (non admin) de changer son profil principal depuis son profil → non inclus, à demander si besoin.
-- Migration des utilisateurs existants pour marquer un `isPrimary` initial → la logique de fallback (étape 3-4 du §3) gère naturellement les anciens comptes ; aucune migration bloquante.
+- **Synchronisation bidirectionnelle** : si on modifie le téléphone d'un user, le serviteur lié n'est pas mis à jour automatiquement. On peut l'ajouter plus tard via une Cloud Function ou un trigger applicatif.
+- **Suivi unifié** (suivi du serviteur ET de l'âme dans une même fiche) : non couvert ici, à traiter dans un ticket séparé.
+- **Désaffecter en masse** d'un département : peut être ajouté dans la même modale en mode « Retirer » si besoin.
