@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { StatCard } from './stats/StatCard';
@@ -8,6 +9,7 @@ import { SoulEvolutionChart } from './stats/SoulEvolutionChart';
 import toast from 'react-hot-toast';
 
 export function ADNDashboard() {
+  const navigate = useNavigate();
   const [stats, setStats] = useState({
     totalSouls: 0,
     activeAssignedSouls: 0,
@@ -147,6 +149,8 @@ export function ADNDashboard() {
           trend={`${stats.totalSouls ? ((stats.activeUnassignedSouls / stats.totalSouls) * 100).toFixed(1) : '0'}%`}
           trendLabel="du total"
           iconClassName="text-blue-600"
+          onClick={() => navigate('/souls?filter=unassigned')}
+          linkLabel="Voir la liste"
         />
 
         <StatCard
@@ -156,8 +160,10 @@ export function ADNDashboard() {
           trend={`${stats.totalSouls ? ((stats.newSoulsThisMonth / stats.totalSouls) * 100).toFixed(1) : '0'}%`}
           trendLabel="du total"
           iconClassName="text-emerald-600"
+          onClick={() => navigate('/souls?filter=this_month')}
+          linkLabel="Voir la liste"
         />
-        
+
         <StatCard
           title="Total des âmes indécises"
           value={stats.undecidedSouls}
@@ -165,6 +171,8 @@ export function ADNDashboard() {
           trend={`${stats.totalSouls ? ((stats.undecidedSouls / stats.totalSouls) * 100).toFixed(1) : '0'}%`}
           trendLabel="du total"
           iconClassName="text-amber-600"
+          onClick={() => navigate('/undecided-souls')}
+          linkLabel="Voir la liste"
         />
 
         <StatCard

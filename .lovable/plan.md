@@ -1,68 +1,53 @@
-## Objectif
+# Amélioration #2 — Stats cliquables sur le dashboard ADN
 
-Permettre aux rôles **ADN, Admin et Super Admin** d'importer en masse des âmes via un fichier Excel structuré, avec aperçu, validation ligne par ligne, et téléchargement d'un modèle vierge.
+Objectif : chaque chiffre clé du dashboard ADN devient un raccourci direct vers la liste filtrée correspondante, afin d'éviter à l'ADN de naviguer manuellement puis de re-filtrer.
 
-## Comportement attendu
+## Ce qui change pour l'utilisateur (ADN)
 
-1. Bouton **"Importer Excel"** ajouté à côté de "Ajouter une âme" dans la page `Âmes`, visible uniquement pour `adn`, `admin`, `super_admin` (en tenant compte du profil actif via `activeRole`).
-2. Modal en 3 étapes :
-   - **Étape 1 — Sélection** : zone de drop / bouton parcourir + lien "Télécharger le modèle".
-   - **Étape 2 — Aperçu** : tableau récapitulatif avec statut par ligne (✅ valide, ⚠️ avertissement, ❌ invalide) et compteurs en haut.
-   - **Étape 3 — Import** : barre de progression, écriture par batch de 10, résumé final.
-3. Téléchargement d'un template `.xlsx` vierge contenant titre/sous-titre (lignes 1-2), en-têtes (ligne 3), 5 lignes d'exemple grisées et listes déroulantes (Genre, Provenance, Famille, Indécise).
+Sur le **Tableau de bord ADN**, les cartes de statistiques deviennent cliquables :
 
-## Format du fichier (feuille "Import Âmes", en-têtes ligne 3, données dès la ligne 4)
+| Carte                              | Action au clic                                       |
+|------------------------------------|------------------------------------------------------|
+| Âmes actives et non assignées      | Ouvre **Gestion des âmes** filtrée « Non assigné »   |
+| Nouvelles âmes (Mois)              | Ouvre **Gestion des âmes** filtrée « 30 derniers jours » |
+| Total des âmes indécises           | Ouvre la page **Âmes indécises**                     |
 
-| Col | Champ | Obligatoire | Mapping Firestore |
-|---|---|---|---|
-| A | Date 1ère visite (JJ/MM/AAAA) | ✅ | `firstVisitDate` |
-| B | Nom complet | ✅ | `fullName` |
-| C | Surnom | | `nickname` |
-| D | Genre (Homme/Femme) | ✅ | `gender` (male/female) |
-| E | Téléphone (10 chiffres) | ✅ | `phone` (préfixé `+225`) |
-| F | Lieu d'habitation | ✅ | `location` |
-| G | Famille de service | | `serviceFamilyId` (lookup par nom) |
-| H | Provenance (Culte/Evangelisation) | | `originSource` |
-| I | Âme indécise (Oui/Non) | | `isUndecided` |
-| J | Remarques | | (ignoré) |
-
-Champs ajoutés automatiquement : `status: 'active'`, `createdAt`, `updatedAt`, `createdBy`, `spiritualProfile` initialisé à `{ isBornAgain:false, isBaptized:false, isEnrolledInAcademy:false, isEnrolledInLifeBearers:false, departments:[] }`.
-
-## Validations par ligne
-
-- `fullName` non vide
-- `gender` ∈ {Homme, Femme}
-- `phone` : exactement 10 chiffres
-- `firstVisitDate` : date valide JJ/MM/AAAA
-- `location` non vide
-- Famille (si renseignée) doit exister dans `serviceFamilies` → sinon ⚠️ (importée sans famille)
-- Provenance (si renseignée) ∈ {Culte, Evangelisation}
-- Doublon de téléphone détecté dans Firestore → ⚠️ (importable mais signalé)
-
-Lignes ❌ ignorées à l'import. Compteurs valides / invalides / avertissements affichés.
-
-## Fichiers à créer / modifier
-
-| Fichier | Action |
-|---|---|
-| `src/services/soulImport.service.ts` | **Créer** — parsing XLSX, validation, lookup familles, détection doublons, écriture par batch |
-| `src/components/souls/ImportSoulsModal.tsx` | **Créer** — modal 3 étapes + génération du template |
-| `src/pages/SoulManagement.tsx` | **Modifier** — bouton "Importer Excel" + état `showImportModal` (gardé par rôle) |
-| `src/pages/Login.tsx` | Bump version **1.7.30** |
-| `src/CHANGELOG.md` | Entrée pour la nouvelle fonctionnalité |
+- Apparition d'un libellé **« Voir la liste → »** en bas des cartes cliquables.
+- Effet visuel discret au survol (ombre + accent jaune sur la barre gauche), curseur main, focus clavier accessible.
+- Les autres cartes (totaux purement informatifs) restent inchangées.
 
 ## Détails techniques
 
-- Librairie **`xlsx` (SheetJS)** déjà présente (v0.18.5).
-- Lecture : `XLSX.read(arrayBuffer, { type: 'array' })` puis `sheet_to_json(sheet, { header: 1, range: 2 })`.
-- Génération template : `XLSX.utils.aoa_to_sheet`, ajout de `!dataValidations` pour les listes déroulantes, styles gris sur exemples.
-- Écriture Firestore : `writeBatch` par paquets de 10, `await` séquentiel entre batches pour la barre de progression.
-- Lookup familles : un seul `getDocs(collection(db,'serviceFamilies'))` mis en cache (Map name→id, insensible à la casse/accents).
-- Détection doublons : un `getDocs` initial sur `souls` pour récupérer la liste des téléphones existants (Set).
-- Restriction d'accès : `const canImport = ['adn','admin','super_admin'].includes(activeRole || userRole)`.
-- Mobile : modal responsive, tableau d'aperçu scrollable horizontalement, boutons tactiles.
+### 1. `src/components/dashboard/stats/StatCard.tsx`
+Ajouter deux props optionnelles :
+- `onClick?: () => void`
+- `linkLabel?: string` (ex. « Voir la liste »)
 
-## Maintenance
+Si `onClick` est fourni :
+- la carte devient un élément interactif (`role="button"`, `tabIndex={0}`, gestion `Enter` / `Espace`),
+- styles : `cursor-pointer`, `hover:shadow-md`, transition légère sur la bordure gauche,
+- affichage de `linkLabel` avec une icône `ArrowRight`.
 
-- Version affichée dans le header → **1.7.30**.
-- Entrée changelog : « Ajout de l'import en masse d'âmes depuis un fichier Excel (réservé ADN/Admin/Super Admin) avec téléchargement d'un modèle, aperçu validé ligne par ligne et import par batch. ».
+Le bouton chevron des `details` doit appeler `e.stopPropagation()` pour ne pas déclencher la navigation.
+
+### 2. `src/components/dashboard/ADNDashboard.tsx`
+- Importer `useNavigate` de `react-router-dom`.
+- Passer `onClick` + `linkLabel` aux 3 cartes ciblées :
+  - « Âmes actives et non assignées » → `navigate('/souls?filter=unassigned')`
+  - « Nouvelles âmes (Mois) » → `navigate('/souls?filter=this_month')`
+  - « Total des âmes indécises » → `navigate('/undecided-souls')` (page dédiée déjà existante)
+
+### 3. `src/pages/SoulManagement.tsx`
+- Lire `useSearchParams` au montage.
+- Si `filter=unassigned` : appliquer `setSelectedShepherdId('unassigned')` (le filtre existe déjà dans `ShepherdFilter`).
+- Si `filter=this_month` : pré-remplir `dateRange.startDate` avec la date d'il y a 30 jours et `dateRange.endDate` avec aujourd'hui (format `YYYY-MM-DD`). Forcer `statusFilter = 'active'` (déjà la valeur par défaut).
+- Le paramètre est consommé une seule fois (au premier rendu) pour ne pas écraser les choix manuels ultérieurs de l'utilisateur.
+
+### 4. Versionnage
+- `src/pages/Login.tsx` : version `1.7.31` → `1.7.32`.
+- `src/CHANGELOG.md` : nouvelle entrée `[1.7.32] - Stats cliquables sur le dashboard ADN`.
+
+## Hors périmètre
+- Pas de changement de schéma Firestore.
+- Pas de modification des autres dashboards (Berger, Responsable de famille, Admin).
+- Pas de filtre URL pour les autres pages (`/undecided-souls` est déjà ciblée et n'a pas besoin de paramètre).
