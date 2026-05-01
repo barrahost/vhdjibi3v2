@@ -45,6 +45,7 @@ export function ShepherdDashboard() {
 
         const userData = userSnapshot.docs[0].data();
         const currentShepherdId = userSnapshot.docs[0].id;
+        setShepherdId(currentShepherdId);
         
         console.log('🔍 [ShepherdDashboard] User data:', {
           id: currentShepherdId,
