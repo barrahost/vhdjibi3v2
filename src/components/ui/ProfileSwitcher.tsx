@@ -33,6 +33,8 @@ export function ProfileSwitcher() {
         return <Crown className="w-4 h-4" />;
       case 'department_leader':
         return <Settings className="w-4 h-4" />;
+      case 'family_leader':
+        return <Users className="w-4 h-4" />;
       case 'adn':
         return <Shield className="w-4 h-4" />;
       case 'shepherd':
