@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.7.59] - StatCards uniformes (Responsable de famille)
+
+### Changed
+- Les 3 blocs de statistiques du tableau de bord **Responsable de famille** utilisent désormais le composant partagé `StatCard`, alignant le rendu visuel sur le reste de l'application (icônes, tendances, libellés cohérents).
+
 ## [1.7.58] - Tableau de bord Berger en temps réel
 
 ### Changed
