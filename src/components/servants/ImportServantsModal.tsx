@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { collection, getDocs, query, where, orderBy } from 'firebase/firestore';
+import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/button';
@@ -93,11 +93,17 @@ export function ImportServantsModal({ isOpen, onClose, fixedDepartmentId, onImpo
           if (data.originalSoulId) existingSoulIds.add(data.originalSoulId);
         });
 
-        if (tab === 'souls') {
-          const snap = await getDocs(
-            query(collection(db, 'souls'), where('status', '==', 'active'), orderBy('fullName'))
+        const sortByName = <T extends { fullName: string }>(arr: T[]) =>
+          arr.sort((a, b) =>
+            a.fullName.localeCompare(b.fullName, 'fr', { sensitivity: 'base' })
           );
-          setSouls(snap.docs.map(d => {
+
+        if (tab === 'souls') {
+          // Avoid composite-index requirement: filter on status only, sort client-side
+          const snap = await getDocs(
+            query(collection(db, 'souls'), where('status', '==', 'active'))
+          );
+          const rows: SoulRow[] = snap.docs.map(d => {
             const data: any = d.data();
             return {
               id: d.id,
@@ -106,12 +112,13 @@ export function ImportServantsModal({ isOpen, onClose, fixedDepartmentId, onImpo
               gender: data.gender,
               alreadyServant: existingSoulIds.has(d.id),
             };
-          }));
+          });
+          setSouls(sortByName(rows));
         } else {
           const snap = await getDocs(
-            query(collection(db, 'users'), where('status', '==', 'active'), orderBy('fullName'))
+            query(collection(db, 'users'), where('status', '==', 'active'))
           );
-          setUsers(snap.docs.map(d => {
+          const rows: UserRow[] = snap.docs.map(d => {
             const data: any = d.data();
             return {
               id: d.id,
@@ -121,7 +128,8 @@ export function ImportServantsModal({ isOpen, onClose, fixedDepartmentId, onImpo
               role: data.role,
               alreadyServant: existingUserIds.has(d.id),
             };
-          }));
+          });
+          setUsers(sortByName(rows));
         }
       } catch (e) {
         console.error('Error loading import source:', e);
