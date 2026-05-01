@@ -39,7 +39,12 @@ export default function SoulManagement() {
   });
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('active');
   const { hasPermission } = usePermissions();
-  const { userRole } = useAuth();
+  const { userRole, activeRole } = useAuth();
+
+  // Restriction d'accès à l'import : ADN, Admin, Super Admin uniquement
+  const canImport = ['adn', 'admin', 'super_admin'].includes(
+    (activeRole || userRole || '') as string
+  );
 
   // Vérifier si l'utilisateur peut supprimer des âmes
   const canDelete = userRole === 'super_admin' || hasPermission(PERMISSIONS.MANAGE_SOULS);
