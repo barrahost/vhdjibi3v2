@@ -26,7 +26,10 @@ interface ServantListProps {
 
 export default function ServantList({ statusFilter, selectedServantIds = [], onSelectionChange }: ServantListProps) {
   const { user, activeRole } = useAuth();
+  const { hasPermission } = usePermissions();
+  const isAdmin = hasPermission('*') || hasPermission('MANAGE_SERVANTS');
   const [servants, setServants] = useState<Servant[]>([]);
+  const [showOrphanModal, setShowOrphanModal] = useState(false);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
