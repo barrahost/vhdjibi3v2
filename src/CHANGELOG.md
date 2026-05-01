@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.7.54] - Filtre par période sur le tableau de bord ADN
+
+### Added
+- Nouveau **sélecteur de période** (7 j, 30 j, 3 mois, 1 an, depuis le début) sur le tableau de bord ADN.
+- La carte « Nouvelles âmes » se met à jour selon la période sélectionnée et son titre reflète la plage choisie.
+
 ## [1.7.53] - Hiérarchie visuelle du tableau de bord ADN
 
 ### Changed
