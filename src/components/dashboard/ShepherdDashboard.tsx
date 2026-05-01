@@ -101,16 +101,16 @@ export function ShepherdDashboard() {
         const totalSouls = soulsData.length;
         const totalInteractions = interactionsData.length;
 
-        // Calculer les âmes nécessitant attention (pas d'interaction depuis 5 jours)
-        const fiveDaysAgo = new Date();
-        fiveDaysAgo.setDate(fiveDaysAgo.getDate() - 5);
-        
+        // Calculer les âmes nécessitant attention (pas d'interaction depuis 14 jours)
+        const attentionThreshold = new Date();
+        attentionThreshold.setDate(attentionThreshold.getDate() - 14);
+
         const soulsNeedingAttention = soulsData.filter(soul => {
           const soulInteractions = interactionsData.filter(i => i.soulId === soul.id);
           if (soulInteractions.length === 0) return true;
-          
+
           const lastInteraction = new Date(Math.max(...soulInteractions.map(i => i.date.getTime())));
-          return lastInteraction < fiveDaysAgo;
+          return lastInteraction < attentionThreshold;
         }).length;
 
         // Récupérer les interactions récentes
