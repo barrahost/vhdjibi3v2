@@ -24,7 +24,7 @@ export type Permission =
   | 'MANAGE_BIRTHDAYS'
   | '*';
 
-export type BaseRole = 'super_admin' | 'admin' | 'shepherd' | 'adn' | 'pasteur' | 'department_leader';
+export type BaseRole = 'super_admin' | 'admin' | 'shepherd' | 'adn' | 'pasteur' | 'department_leader' | 'family_leader';
 
 export interface UserRoles {
   primary: BaseRole;

@@ -33,6 +33,7 @@ export const ROLES = {
   SHEPHERD: 'shepherd',
   ADN: 'adn',
   DEPARTMENT_LEADER: 'department_leader',
+  FAMILY_LEADER: 'family_leader',
 } as const;
 
 export const ROLE_PERMISSIONS = {
