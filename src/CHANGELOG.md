@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.7.53] - Hiérarchie visuelle du tableau de bord ADN
+
+### Changed
+- Refonte de la disposition des cartes du **tableau de bord ADN** : une **carte hero** verte met en avant le total des âmes avec les répartitions (assignées, non assignées, indécises) cliquables.
+- Les 4 métriques secondaires (nouvelles, indécises, hommes/femmes assignés) sont regroupées sur une grille compacte 2/4 colonnes en dessous.
+
 ## [1.7.52] - Tableau de bord ADN en temps réel
 
 ### Changed
