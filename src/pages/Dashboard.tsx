@@ -3,12 +3,12 @@ import { AdminDashboard } from '../components/dashboard/AdminDashboard';
 import { ShepherdDashboard } from '../components/dashboard/ShepherdDashboard';
 import { ADNDashboard } from '../components/dashboard/ADNDashboard';
 import DepartmentLeaderDashboard from '../components/servants/DepartmentLeaderDashboard';
+import FamilyLeaderDashboard from '../components/dashboard/FamilyLeaderDashboard';
 import { ROLES } from '../constants/roles';
 
 export default function Dashboard() {
   const { userRole, activeRole } = useAuth();
 
-  // Si pas de rôle défini, afficher un message d'erreur
   if (!userRole) {
     return (
       <div className="text-center py-12">
@@ -17,7 +17,6 @@ export default function Dashboard() {
     );
   }
 
-  // Afficher le tableau de bord spécifique selon le rôle actif ou le rôle principal
   const currentRole = activeRole || userRole;
   switch (currentRole) {
     case ROLES.SHEPHERD:
@@ -26,6 +25,8 @@ export default function Dashboard() {
       return <ADNDashboard />;
     case ROLES.DEPARTMENT_LEADER:
       return <DepartmentLeaderDashboard />;
+    case ROLES.FAMILY_LEADER:
+      return <FamilyLeaderDashboard />;
     case ROLES.ADMIN:
     case ROLES.SUPER_ADMIN:
       return <AdminDashboard />;
