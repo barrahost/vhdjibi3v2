@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.7.46] - Side-drawer tablette pour la fiche détail (Replay)
+
+### Added
+- Sur tablette (768–1023px), la fiche détail s'ouvre désormais dans un **panneau latéral droit (380px)** glissant depuis le bord — l'espace écran est mieux exploité, la liste reste visible derrière l'overlay.
+- En-tête sticky du drawer avec bouton de fermeture et clic sur l'overlay pour fermer.
+
+### Fixed
+- Breakpoint mobile resserré à `< 768px` (au lieu de `≤ 768px`) pour une transition propre vers le mode tablette.
+
 ## [1.7.45] - Layout deux colonnes desktop sur la page Replay
 
 ### Changed
