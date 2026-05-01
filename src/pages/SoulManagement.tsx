@@ -467,6 +467,11 @@ export default function SoulManagement() {
           onClose={() => setEditingSoul(null)}
         />
       )}
+
+      <ImportSoulsModal
+        isOpen={showImportModal}
+        onClose={() => setShowImportModal(false)}
+      />
     </div>
   );
 }
