@@ -15,26 +15,28 @@ export class ServantService {
    */
   static async createServant(data: ServantFormData): Promise<string> {
     try {
-      // Validate phone number
-      // Check if phone already exists (assuming it's already validated and formatted)
-      const phoneQuery = query(
-        collection(db, 'servants'),
-        where('phone', '==', data.phone)
-      );
-      const phoneSnapshot = await getDocs(phoneQuery);
-      if (!phoneSnapshot.empty) {
-        throw new Error('Ce numéro de téléphone est déjà utilisé');
-      }
-
-      // Check if email already exists (if provided)
-      if (data.email) {
-        const emailQuery = query(
+      // If a source is provided, prevent importing the same person twice in the same department
+      if (data.sourceType && data.sourceId) {
+        const dupQuery = query(
           collection(db, 'servants'),
-          where('email', '==', data.email.trim())
+          where('sourceType', '==', data.sourceType),
+          where('sourceId', '==', data.sourceId),
+          where('departmentId', '==', data.departmentId)
         );
-        const emailSnapshot = await getDocs(emailQuery);
-        if (!emailSnapshot.empty) {
-          throw new Error('Cet email est déjà utilisé');
+        const dupSnap = await getDocs(dupQuery);
+        if (!dupSnap.empty) {
+          throw new Error('Cette personne est déjà serviteur dans ce département');
+        }
+      } else {
+        // Manual entry: prevent duplicate phone within the same department
+        const phoneQuery = query(
+          collection(db, 'servants'),
+          where('phone', '==', data.phone),
+          where('departmentId', '==', data.departmentId)
+        );
+        const phoneSnap = await getDocs(phoneQuery);
+        if (!phoneSnap.empty) {
+          throw new Error('Ce numéro est déjà utilisé pour un serviteur dans ce département');
         }
       }
 
