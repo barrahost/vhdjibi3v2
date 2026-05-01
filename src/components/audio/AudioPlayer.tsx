@@ -303,8 +303,6 @@ export function AudioPlayer({
     }
   };
   
-  return (
-    <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-r from-white via-gray-50 to-white backdrop-blur-sm border-t shadow-2xl z-50 animate-slide-up">
   // ========== MOBILE: COMPACT MODE ==========
   if (isMobile && !isExpanded) {
     return (
