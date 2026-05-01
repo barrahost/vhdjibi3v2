@@ -16,22 +16,35 @@ function Options() {
   useEffect(() => {
     const loadShepherds = async () => {
       try {
-        // Récupérer les bergers et stagiaires depuis la collection users
+        // Récupérer tous les utilisateurs actifs puis filtrer côté client
+        // pour combiner le champ legacy `role` ET le système `businessProfiles`.
         const q = query(
           collection(db, 'users'),
-          where('role', 'in', ['shepherd', 'intern']),
           where('status', '==', 'active')
         );
-        
+
         const snapshot = await getDocs(q);
         const shepherdsData = snapshot.docs
-          .map(doc => ({
-            id: doc.id,
-            fullName: doc.data().fullName,
-            role: doc.data().role
-          }))
+          .map(doc => {
+            const data: any = doc.data();
+            const profiles: any[] = Array.isArray(data.businessProfiles) ? data.businessProfiles : [];
+            const fromRole = data.role === 'shepherd' || data.role === 'intern';
+            const fromProfiles = profiles.some(
+              (p: any) => (p?.type === 'shepherd' || p?.type === 'intern') && p?.isActive !== false
+            );
+            if (!fromRole && !fromProfiles) return null;
+            const isIntern =
+              data.role === 'intern' ||
+              profiles.some((p: any) => p?.type === 'intern' && p?.isActive !== false);
+            return {
+              id: doc.id,
+              fullName: data.fullName || '',
+              role: isIntern ? 'intern' : 'shepherd',
+            } as ShepherdOption;
+          })
+          .filter((s): s is ShepherdOption => s !== null && !!s.fullName)
           .sort((a, b) => a.fullName.localeCompare(b.fullName));
-        
+
         setShepherds(shepherdsData);
       } catch (error) {
         console.error('Error loading shepherds:', error);
