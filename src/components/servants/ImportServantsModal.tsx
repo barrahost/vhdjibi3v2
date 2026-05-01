@@ -220,6 +220,52 @@ export function ImportServantsModal({ isOpen, onClose, fixedDepartmentId, onImpo
     }
   };
 
+  const handleCreateManual = async () => {
+    if (!selectedDept) {
+      toast.error('Sélectionnez un département cible');
+      return;
+    }
+    if (!manualForm.fullName.trim()) {
+      toast.error('Le nom est obligatoire');
+      return;
+    }
+    const phoneValidation = validatePhoneNumber(manualForm.phone);
+    if (!phoneValidation.isValid) {
+      toast.error(phoneValidation.error || 'Numéro de téléphone invalide');
+      return;
+    }
+
+    setCreatingManual(true);
+    try {
+      await ServantService.createServant({
+        fullName: manualForm.fullName.trim(),
+        nickname: manualForm.nickname.trim() || undefined,
+        gender: manualForm.gender,
+        phone: phoneValidation.formattedNumber || '',
+        email: manualForm.email.trim(),
+        departmentId: selectedDept,
+        isHead: canSetHead ? manualForm.isHead : false,
+        sourceType: 'manual',
+      });
+      toast.success('Serviteur créé avec succès');
+      setManualForm({
+        fullName: '',
+        nickname: '',
+        gender: 'male',
+        phone: '',
+        email: '',
+        isHead: false,
+      });
+      onImported?.();
+      onClose();
+    } catch (e: any) {
+      console.error('Error creating manual servant:', e);
+      toast.error(e?.message || 'Erreur lors de la création');
+    } finally {
+      setCreatingManual(false);
+    }
+  };
+
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Importer des serviteurs">
       <div className="space-y-4 p-6">
