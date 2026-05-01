@@ -4,6 +4,7 @@ import { FamilyLeaderService } from '../../services/familyLeader.service';
 import type { ServiceFamily, Soul } from '../../types/database.types';
 import { Heart, Users, UserPlus, AlertCircle, BarChart3 } from 'lucide-react';
 import PendingActionsWidget from './PendingActionsWidget';
+import { StatCard } from './stats/StatCard';
 import toast from 'react-hot-toast';
 
 export default function FamilyLeaderDashboard() {
@@ -156,18 +157,30 @@ export default function FamilyLeaderDashboard() {
 
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-white border rounded-lg p-4">
-          <div className="flex items-center gap-2 text-gray-500"><Heart className="w-4 h-4" /> Total âmes</div>
-          <div className="text-2xl font-bold text-[#00665C] mt-1">{stats.total}</div>
-        </div>
-        <div className="bg-white border rounded-lg p-4">
-          <div className="flex items-center gap-2 text-gray-500"><Users className="w-4 h-4" /> Assignées</div>
-          <div className="text-2xl font-bold text-green-600 mt-1">{stats.assigned}</div>
-        </div>
-        <div className="bg-white border rounded-lg p-4">
-          <div className="flex items-center gap-2 text-gray-500"><UserPlus className="w-4 h-4" /> Non assignées</div>
-          <div className="text-2xl font-bold text-amber-600 mt-1">{stats.unassigned}</div>
-        </div>
+        <StatCard
+          title="Total âmes"
+          value={stats.total}
+          icon={Heart}
+          trend={`${stats.total}`}
+          trendLabel="âmes dans la famille"
+          iconClassName="text-[#00665C]"
+        />
+        <StatCard
+          title="Assignées à un berger"
+          value={stats.assigned}
+          icon={Users}
+          trend={stats.total ? `${Math.round((stats.assigned / stats.total) * 100)}%` : '0%'}
+          trendLabel="du total"
+          iconClassName="text-green-600"
+        />
+        <StatCard
+          title="Sans berger"
+          value={stats.unassigned}
+          icon={UserPlus}
+          trend={stats.total ? `${Math.round((stats.unassigned / stats.total) * 100)}%` : '0%'}
+          trendLabel="à assigner"
+          iconClassName="text-amber-600"
+        />
       </div>
 
       {/* Répartition des bergers */}
