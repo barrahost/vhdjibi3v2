@@ -131,7 +131,7 @@ export default function SoulManagement() {
     // Nettoyer l'URL pour ne pas réappliquer le filtre lors d'un re-render
     const next = new URLSearchParams(searchParams);
     next.delete('filter');
-    setSearchParams(next, { replace: true });
+    setSearchParams(Object.fromEntries(next), { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
