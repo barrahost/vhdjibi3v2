@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.7.44] - Section « Récemment écoutés » sur la page Replay
+
+### Added
+- Nouvelle bande horizontale **« Récemment écoutés »** en haut de la page Replay, affichant les **5 derniers enseignements lancés**.
+- Persistance locale via `localStorage` (aucune base de données impactée) — synchronisation en temps réel quand un nouvel audio démarre, y compris entre onglets.
+
 ## [1.7.43] - Fiche détail en bottom sheet sur mobile (Replay)
 
 ### Changed
