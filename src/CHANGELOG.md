@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.7.50] - Sidebar filtres en panneau gauche fixe (Replay desktop XL)
+
+### Added
+- Sur très grand écran (≥ 1280px), les **filtres** (recherche, catégorie, orateur) sont désormais affichés dans une **sidebar gauche fixe (224px)** sticky, avec listes verticales cliquables et bouton « Réinitialiser ».
+- Sous 1280px, les filtres restent affichés en haut de la liste (chips sur mobile, selects sur tablette/desktop) — aucun changement.
+- Nouvelle variante `sidebar` du composant `TeachingFilters` pour réutilisation.
+
 ## [1.7.49] - Mini-player et badge « En cours » sur les cartes (Replay)
 
 ### Added
