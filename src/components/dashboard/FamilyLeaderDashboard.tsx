@@ -235,8 +235,11 @@ export default function FamilyLeaderDashboard() {
           <>
             {unassignedSouls.length > 0 && (
               <div>
-                <div className="px-4 py-2 bg-amber-50 border-b border-amber-200 text-sm font-medium text-amber-900">
-                  À assigner ({unassignedSouls.length})
+                <div className="px-4 py-2 bg-amber-50 border-b border-amber-100 flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                  <span className="text-xs font-semibold text-amber-800 uppercase tracking-wide">
+                    À assigner ({unassignedSouls.length})
+                  </span>
                 </div>
                 <div className="divide-y">
                   {unassignedSouls.map(renderSoulRow)}
@@ -245,8 +248,11 @@ export default function FamilyLeaderDashboard() {
             )}
             {assignedSouls.length > 0 && (
               <div>
-                <div className="px-4 py-2 bg-gray-50 border-b border-t text-sm font-medium text-gray-700">
-                  Assignées ({assignedSouls.length})
+                <div className="px-4 py-2 bg-gray-50 border-y border-gray-100 flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-green-500" />
+                  <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                    Assignées ({assignedSouls.length})
+                  </span>
                 </div>
                 <div className="divide-y">
                   {assignedSouls.map(renderSoulRow)}
