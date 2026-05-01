@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { addDoc, collection, doc, deleteDoc } from 'firebase/firestore';
+import { addDoc, collection } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { EditSoulTabs } from './tabs/EditSoulTabs';
 import { SMSTemplate } from '../../types/sms.types';
@@ -57,7 +57,7 @@ export default function SoulForm() {
   useEffect(() => {
     const loadTemplates = async () => {
       try {
-        const templatesData = await SMSService.getTemplates();
+        const templatesData = await SMSService.getTemplates('Bienvenue');
         setTemplates(templatesData);
       } catch (error) {
         console.error('Error loading templates:', error);
@@ -205,17 +205,13 @@ export default function SoulForm() {
           toast.error(
             "Crédit SMS insuffisant. Le SMS de bienvenue n'a pas été envoyé."
           );
-          const recap = buildLastAdded(false);
-          resetFormState();
-          setLastAddedSoul(recap);
-          toast.success('Âme ajoutée avec succès');
-          return;
+        } else {
+          // L'âme est conservée — on avertit simplement l'utilisateur.
+          toast.error(
+            "Le SMS de bienvenue n'a pas pu être envoyé. L'âme a bien été ajoutée — vous pouvez lui envoyer un SMS manuellement depuis la liste des âmes."
+          );
         }
-        // Pour toute autre erreur SMS : on annule l'âme (comportement existant)
-        await deleteDoc(doc(db, 'souls', docRef.id));
-        throw new Error(
-          "Erreur lors de l'envoi du SMS de bienvenue. L'âme n'a pas été ajoutée."
-        );
+        smsSent = false;
       }
 
       const recap = buildLastAdded(smsSent);
@@ -337,7 +333,7 @@ export default function SoulForm() {
         )}
         {!loadingTemplates && templates.length === 0 && (
           <p className="mt-1 text-sm text-amber-600">
-            Aucun modèle de message disponible dans la catégorie "Suivi"
+            Aucun modèle de message disponible dans la catégorie "Bienvenue"
           </p>
         )}
       </div>
