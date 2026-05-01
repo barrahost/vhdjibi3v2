@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.7.32] - Statistiques cliquables sur le dashboard ADN
+
+### Added
+- Les cartes **« Âmes actives non assignées »**, **« Nouvelles âmes (Mois) »** et **« Âmes indécises »** du tableau de bord ADN sont désormais cliquables et ouvrent directement la liste filtrée correspondante.
+- Mention **« Voir la liste → »** sur chaque carte cliquable, avec effet visuel au survol et navigation au clavier (Entrée / Espace).
+- Prise en charge des paramètres URL `?filter=unassigned` et `?filter=this_month` sur la page Gestion des Âmes (filtre appliqué automatiquement, puis URL nettoyée).
+
 ## [1.7.31] - Indicateur de dernier contact pour les bergers
 
 ### Added
