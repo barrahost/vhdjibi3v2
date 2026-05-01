@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.7.39] - Cartes d'enseignement compactes sur mobile
+
+### Changed
+- Sur la page **Replay**, les cartes d'enseignement adoptent un **layout horizontal** sur mobile (vignette 80×80 + texte) → 5–6 enseignements visibles sans scroller (au lieu de 2).
+- La **durée** est désormais visible sur mobile.
+- Affichage du **nombre d'écoutes** (ex. « 1.2k écoutes ») quand la donnée est disponible.
+- Sur desktop, le layout vertical reste inchangé.
+
 ## [1.7.38] - Lecteur audio compact/étendu sur mobile
 
 ### Changed
