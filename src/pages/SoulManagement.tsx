@@ -39,6 +39,7 @@ export default function SoulManagement() {
     direction: 'asc' as 'asc' | 'desc'
   });
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('active');
+  const [unassignedFamilyOnly, setUnassignedFamilyOnly] = useState(false);
   const { hasPermission } = usePermissions();
   const { userRole, activeRole } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -57,6 +58,9 @@ export default function SoulManagement() {
       start.setDate(today.getDate() - 30);
       const fmt = (d: Date) => d.toISOString().split('T')[0];
       setDateRange({ startDate: fmt(start), endDate: fmt(today) });
+      setStatusFilter('active');
+    } else if (filter === 'unassigned_family') {
+      setUnassignedFamilyOnly(true);
       setStatusFilter('active');
     }
 
