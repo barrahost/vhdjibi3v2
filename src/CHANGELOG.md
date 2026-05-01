@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.7.58] - Tableau de bord Berger en temps réel
+
+### Changed
+- Le tableau de bord **Berger** se met à jour **en temps réel** : les âmes assignées et les interactions sont synchronisées via `onSnapshot` (Firestore) — plus besoin de recharger la page après une nouvelle interaction.
+- Les statistiques (total âmes, interactions, à contacter) et la liste de suivi sont désormais dérivées en mémoire à partir des flux temps réel.
+
 ## [1.7.57] - Liste des âmes avec dernier contact (Berger)
 
 ### Changed
