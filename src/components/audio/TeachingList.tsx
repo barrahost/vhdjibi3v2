@@ -72,6 +72,7 @@ export function TeachingList({
                 category={teaching.category}
                 theme={teaching.theme}
                 thumbnail_url={teaching.thumbnail_url}
+                plays={teaching.plays}
                 isSelected={selectedTeaching?.id === teaching.id}
                 onClick={() => onSelect(teaching)}
               />
