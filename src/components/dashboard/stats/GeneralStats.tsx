@@ -63,8 +63,6 @@ export function GeneralStats() {
         
         const totalShepherds = activeShepherds.length;
         
-        const totalShepherds = shepherdsSnapshot.size;
-        
         setStats({
           totalSouls,
           assignedActiveSouls,
