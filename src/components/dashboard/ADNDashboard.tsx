@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { collection, onSnapshot } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
@@ -9,17 +9,29 @@ import { SoulEvolutionChart } from './stats/SoulEvolutionChart';
 import PendingActionsWidget from './PendingActionsWidget';
 import toast from 'react-hot-toast';
 
+type Period = '7d' | '30d' | '90d' | '365d' | 'all';
+
+const periodLabel: Record<Period, string> = {
+  '7d': '7 derniers jours',
+  '30d': '30 derniers jours',
+  '90d': '3 derniers mois',
+  '365d': 'Cette année',
+  'all': 'Depuis le début',
+};
+
+interface SoulLite {
+  id: string;
+  createdAt: Date;
+  shepherdId?: string;
+  isUndecided?: boolean;
+  gender?: string;
+  status?: string;
+}
+
 export function ADNDashboard() {
   const navigate = useNavigate();
-  const [stats, setStats] = useState({
-    totalSouls: 0,
-    activeAssignedSouls: 0,
-    activeUnassignedSouls: 0,
-    undecidedSouls: 0,
-    newSoulsThisMonth: 0,
-    activeAssignedMaleCount: 0,
-    activeAssignedFemaleCount: 0
-  });
+  const [souls, setSouls] = useState<SoulLite[]>([]);
+  const [period, setPeriod] = useState<Period>('30d');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -31,62 +43,18 @@ export function ADNDashboard() {
       soulsRef,
       (snapshot) => {
         try {
-          const souls = snapshot.docs.map(doc => {
-            const data = doc.data();
+          const data: SoulLite[] = snapshot.docs.map(doc => {
+            const d = doc.data();
             return {
               id: doc.id,
-              ...data,
-              createdAt: data.createdAt?.toDate() || new Date(),
-              shepherdId: data.shepherdId as string | undefined,
-              isUndecided: data.isUndecided as boolean,
-              gender: data.gender as string,
-              status: data.status as string,
+              createdAt: d.createdAt?.toDate() || new Date(),
+              shepherdId: d.shepherdId as string | undefined,
+              isUndecided: d.isUndecided as boolean,
+              gender: d.gender as string,
+              status: d.status as string,
             };
           });
-
-          // Total des âmes enregistrées
-          const totalSouls = souls.length;
-
-          // Total des âmes actives et assignées
-          const activeAssignedSouls = souls.filter(soul =>
-            soul.status === 'active' && soul.shepherdId && !soul.isUndecided
-          ).length;
-
-          // Total des âmes actives et non assignées
-          const activeUnassignedSouls = souls.filter(soul =>
-            soul.status === 'active' && !soul.shepherdId && !soul.isUndecided
-          ).length;
-
-          // Total des âmes indécises
-          const undecidedSouls = souls.filter(soul => soul.isUndecided).length;
-
-          // Nouvelles âmes ce mois (30 derniers jours)
-          const thirtyDaysAgo = new Date();
-          thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-          const newSoulsThisMonth = souls.filter(soul => {
-            const createdAt = soul.createdAt instanceof Date ? soul.createdAt : new Date(soul.createdAt);
-            return createdAt >= thirtyDaysAgo;
-          }).length;
-
-          // Total des âmes hommes actives et assignées
-          const activeAssignedMaleCount = souls.filter(soul =>
-            soul.status === 'active' && soul.shepherdId && !soul.isUndecided && soul.gender === 'male'
-          ).length;
-
-          // Total des âmes femmes actives et assignées
-          const activeAssignedFemaleCount = souls.filter(soul =>
-            soul.status === 'active' && soul.shepherdId && !soul.isUndecided && soul.gender === 'female'
-          ).length;
-
-          setStats({
-            totalSouls,
-            activeAssignedSouls,
-            activeUnassignedSouls,
-            undecidedSouls,
-            newSoulsThisMonth,
-            activeAssignedMaleCount,
-            activeAssignedFemaleCount
-          });
+          setSouls(data);
           setError(null);
         } catch (err) {
           console.error('Error processing ADN snapshot:', err);
@@ -105,6 +73,40 @@ export function ADNDashboard() {
 
     return () => unsubscribe();
   }, []);
+
+  const cutoff = useMemo(() => {
+    if (period === 'all') return new Date(0);
+    const d = new Date();
+    const days = { '7d': 7, '30d': 30, '90d': 90, '365d': 365 }[period];
+    d.setDate(d.getDate() - days);
+    return d;
+  }, [period]);
+
+  const stats = useMemo(() => {
+    const totalSouls = souls.length;
+    const activeAssignedSouls = souls.filter(s => s.status === 'active' && s.shepherdId && !s.isUndecided).length;
+    const activeUnassignedSouls = souls.filter(s => s.status === 'active' && !s.shepherdId && !s.isUndecided).length;
+    const undecidedSouls = souls.filter(s => s.isUndecided).length;
+    const newSoulsInPeriod = souls.filter(s => {
+      const c = s.createdAt instanceof Date ? s.createdAt : new Date(s.createdAt);
+      return c >= cutoff;
+    }).length;
+    const activeAssignedMaleCount = souls.filter(s =>
+      s.status === 'active' && s.shepherdId && !s.isUndecided && s.gender === 'male'
+    ).length;
+    const activeAssignedFemaleCount = souls.filter(s =>
+      s.status === 'active' && s.shepherdId && !s.isUndecided && s.gender === 'female'
+    ).length;
+    return {
+      totalSouls,
+      activeAssignedSouls,
+      activeUnassignedSouls,
+      undecidedSouls,
+      newSoulsInPeriod,
+      activeAssignedMaleCount,
+      activeAssignedFemaleCount,
+    };
+  }, [souls, cutoff]);
 
   if (loading) {
     return (
@@ -127,6 +129,23 @@ export function ADNDashboard() {
       <h1 className="text-2xl font-bold text-gray-900">Tableau de bord ADN</h1>
 
       <PendingActionsWidget role="adn" />
+
+      {/* Sélecteur de période */}
+      <div className="flex gap-2 flex-wrap">
+        {(['7d', '30d', '90d', '365d', 'all'] as Period[]).map(p => (
+          <button
+            key={p}
+            onClick={() => setPeriod(p)}
+            className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+              period === p
+                ? 'bg-[#00665C] text-white'
+                : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
+            }`}
+          >
+            {periodLabel[p]}
+          </button>
+        ))}
+      </div>
 
       {/* Hero card — métrique principale */}
       <div className="bg-gradient-to-br from-[#00665C] to-[#00887A] rounded-2xl p-6 text-white shadow-lg">
@@ -157,10 +176,10 @@ export function ADNDashboard() {
       {/* Cartes secondaires */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <StatCard
-          title="Nouvelles âmes (30 j)"
-          value={stats.newSoulsThisMonth}
+          title={`Nouvelles âmes (${periodLabel[period]})`}
+          value={stats.newSoulsInPeriod}
           icon={UserCheck}
-          trend={`${stats.totalSouls ? ((stats.newSoulsThisMonth / stats.totalSouls) * 100).toFixed(1) : '0'}%`}
+          trend={`${stats.totalSouls ? ((stats.newSoulsInPeriod / stats.totalSouls) * 100).toFixed(1) : '0'}%`}
           trendLabel="du total"
           iconClassName="text-emerald-600"
           onClick={() => navigate('/souls?filter=this_month')}
