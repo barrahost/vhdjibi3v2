@@ -38,6 +38,29 @@ export class ServantService {
         if (!phoneSnap.empty) {
           throw new Error('Ce numéro est déjà utilisé pour un serviteur dans ce département');
         }
+
+        // Cross-department check: avertissement non bloquant
+        try {
+          const globalPhoneQuery = query(
+            collection(db, 'servants'),
+            where('phone', '==', data.phone),
+            where('status', '==', 'active')
+          );
+          const globalSnap = await getDocs(globalPhoneQuery);
+          if (!globalSnap.empty) {
+            const otherDepts = globalSnap.docs
+              .map(d => d.data() as any)
+              .filter(d => d.departmentId !== data.departmentId)
+              .map(d => d.departmentId);
+            if (otherDepts.length > 0) {
+              console.warn(
+                `[Servants] Numéro ${data.phone} déjà utilisé dans ${otherDepts.length} autre(s) département(s)`
+              );
+            }
+          }
+        } catch (e) {
+          console.warn('Cross-department duplicate check failed', e);
+        }
       }
 
       // If this servant will be a department head, check if there's already a head
