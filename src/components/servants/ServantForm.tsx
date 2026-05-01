@@ -234,6 +234,17 @@ export default function ServantForm({ onSuccess }: { onSuccess?: () => void }) {
         </label>
       </div>
 
+      {duplicateWarning && (
+        <div className="flex items-start gap-2 p-3 rounded-md border border-amber-300 bg-amber-50 text-sm text-amber-900">
+          <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0 text-amber-600" />
+          <div>
+            Ce numéro est déjà utilisé par <strong>{duplicateWarning.name}</strong> dans {duplicateWarning.deptNames.length > 1 ? 'les départements' : 'le département'}{' '}
+            <strong>{duplicateWarning.deptNames.join(', ')}</strong>.
+            Vous pouvez quand même l'ajouter dans ce département.
+          </div>
+        </div>
+      )}
+
       <button
         type="submit"
         disabled={isSubmitting}
