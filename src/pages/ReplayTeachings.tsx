@@ -13,6 +13,7 @@ import { DateRangePicker } from '../components/ui/DateRangePicker';
 import { AudioPlayer } from '../components/audio/AudioPlayer';
 import toast from 'react-hot-toast';
 import { TeachingDetails } from '../components/audio/TeachingDetails';
+import { RecentlyPlayedBar } from '../components/audio/RecentlyPlayedBar';
 
 // Helper function to get date from one month ago
 const getOneMonthAgoDate = (): string => {
