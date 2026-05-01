@@ -37,13 +37,14 @@ export default function PrivateRoute({ children, requiredPermissions }: PrivateR
     const hasAccess = hasRoleAccess || hasAdditionalMenuAccess;
     
     if (!hasAccess) {
-      // Si l'utilisateur n'a pas les permissions requises, rediriger vers la page appropriée
       if (['admin', 'super_admin', 'pasteur'].includes(userRole as string)) {
         return <Navigate to="/" />;
       } else if (userRole === 'shepherd') {
         return <Navigate to="/assigned-souls" />;
       } else if (userRole === 'adn') {
         return <Navigate to="/ames" />;
+      } else if (userRole === 'family_leader') {
+        return <Navigate to="/" />;
       }
       return <Navigate to="/" />;
     }
