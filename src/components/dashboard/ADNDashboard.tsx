@@ -112,6 +112,15 @@ export function ADNDashboard() {
     };
   }, [souls, cutoff]);
 
+  const byFamily = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const soul of souls) {
+      const key = soul.serviceFamilyId || '__none__';
+      map.set(key, (map.get(key) || 0) + 1);
+    }
+    return map;
+  }, [souls]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
