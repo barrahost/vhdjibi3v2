@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.7.62] - Charge par berger améliorée (Responsable de famille)
+
+### Changed
+- Bloc **« Répartition des bergers »** enrichi : badge **« Disponible »** vert pour les bergers à 0 âme, et la ligne **« Non assignées »** affiche désormais une **barre ambre proportionnelle** pour visualiser le déséquilibre à corriger.
+
 ## [1.7.61] - Recherche d'âmes (Responsable de famille)
 
 ### Added
