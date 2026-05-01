@@ -1,14 +1,39 @@
-import { useState, useEffect } from 'react';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { useState, useEffect, useMemo } from 'react';
+import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useAuth } from '../contexts/AuthContext';
 import type { Soul } from '../types/database.types';
-import { MessagesSquare, Pencil, Search } from 'lucide-react';
+import { Pencil, Search, Phone } from 'lucide-react';
 import EditSoulModal from '../components/souls/EditSoulModal';
 import InteractionModal from '../components/interactions/InteractionModal';
 import { formatDate } from '../utils/dateUtils';
 import { CustomTable } from '../components/ui/CustomTable';
 import toast from 'react-hot-toast';
+
+type SortField = 'fullName' | 'lastContact';
+
+const daysSince = (d: Date) =>
+  Math.floor((Date.now() - d.getTime()) / (1000 * 60 * 60 * 24));
+
+function LastContactBadge({ date }: { date: Date | null }) {
+  if (!date) {
+    return (
+      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
+        Aucun contact
+      </span>
+    );
+  }
+  const days = daysSince(date);
+  let cls = 'bg-green-100 text-green-800';
+  if (days > 14) cls = 'bg-red-100 text-red-800';
+  else if (days > 7) cls = 'bg-yellow-100 text-yellow-800';
+  const label = days === 0 ? "Aujourd'hui" : days === 1 ? 'Hier' : `Il y a ${days} jours`;
+  return (
+    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${cls}`}>
+      {label}
+    </span>
+  );
+}
 
 export default function AssignedSouls() {
   const { user } = useAuth();
@@ -18,10 +43,35 @@ export default function AssignedSouls() {
   const [editingSoul, setEditingSoul] = useState<Soul | null>(null);
   const [interactingSoul, setInteractingSoul] = useState<Soul | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [sortConfig, setSortConfig] = useState({
-    field: 'fullName' as keyof Soul,
-    direction: 'asc' as 'asc' | 'desc'
-  });
+  const [lastContactMap, setLastContactMap] = useState<Map<string, Date>>(new Map());
+  const [sortField, setSortField] = useState<SortField>('lastContact');
+
+  const loadLastContacts = async (soulIds: string[]) => {
+    const map = new Map<string, Date>();
+    // Firestore "in" supporte 10 valeurs max
+    for (let i = 0; i < soulIds.length; i += 10) {
+      const batch = soulIds.slice(i, i + 10);
+      try {
+        const q = query(
+          collection(db, 'interactions'),
+          where('soulId', 'in', batch),
+          orderBy('date', 'desc')
+        );
+        const snap = await getDocs(q);
+        snap.docs.forEach((d) => {
+          const data = d.data() as any;
+          const sId = data.soulId;
+          const dt: Date = data.date?.toDate ? data.date.toDate() : new Date(data.date);
+          if (!map.has(sId) || map.get(sId)!.getTime() < dt.getTime()) {
+            map.set(sId, dt);
+          }
+        });
+      } catch (e) {
+        console.error('Error loading interactions batch:', e);
+      }
+    }
+    setLastContactMap(map);
+  };
 
   const columns = [
     {
@@ -31,9 +81,7 @@ export default function AssignedSouls() {
         <div>
           <span className="font-medium text-gray-900">{value}</span>
           {soul.nickname && (
-            <span className="ml-2 text-sm text-gray-500">
-              ({soul.nickname})
-            </span>
+            <span className="ml-2 text-sm text-gray-500">({soul.nickname})</span>
           )}
         </div>
       )
@@ -41,22 +89,23 @@ export default function AssignedSouls() {
     {
       key: 'phone',
       title: 'Téléphone',
-      render: (value: string) => (
-        <span className="text-gray-600">{value}</span>
-      )
+      render: (value: string) => <span className="text-gray-600">{value}</span>
     },
     {
       key: 'location',
-      title: 'Lieu d\'habitation',
-      render: (value: string) => (
-        <span className="text-gray-600">{value}</span>
-      )
+      title: "Lieu d'habitation",
+      render: (value: string) => <span className="text-gray-600">{value}</span>
     },
     {
       key: 'firstVisitDate',
       title: 'Date de première visite',
-      render: (value: Date) => (
-        <span className="text-gray-600">{formatDate(value)}</span>
+      render: (value: Date) => <span className="text-gray-600">{formatDate(value)}</span>
+    },
+    {
+      key: 'lastContact',
+      title: 'Dernier contact',
+      render: (_: any, soul: Soul) => (
+        <LastContactBadge date={lastContactMap.get(soul.id) || null} />
       )
     },
     {
@@ -69,10 +118,11 @@ export default function AssignedSouls() {
               e.stopPropagation();
               setInteractingSoul(soul);
             }}
-            className="p-1 text-[#00665C] hover:bg-[#00665C]/10 rounded transition-colors"
-            title="Interactions"
+            className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-white bg-[#00665C] hover:bg-[#00665C]/90 rounded transition-colors"
+            title="Contacter cette âme"
           >
-            <MessagesSquare className="w-4 h-4" />
+            <Phone className="w-3.5 h-3.5" />
+            Contacter
           </button>
           <button
             onClick={(e) => {
@@ -93,39 +143,41 @@ export default function AssignedSouls() {
     if (!user) return;
 
     try {
-      // Récupérer l'utilisateur depuis la collection users
       const userQuery = query(
         collection(db, 'users'),
         where('uid', '==', user.uid),
         where('status', '==', 'active')
       );
       const userDoc = await getDocs(userQuery);
-      
+
       if (!userDoc.empty) {
         const userData = userDoc.docs[0].data();
         const currentUserId = userDoc.docs[0].id;
-        
-        // Vérifier si l'utilisateur a le profil berger actif ou l'ancien rôle berger
-        const hasShepherdProfile = userData.businessProfiles?.some((profile: any) => 
+
+        const hasShepherdProfile = userData.businessProfiles?.some((profile: any) =>
           profile.type === 'shepherd' && profile.isActive
         );
         const hasOldShepherdRole = userData.role === 'shepherd' || userData.role === 'intern';
-        
+
         if (hasShepherdProfile || hasOldShepherdRole) {
           setShepherdId(currentUserId);
 
-          // Récupérer les âmes assignées
           const soulsQuery = query(
             collection(db, 'souls'),
             where('shepherdId', '==', currentUserId),
             where('status', '==', 'active')
           );
           const soulsSnapshot = await getDocs(soulsQuery);
-          
-          setSouls(soulsSnapshot.docs.map(doc => ({
+
+          const loaded = soulsSnapshot.docs.map((doc) => ({
             id: doc.id,
             ...doc.data()
-          } as Soul)));
+          } as Soul));
+          setSouls(loaded);
+
+          if (loaded.length > 0) {
+            await loadLastContacts(loaded.map((s) => s.id));
+          }
         } else {
           toast.error('Profil berger requis pour voir les âmes assignées');
         }
@@ -144,24 +196,34 @@ export default function AssignedSouls() {
     loadAssignedSouls();
   }, [user]);
 
-  // Filtrer les âmes
-  const filteredSouls = souls.filter(soul =>
-    soul.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    soul.phone.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    soul.location.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredSouls = useMemo(
+    () =>
+      souls.filter(
+        (soul) =>
+          soul.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          soul.phone.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          soul.location.toLowerCase().includes(searchTerm.toLowerCase())
+      ),
+    [souls, searchTerm]
   );
 
-  // Trier les âmes
-  const sortedSouls = [...filteredSouls].sort((a, b) => {
-    const { field, direction } = sortConfig;
-    const modifier = direction === 'asc' ? 1 : -1;
-
-    if (field === 'firstVisitDate') {
-      return (new Date(a[field]).getTime() - new Date(b[field]).getTime()) * modifier;
+  const sortedSouls = useMemo(() => {
+    const arr = [...filteredSouls];
+    if (sortField === 'fullName') {
+      arr.sort((a, b) => a.fullName.localeCompare(b.fullName));
+    } else {
+      // lastContact croissant : jamais contactés en premier, puis plus anciens
+      arr.sort((a, b) => {
+        const da = lastContactMap.get(a.id);
+        const dbb = lastContactMap.get(b.id);
+        if (!da && !dbb) return 0;
+        if (!da) return -1;
+        if (!dbb) return 1;
+        return da.getTime() - dbb.getTime();
+      });
     }
-
-    return String(a[field]).localeCompare(String(b[field])) * modifier;
-  });
+    return arr;
+  }, [filteredSouls, sortField, lastContactMap]);
 
   if (loading) {
     return (
@@ -173,8 +235,19 @@ export default function AssignedSouls() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
         <h1 className="text-2xl font-bold text-gray-900">Mes Âmes Assignées</h1>
+        <div className="flex items-center gap-2 text-sm">
+          <label className="text-gray-600">Trier par :</label>
+          <select
+            value={sortField}
+            onChange={(e) => setSortField(e.target.value as SortField)}
+            className="px-3 py-1.5 border border-gray-300 rounded-md focus:ring-[#00665C] focus:border-[#00665C]"
+          >
+            <option value="lastContact">Dernier contact</option>
+            <option value="fullName">Nom</option>
+          </select>
+        </div>
       </div>
 
       <div className="relative">
@@ -188,10 +261,7 @@ export default function AssignedSouls() {
         />
       </div>
 
-      <CustomTable
-        data={sortedSouls}
-        columns={columns}
-      />
+      <CustomTable data={sortedSouls} columns={columns} />
 
       {editingSoul && shepherdId && (
         <EditSoulModal
@@ -208,7 +278,11 @@ export default function AssignedSouls() {
       {interactingSoul && shepherdId && (
         <InteractionModal
           isOpen={!!interactingSoul}
-          onClose={() => setInteractingSoul(null)}
+          onClose={() => {
+            setInteractingSoul(null);
+            // Recharger les dernières interactions après fermeture
+            if (souls.length > 0) loadLastContacts(souls.map((s) => s.id));
+          }}
           soulId={interactingSoul.id}
           shepherdId={shepherdId}
           soulName={interactingSoul.fullName}
