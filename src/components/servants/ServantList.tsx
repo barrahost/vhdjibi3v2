@@ -1,14 +1,16 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { collection, query, orderBy, onSnapshot, where } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { Servant } from '../../types/servant.types';
-import { Search, ArrowUpDown } from 'lucide-react';
+import { Search, ArrowUpDown, AlertTriangle } from 'lucide-react';
 import ServantListItem from './ServantListItem';
 import EditServantModal from './EditServantModal';
+import OrphanedServantsModal from './OrphanedServantsModal';
 import { CustomPagination } from '../ui/CustomPagination';
 import { useDepartments } from '../../hooks/useDepartments';
 import { Checkbox } from '../ui/checkbox';
 import { useAuth } from '../../contexts/AuthContext';
+import { usePermissions } from '../../hooks/usePermissions';
 import toast from 'react-hot-toast';
 
 const ITEMS_PER_PAGE = 10;
