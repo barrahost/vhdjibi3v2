@@ -229,6 +229,45 @@ export function ADNDashboard() {
         />
       </div>
 
+      {/* Répartition par famille de service */}
+      <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+        <h2 className="font-semibold text-[#00665C] mb-3">Répartition par famille de service</h2>
+        <div className="space-y-2">
+          {families.map(fam => {
+            const count = byFamily.get(fam.id) || 0;
+            const pct = stats.totalSouls ? Math.round((count / stats.totalSouls) * 100) : 0;
+            return (
+              <div key={fam.id} className="flex items-center gap-3">
+                <span className="text-sm text-gray-700 w-32 sm:w-40 truncate" title={fam.name}>{fam.name}</span>
+                <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
+                  <div className="h-full bg-[#00665C] rounded-full transition-all" style={{ width: `${pct}%` }} />
+                </div>
+                <span className="text-sm font-medium text-gray-900 w-16 text-right tabular-nums">
+                  {count} <span className="text-xs text-gray-500">({pct}%)</span>
+                </span>
+              </div>
+            );
+          })}
+          {byFamily.has('__none__') && (
+            <div className="flex items-center gap-3 pt-2 border-t border-gray-100">
+              <span className="text-sm text-gray-500 w-32 sm:w-40">Sans famille</span>
+              <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-amber-400 rounded-full transition-all"
+                  style={{ width: `${stats.totalSouls ? Math.round(((byFamily.get('__none__') || 0) / stats.totalSouls) * 100) : 0}%` }}
+                />
+              </div>
+              <span className="text-sm font-medium text-gray-900 w-16 text-right tabular-nums">
+                {byFamily.get('__none__')}
+                <span className="text-xs text-gray-500"> ({stats.totalSouls ? Math.round(((byFamily.get('__none__') || 0) / stats.totalSouls) * 100) : 0}%)</span>
+              </span>
+            </div>
+          )}
+          {families.length === 0 && !byFamily.has('__none__') && (
+            <p className="text-sm text-gray-500 italic">Aucune famille de service configurée.</p>
+          )}
+        </div>
+      </div>
       <div>
         <h2 className="text-lg font-semibold text-[#00665C] mb-4">
           Évolution des âmes enregistrées
