@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.7.29] - Restriction des champs Provenance et Famille de service
+
+### Fixed
+- Les champs **« Provenance de l'âme »** et **« Famille de service »** sont désormais en lecture seule pour les bergers, responsables de famille et responsables de département. Seuls les rôles `adn`, `admin` et `super_admin` peuvent les modifier.
+
+
 ## [1.7.28] - Verrouillage de l'import basé sur le profil actif
 
 ### Fixed

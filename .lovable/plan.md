@@ -1,47 +1,53 @@
-## Problème
+## Objectif
 
-La capture montre que la responsable du département **SOCIAL** (ASSOMA JOCELYNE), connectée avec son profil "Responsable de Département" actif, voit toujours le sélecteur **"Département cible"** dans la modale d'import (préselectionné sur "ACCUEIL", ce qui lui permettrait d'importer des âmes dans un département qui n'est pas le sien).
+Restreindre les champs **"Provenance de l'âme"** et **"Famille de service"** en lecture seule pour tous les rôles, sauf `adn`, `admin`, et `super_admin`, dans l'onglet d'édition d'une âme.
 
-Le correctif précédent (1.7.27) verrouillait la cible uniquement quand `isAdmin` était `false`. Mais cette utilisatrice possède manifestement aussi la permission `MANAGE_SERVANTS` (ou `*`), donc `isAdmin` est `true` et le verrou ne s'applique pas. De plus, on prenait le premier profil `department_leader` trouvé sans vérifier qu'il s'agit du **profil actif** sélectionné via le sélecteur de profils.
+## Fichier modifié
 
-## Solution
+### `src/components/souls/tabs/GeneralInfoTab.tsx`
 
-Verrouiller la cible d'import sur le département du profil **actuellement actif** dès que ce profil est `department_leader`, indépendamment des autres permissions (admin ou non). Un admin qui agit en tant que responsable de département ne doit pouvoir importer que dans son département. S'il veut importer dans n'importe quel département, il doit basculer sur son profil admin via le sélecteur de profils.
+1. **Ajouter `canEditAdnFields`** juste après `isAdnOnly` (ligne 41) :
+   ```ts
+   const canEditAdnFields =
+     activeRole === 'admin' || activeRole === 'super_admin' ||
+     userRole === 'admin' || userRole === 'super_admin' ||
+     isAdnOnly;
+   ```
 
-Comportement final :
-- **Profil actif = `department_leader`** → champ "Département cible" masqué, verrouillé sur le département du profil actif (même si l'utilisateur a `MANAGE_SERVANTS`).
-- **Profil actif = admin / autre, sans profil `department_leader`** → sélecteur affiché normalement.
-- **Profil actif = admin / autre, mais l'utilisateur a aussi un profil `department_leader`** → comportement par défaut admin (sélecteur visible) ; pour importer dans son département, il doit basculer sur son profil de responsable.
+2. **Bloquer les radios `originSource`** (lignes 145-166) :
+   - Ajouter `disabled={!canEditAdnFields}` sur chaque `<input type="radio">`.
+   - `onChange` n'applique le changement que si `canEditAdnFields`.
+   - Classes dynamiques : `cursor-pointer` si éditable, sinon `cursor-not-allowed opacity-60`.
 
-## Détails techniques
+3. **Texte d'aide sous les radios** (ligne 169) :
+   ```tsx
+   {canEditAdnFields ? "Précisez d'où vient cette âme" : "Défini par l'ADN — lecture seule"}
+   ```
 
-### `src/pages/ServantManagement.tsx`
-Remplacer le bloc actuel par :
-```ts
-const activeProfile = (user as any)?.businessProfiles?.find((p: any) => p.isActive);
-const isActingAsDepartmentLeader =
-  activeProfile?.type === 'department_leader' && !!activeProfile?.departmentId;
+4. **Bloquer le `<select>` famille de service** (lignes 178-183) :
+   - `disabled={loadingFamilies || !canEditAdnFields}`
+   - Ajouter classes `bg-gray-50 cursor-not-allowed` quand `!canEditAdnFields`.
 
-const leaderDepartmentId = isActingAsDepartmentLeader
-  ? (activeProfile.departmentId as string)
-  : undefined;
+5. **Texte d'aide sous le select** (lignes 189-193) :
+   ```tsx
+   {!canEditAdnFields
+     ? "Défini par l'ADN — lecture seule"
+     : isAdnOnly
+       ? "Le responsable de famille assignera ensuite l'âme à un berger"
+       : "Optionnel : assigner l'âme à une famille de service"}
+   ```
 
-const canShowImportButton =
-  isAdmin || (canManageDepartmentServants && !!leaderDepartmentId);
-```
-Et passer à la modale :
-```tsx
-<ImportServantsModal
-  isOpen={showImportModal}
-  onClose={() => setShowImportModal(false)}
-  fixedDepartmentId={isActingAsDepartmentLeader ? leaderDepartmentId : undefined}
-/>
-```
+## Maintenance
 
-### Maintenance
-- Bumper la version à **1.7.28** dans `src/pages/Login.tsx` et `src/CHANGELOG.md` :
-  - "Fix : la cible d'import est désormais verrouillée sur le département du profil actif lorsqu'on agit en tant que responsable de département (y compris pour les utilisateurs ayant aussi des droits admin)."
+- Bump version à **1.7.29** dans `src/pages/Login.tsx`.
+- Ajouter une entrée dans `src/CHANGELOG.md` : "Fix : les champs Provenance et Famille de service sont désormais en lecture seule pour les bergers, responsables de famille et responsables de département (modifiables uniquement par ADN/admin/super_admin)."
 
-## Résultat attendu
+## Comportement attendu
 
-ASSOMA JOCELYNE, connectée avec son profil "Responsable de Département" SOCIAL actif, ouvre "Importer des serviteurs" → la modale s'ouvre directement sur le département SOCIAL, sans champ "Département cible" sélectionnable.
+| Rôle | Provenance | Famille de service |
+|---|---|---|
+| `adn` | Modifiable | Modifiable |
+| `admin` / `super_admin` | Modifiable | Modifiable |
+| `shepherd` | Lecture seule | Lecture seule |
+| `family_leader` | Lecture seule | Lecture seule |
+| `department_leader` | Lecture seule | Lecture seule |
