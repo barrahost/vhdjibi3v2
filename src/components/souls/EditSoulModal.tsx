@@ -35,6 +35,8 @@ export default function EditSoulModal({ soul, isOpen, onClose, onUpdate }: EditS
       shepherdId: undefined as string | undefined,
       status: 'active' as 'active' | 'inactive',
       photo: null as File | null,
+      originSource: '' as '' | 'culte' | 'evangelisation',
+      serviceFamilyId: undefined as string | undefined,
     },
     spiritual: {} as Soul['spiritualProfile']
   });
@@ -83,6 +85,8 @@ export default function EditSoulModal({ soul, isOpen, onClose, onUpdate }: EditS
           shepherdId: soul.shepherdId,
           status: soul.status || 'active',
           photo: null,
+          originSource: (soul.originSource as 'culte' | 'evangelisation') || '',
+          serviceFamilyId: soul.serviceFamilyId,
         },
         spiritual: soul.spiritualProfile
       });
