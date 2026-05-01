@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { collection, query, where, orderBy, getDocs } from 'firebase/firestore';
+import { useState, useEffect, useMemo } from 'react';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 import { Send, X, Search } from 'lucide-react';
 import { db } from '../../lib/firebase';
 import { SMSService } from '../../services/sms.service';
@@ -11,7 +11,7 @@ interface SMSFormProps {
   assignedSouls: SMSRecipient[];
 }
 
-const MAX_SMS_LENGTH = 125; // Reduced to 125 to allow for appending user info
+const SMS_HARD_LIMIT = 160;
 
 export default function SMSForm({ assignedSouls }: SMSFormProps) {
   const { user } = useAuth();
@@ -20,7 +20,6 @@ export default function SMSForm({ assignedSouls }: SMSFormProps) {
   const [selectedTemplate, setSelectedTemplate] = useState('');
   const [templates, setTemplates] = useState<SMSTemplate[]>([]);
   const [isSending, setIsSending] = useState(false);
-  const [characterCount, setCharacterCount] = useState(0);
   const [searchTerm, setSearchTerm] = useState('');
   const [userInfo, setUserInfo] = useState({ fullName: '', phone: '' });
 
@@ -52,21 +51,12 @@ export default function SMSForm({ assignedSouls }: SMSFormProps) {
     loadUserInfo();
   }, [user]);
 
-  // Charger les modèles actifs
+  // Charger les modèles actifs (tous, pour la flexibilité des bergers)
   useEffect(() => {
     const loadTemplates = async () => {
       try {
-        const templatesQuery = query(
-          collection(db, 'smsTemplates'),
-          where('status', '==', 'active'),
-          orderBy('title', 'asc')
-        );
-        
-        const snapshot = await getDocs(templatesQuery);
-        setTemplates(snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        } as SMSTemplate)));
+        const data = await SMSService.getTemplates();
+        setTemplates(data as SMSTemplate[]);
       } catch (error) {
         console.error('Error loading templates:', error);
         toast.error('Erreur lors du chargement des modèles');
@@ -99,9 +89,33 @@ export default function SMSForm({ assignedSouls }: SMSFormProps) {
     if (template) {
       setSelectedTemplate(templateId);
       setMessage(template.content);
-      setCharacterCount(template.content.length);
     }
   };
+
+  // Signature (avec indicatif +225 conservé)
+  const userSignature = useMemo(() => {
+    const nameParts = userInfo.fullName.split(' ').filter(Boolean);
+    const signatureName = nameParts.slice(0, 2).join(' ');
+    const signaturePhone = userInfo.phone || '';
+    return `\n- ${signatureName} (${signaturePhone})`;
+  }, [userInfo]);
+
+  // Aperçu basé sur le 1er destinataire sélectionné (ou exemple par défaut)
+  const messagePreview = useMemo(() => {
+    if (!message) return '';
+    const firstSelectedId = Array.from(selectedRecipients)[0];
+    const previewSoul = firstSelectedId
+      ? assignedSouls.find(s => s.id === firstSelectedId)
+      : undefined;
+    const exampleName = previewSoul?.fullName || 'Jean Kouassi';
+    const exampleNickname = previewSoul?.nickname || exampleName.split(' ')[0];
+    return message
+      .replace(/\[nom\]/g, exampleName)
+      .replace(/\[surnom\]/g, exampleNickname)
+      + userSignature;
+  }, [message, userSignature, selectedRecipients, assignedSouls]);
+
+  const previewCharCount = messagePreview.length;
 
   const replaceVariables = (text: string, soul: SMSRecipient) => {
     let result = text;
