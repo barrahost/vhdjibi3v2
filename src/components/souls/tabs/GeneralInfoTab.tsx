@@ -40,6 +40,12 @@ export function GeneralInfoTab({ data, onChange, isShepherd, currentShepherdId }
   // Un ADN n'assigne pas le berger : il assigne une famille de service
   const isAdnOnly = (activeRole === 'adn' || userRole === 'adn') && activeRole !== 'admin' && activeRole !== 'super_admin';
 
+  // Seuls ADN, admin et super_admin peuvent modifier la provenance et la famille de service
+  const canEditAdnFields =
+    activeRole === 'admin' || activeRole === 'super_admin' ||
+    userRole === 'admin' || userRole === 'super_admin' ||
+    isAdnOnly;
+
   // Charger le nom du berger si une âme est assignée
   useEffect(() => {
     const loadShepherdName = async () => {
@@ -142,31 +148,33 @@ export function GeneralInfoTab({ data, onChange, isShepherd, currentShepherdId }
           Provenance de l'âme <span className="text-red-500">*</span>
         </label>
         <div className="flex flex-col sm:flex-row gap-3">
-          <label className="flex items-center gap-2 cursor-pointer">
+          <label className={`flex items-center gap-2 ${canEditAdnFields ? 'cursor-pointer' : 'cursor-not-allowed opacity-60'}`}>
             <input
               type="radio"
               name="originSource"
               value="culte"
               checked={data.originSource === 'culte'}
-              onChange={() => onChange({ ...data, originSource: 'culte' })}
+              onChange={() => canEditAdnFields && onChange({ ...data, originSource: 'culte' })}
+              disabled={!canEditAdnFields}
               className="text-[#00665C] focus:ring-[#00665C]"
             />
             <span className="text-sm text-gray-700">Culte</span>
           </label>
-          <label className="flex items-center gap-2 cursor-pointer">
+          <label className={`flex items-center gap-2 ${canEditAdnFields ? 'cursor-pointer' : 'cursor-not-allowed opacity-60'}`}>
             <input
               type="radio"
               name="originSource"
               value="evangelisation"
               checked={data.originSource === 'evangelisation'}
-              onChange={() => onChange({ ...data, originSource: 'evangelisation' })}
+              onChange={() => canEditAdnFields && onChange({ ...data, originSource: 'evangelisation' })}
+              disabled={!canEditAdnFields}
               className="text-[#00665C] focus:ring-[#00665C]"
             />
             <span className="text-sm text-gray-700">Campagne d'évangélisation</span>
           </label>
         </div>
         <p className="mt-1 text-sm text-gray-500">
-          Précisez d'où vient cette âme
+          {canEditAdnFields ? "Précisez d'où vient cette âme" : "Défini par l'ADN — lecture seule"}
         </p>
       </div>
 
@@ -178,8 +186,8 @@ export function GeneralInfoTab({ data, onChange, isShepherd, currentShepherdId }
         <select
           value={data.serviceFamilyId || ''}
           onChange={(e) => onChange({ ...data, serviceFamilyId: e.target.value || undefined })}
-          disabled={loadingFamilies}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-[#00665C] focus:border-[#00665C]"
+          disabled={loadingFamilies || !canEditAdnFields}
+          className={`w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-[#00665C] focus:border-[#00665C] ${!canEditAdnFields ? 'bg-gray-50 cursor-not-allowed' : ''}`}
         >
           <option value="">-- Sélectionner une famille --</option>
           {families.map(f => (
@@ -187,9 +195,11 @@ export function GeneralInfoTab({ data, onChange, isShepherd, currentShepherdId }
           ))}
         </select>
         <p className="mt-1 text-sm text-gray-500">
-          {isAdnOnly
-            ? "Le responsable de famille assignera ensuite l'âme à un berger"
-            : "Optionnel : assigner l'âme à une famille de service"}
+          {!canEditAdnFields
+            ? "Défini par l'ADN — lecture seule"
+            : isAdnOnly
+              ? "Le responsable de famille assignera ensuite l'âme à un berger"
+              : "Optionnel : assigner l'âme à une famille de service"}
         </p>
       </div>
 
