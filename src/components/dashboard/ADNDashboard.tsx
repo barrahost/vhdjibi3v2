@@ -128,38 +128,36 @@ export function ADNDashboard() {
 
       <PendingActionsWidget role="adn" />
 
-      {/* Première ligne de statistiques */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <StatCard
-          title="Total des âmes enregistrées"
-          value={stats.totalSouls}
-          icon={Users}
-          trend={`${stats.totalSouls}`}
-          trendLabel="âmes au total"
-        />
-        
-        <StatCard
-          title="Total des âmes actives et assignées"
-          value={stats.activeAssignedSouls}
-          icon={UserCheck}
-          trend={`${((stats.activeAssignedSouls / stats.totalSouls) * 100).toFixed(1)}%`}
-          trendLabel="du total"
-          iconClassName="text-green-600"
-        />
-        
-        <StatCard
-          title="Total des âmes actives et non assignées"
-          value={stats.activeUnassignedSouls}
-          icon={Users}
-          trend={`${stats.totalSouls ? ((stats.activeUnassignedSouls / stats.totalSouls) * 100).toFixed(1) : '0'}%`}
-          trendLabel="du total"
-          iconClassName="text-blue-600"
-          onClick={() => navigate('/souls?filter=unassigned')}
-          linkLabel="Voir la liste"
-        />
+      {/* Hero card — métrique principale */}
+      <div className="bg-gradient-to-br from-[#00665C] to-[#00887A] rounded-2xl p-6 text-white shadow-lg">
+        <p className="text-sm font-medium opacity-80">Total des âmes enregistrées</p>
+        <p className="text-5xl font-bold mt-1 tracking-tight">{stats.totalSouls}</p>
+        <div className="flex flex-wrap gap-x-6 gap-y-2 mt-4 text-sm opacity-95">
+          <span className="inline-flex items-center gap-1.5">
+            <UserCheck className="w-4 h-4" />
+            <strong>{stats.activeAssignedSouls}</strong> assignées
+          </span>
+          <button
+            onClick={() => navigate('/souls?filter=unassigned')}
+            className="inline-flex items-center gap-1.5 hover:underline"
+          >
+            <Users className="w-4 h-4" />
+            <strong>{stats.activeUnassignedSouls}</strong> non assignées
+          </button>
+          <button
+            onClick={() => navigate('/undecided-souls')}
+            className="inline-flex items-center gap-1.5 hover:underline"
+          >
+            <AlertTriangle className="w-4 h-4" />
+            <strong>{stats.undecidedSouls}</strong> indécises
+          </button>
+        </div>
+      </div>
 
+      {/* Cartes secondaires */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <StatCard
-          title="Nouvelles âmes (Mois)"
+          title="Nouvelles âmes (30 j)"
           value={stats.newSoulsThisMonth}
           icon={UserCheck}
           trend={`${stats.totalSouls ? ((stats.newSoulsThisMonth / stats.totalSouls) * 100).toFixed(1) : '0'}%`}
@@ -170,7 +168,7 @@ export function ADNDashboard() {
         />
 
         <StatCard
-          title="Total des âmes indécises"
+          title="Indécises"
           value={stats.undecidedSouls}
           icon={AlertTriangle}
           trend={`${stats.totalSouls ? ((stats.undecidedSouls / stats.totalSouls) * 100).toFixed(1) : '0'}%`}
@@ -181,20 +179,20 @@ export function ADNDashboard() {
         />
 
         <StatCard
-          title="Total des âmes hommes actifs et assignés"
+          title="Hommes assignés"
           value={stats.activeAssignedMaleCount}
           icon={User}
           trend={`${stats.activeAssignedSouls ? ((stats.activeAssignedMaleCount / stats.activeAssignedSouls) * 100).toFixed(1) : '0'}%`}
-          trendLabel="des assignés actifs"
+          trendLabel="des assignés"
           iconClassName="text-blue-600"
         />
 
         <StatCard
-          title="Total des âmes femmes actives et assignées"
+          title="Femmes assignées"
           value={stats.activeAssignedFemaleCount}
           icon={User}
           trend={`${stats.activeAssignedSouls ? ((stats.activeAssignedFemaleCount / stats.activeAssignedSouls) * 100).toFixed(1) : '0'}%`}
-          trendLabel="des assignées actives"
+          trendLabel="des assignées"
           iconClassName="text-pink-600"
         />
       </div>
