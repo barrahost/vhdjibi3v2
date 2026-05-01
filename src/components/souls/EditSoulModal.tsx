@@ -118,11 +118,13 @@ export default function EditSoulModal({ soul, isOpen, onClose, onUpdate }: EditS
       }
 
       // Préparer les données pour validation
+      const { originSource: rawOrigin, ...restGeneral } = formData.general;
       const dataToValidate = {
-        ...formData.general,
+        ...restGeneral,
         firstVisitDate: new Date(formData.general.firstVisitDate),
         phone: phoneValidation.formattedNumber as string,
         shepherdId: formData.general.shepherdId ?? undefined,
+        originSource: rawOrigin === '' ? undefined : rawOrigin,
         spiritualProfile: formData.spiritual
       };
 
