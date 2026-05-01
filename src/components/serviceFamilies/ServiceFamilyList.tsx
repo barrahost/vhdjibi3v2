@@ -10,7 +10,9 @@ interface ServiceFamily {
   id: string;
   name: string;
   description: string;
-  leader: string;
+  leader?: string;
+  leaderId?: string;
+  shepherdIds?: string[];
   order: number;
 }
 
@@ -67,8 +69,8 @@ export default function ServiceFamilyList() {
 
   const filteredFamilies = families.filter(family =>
     family.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    family.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    family.leader.toLowerCase().includes(searchTerm.toLowerCase())
+    (family.description || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (family.leader || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
