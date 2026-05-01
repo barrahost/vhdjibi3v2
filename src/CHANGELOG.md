@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.7.37] - Doublons et orphelins dans la liste des serviteurs
+
+### Added
+- **Bannière d'alerte** (admin) en haut de la liste des serviteurs lorsqu'il existe des enregistrements liés à un département supprimé, avec modal **« Serviteurs orphelins »** permettant de tous les supprimer ou un par un.
+- En vue **« Tous les serviteurs »**, les enregistrements partageant le même numéro de téléphone sont **regroupés sur une seule ligne**, avec les départements affichés sous forme de **badges**.
+- Le formulaire d'ajout d'un serviteur affiche un **avertissement non bloquant** si le numéro de téléphone est déjà utilisé dans un autre département.
+
+### Fixed
+- Les enregistrements orphelins (département supprimé) ne polluent plus la liste principale et ne comptent plus comme des doublons.
+
 ## [1.7.36] - Mémorisation des filtres de la liste des âmes
 
 ### Added
