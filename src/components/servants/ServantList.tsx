@@ -256,6 +256,20 @@ export default function ServantList({ statusFilter, selectedServantIds = [], onS
 
   return (
     <div className="space-y-4">
+      {isAdmin && orphanServants.length > 0 && (
+        <div className="flex items-start gap-3 p-3 rounded-lg border border-amber-300 bg-amber-50">
+          <AlertTriangle className="w-5 h-5 text-amber-600 mt-0.5 shrink-0" />
+          <div className="flex-1 text-sm text-amber-900">
+            <strong>{orphanServants.length}</strong> serviteur{orphanServants.length > 1 ? 's sont liés' : ' est lié'} à des départements supprimés.
+          </div>
+          <button
+            onClick={() => setShowOrphanModal(true)}
+            className="text-sm font-medium text-amber-800 hover:text-amber-900 underline whitespace-nowrap"
+          >
+            Voir et nettoyer →
+          </button>
+        </div>
+      )}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
@@ -357,6 +371,11 @@ export default function ServantList({ statusFilter, selectedServantIds = [], onS
                     <ServantListItem
                       servant={servant}
                       departmentName={getDepartmentName(servant.departmentId)}
+                      departmentNames={
+                        (servant as any).departmentIds && (servant as any).departmentIds.length > 1
+                          ? (servant as any).departmentIds.map((id: string) => getDepartmentName(id))
+                          : undefined
+                      }
                       onEdit={() => setEditingServant(servant)}
                     />
                   </tr>
@@ -385,6 +404,12 @@ export default function ServantList({ statusFilter, selectedServantIds = [], onS
           departmentName={getDepartmentName(editingServant.departmentId)}
         />
       )}
+
+      <OrphanedServantsModal
+        isOpen={showOrphanModal}
+        onClose={() => setShowOrphanModal(false)}
+        orphans={orphanServants}
+      />
     </div>
   );
 }
