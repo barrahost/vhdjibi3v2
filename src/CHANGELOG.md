@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.7.38] - Lecteur audio compact/étendu sur mobile
+
+### Changed
+- Sur mobile, le lecteur audio (page **Replay**) s'affiche désormais en **mini-barre de 64 px** (pochette, titre, prédicateur, recul −10 s, lecture/pause, fine barre de progression).
+- Un **tap** sur la mini-barre déploie un **panneau plein écran** : grande pochette, contrôles complets (précédent / −10 s / play / +10 s / suivant), sélection de **vitesse de lecture (1× → 2×)**, téléchargement, partage, fermeture.
+- Le comportement **desktop reste inchangé**.
+
 ## [1.7.37] - Doublons et orphelins dans la liste des serviteurs
 
 ### Added
