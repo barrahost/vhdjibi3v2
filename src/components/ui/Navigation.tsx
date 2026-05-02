@@ -20,7 +20,8 @@ import {
   Play,
   Headphones,
   User,
-  Shield
+  Shield,
+  Megaphone
 } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
@@ -247,6 +248,16 @@ export default function Navigation({ onItemClick }: NavigationProps) {
             icon: <TrendingUp className="w-5 h-5" />
           }
         ]
+      });
+    }
+
+    // Âmes évangélisées (profil Évangéliste)
+    if (hasPermission(PERMISSIONS.MANAGE_EVANGELIZED_SOULS)) {
+      items.push({
+        id: 'evangelized-souls',
+        label: 'Âmes évangélisées',
+        icon: <Megaphone className="w-5 h-5" />,
+        href: '/ames-evangelisees'
       });
     }
 

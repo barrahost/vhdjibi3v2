@@ -20,6 +20,7 @@ import ServantManagement from './pages/ServantManagement';
 const Login = lazy(() => import('./pages/Login'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const SoulManagement = lazy(() => import('./pages/SoulManagement'));
+const EvangelizedSoulManagement = lazy(() => import('./pages/EvangelizedSoulManagement'));
 const InteractionsManagement = lazy(() => import('./pages/InteractionsManagement'));
 const AssignedSouls = lazy(() => import('./pages/AssignedSouls'));
 const AttendanceManagement = lazy(() => import('./pages/AttendanceManagement'));
@@ -131,6 +132,18 @@ function AppContent() {
           <Route path="souls" element={
             <PrivateRoute requiredPermissions={[PERMISSIONS.MANAGE_SOULS]}>
               <SoulManagement />
+            </PrivateRoute>
+          } />
+
+          {/* Gestion des âmes évangélisées (profil Évangéliste) */}
+          <Route path="ames-evangelisees" element={
+            <PrivateRoute requiredPermissions={[PERMISSIONS.MANAGE_EVANGELIZED_SOULS]}>
+              <EvangelizedSoulManagement />
+            </PrivateRoute>
+          } />
+          <Route path="evangelized-souls" element={
+            <PrivateRoute requiredPermissions={[PERMISSIONS.MANAGE_EVANGELIZED_SOULS]}>
+              <EvangelizedSoulManagement />
             </PrivateRoute>
           } />
 
