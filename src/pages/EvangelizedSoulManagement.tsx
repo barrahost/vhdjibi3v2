@@ -2,14 +2,15 @@ import { useEffect, useState } from 'react';
 import { collection, query, where, orderBy, onSnapshot, deleteDoc, doc } from 'firebase/firestore';
 import * as XLSX from 'xlsx';
 import { db } from '../lib/firebase';
-import { Plus, FileSpreadsheet, Search, Pencil, Trash2, User as UserIcon, RotateCcw, Megaphone } from 'lucide-react';
+import { Plus, FileSpreadsheet, Search, Pencil, Trash2, User as UserIcon, RotateCcw, Megaphone, Info, CheckCircle2, Download } from 'lucide-react';
 import { CustomTable } from '../components/ui/CustomTable';
 import { CustomPagination } from '../components/ui/CustomPagination';
 import { formatDate, formatDateForExcel } from '../utils/dateUtils';
 import { useAuth } from '../contexts/AuthContext';
-import { isAdminUser } from '../utils/roleHelpers';
+import { isAdminUser, isADNUser, isEvangelistUser } from '../utils/roleHelpers';
 import EvangelizedSoulForm from '../components/evangelizedSouls/EvangelizedSoulForm';
 import EditEvangelizedSoulModal from '../components/evangelizedSouls/EditEvangelizedSoulModal';
+import ImportToSoulModal from '../components/evangelizedSouls/ImportToSoulModal';
 import { EvangelizedSoul } from '../types/evangelized.types';
 import { formatGender } from '../utils/formatting/genderFormat';
 import toast from 'react-hot-toast';
@@ -22,13 +23,22 @@ export default function EvangelizedSoulManagement() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<EvangelizedSoul | null>(null);
+  const [importing, setImporting] = useState<EvangelizedSoul | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('active');
+  const [importFilter, setImportFilter] = useState<'pending' | 'imported' | 'all'>('pending');
   const [dateRange, setDateRange] = useState({ startDate: '', endDate: '' });
   const [currentPage, setCurrentPage] = useState(1);
 
-  // Admin (or super_admin) sees all; otherwise only own list (filtered by evangelistId)
-  const isAdmin = isAdminUser({ role: (activeRole || userRole) as string });
+  const roleForCheck = { role: (activeRole || userRole) as string };
+  const isAdmin = isAdminUser(roleForCheck);
+  const isADN = isADNUser(roleForCheck);
+  const isEvangelist = isEvangelistUser({
+    role: (activeRole || userRole) as string,
+    businessProfiles: (user as any)?.businessProfiles,
+  });
+  const canImportToSouls = isAdmin || isADN;
+  const canCreateEvangelized = isAdmin || isEvangelist;
   const userId = user ? (user as any).id || (user as any).uid : null;
 
   useEffect(() => {
