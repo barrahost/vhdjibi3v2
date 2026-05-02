@@ -11,6 +11,9 @@ export interface EvangelizedSoul {
   evangelistId: string;
   createdAt: Date;
   updatedAt: Date;
-  status: 'active' | 'inactive';
+  status: 'active' | 'inactive' | 'imported';
   photoURL?: string | null;
+  importedToSoulId?: string | null;
+  importedAt?: Date | null;
+  importedBy?: string | null;
 }
