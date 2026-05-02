@@ -152,11 +152,6 @@ export default function EvangelizedSoulManagement() {
     XLSX.utils.book_append_sheet(wb, ws, 'Âmes évangélisées');
     XLSX.writeFile(wb, `ames-evangelisees-${new Date().toISOString().slice(0, 10)}.xlsx`);
   };
-    const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.json_to_sheet(rows);
-    XLSX.utils.book_append_sheet(wb, ws, 'Âmes évangélisées');
-    XLSX.writeFile(wb, `ames-evangelisees-${new Date().toISOString().slice(0, 10)}.xlsx`);
-  };
 
   const columns = [
     {
