@@ -75,7 +75,7 @@ export default function EditEvangelizedSoulModal({ soul, isOpen, onClose, onUpda
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Modifier l'âme évangélisée">
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="p-6"><form onSubmit={handleSubmit} className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Nom et Prénoms *</label>
@@ -150,7 +150,7 @@ export default function EditEvangelizedSoulModal({ soul, isOpen, onClose, onUpda
             {submitting ? 'Enregistrement...' : 'Enregistrer'}
           </button>
         </div>
-      </form>
+      </form></div>
     </Modal>
   );
 }
