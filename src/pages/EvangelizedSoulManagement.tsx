@@ -290,17 +290,35 @@ export default function EvangelizedSoulManagement() {
             <FileSpreadsheet className="w-4 h-4 mr-1.5" />
             Export Excel
           </button>
-          <button
-            onClick={() => setShowForm(!showForm)}
-            className="flex items-center px-4 py-2 text-sm font-medium text-white bg-[#00665C] hover:bg-[#00665C]/90 rounded-md"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            {showForm ? 'Masquer le formulaire' : 'Ajouter une âme évangélisée'}
-          </button>
+          {canCreateEvangelized && (
+            <button
+              onClick={() => setShowForm(!showForm)}
+              className="flex items-center px-4 py-2 text-sm font-medium text-white bg-[#00665C] hover:bg-[#00665C]/90 rounded-md"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              {showForm ? 'Masquer le formulaire' : 'Ajouter une âme évangélisée'}
+            </button>
+          )}
         </div>
       </div>
 
-      {showForm && (
+      <div className="bg-blue-50 border border-blue-200 rounded-md p-4 flex items-start gap-3">
+        <Info className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+        <div className="text-sm text-blue-900">
+          <p>
+            Les <strong>âmes évangélisées</strong> ne sont <strong>pas comptabilisées</strong> parmi
+            les âmes de l'église tant qu'elles n'ont pas effectué leur première visite au culte.
+          </p>
+          {canImportToSouls && (
+            <p className="mt-1">
+              Le jour où l'âme vient au culte, cliquez sur <strong>« Importer »</strong> pour
+              l'ajouter à la liste des âmes de l'église.
+            </p>
+          )}
+        </div>
+      </div>
+
+      {showForm && canCreateEvangelized && (
         <div className="bg-white p-6 rounded-lg shadow-sm border">
           <h2 className="text-xl font-semibold text-[#00665C] mb-4">Ajouter une âme évangélisée</h2>
           <EvangelizedSoulForm onCreated={() => setShowForm(false)} />
