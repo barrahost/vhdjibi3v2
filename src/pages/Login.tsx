@@ -117,7 +117,7 @@ export default function Login() {
             className="mt-1 text-xs text-gray-400 hover:text-[#00665C] transition-colors flex items-center justify-center mx-auto"
           >
             <FileText className="w-3 h-3 mr-1" />
-           Version 1.7.65
+           Version 1.7.66
           </button>
           <div className="mt-2 space-x-4">
             <a href="/legal-notice" className="text-[#00665C] hover:text-[#00665C]/80">

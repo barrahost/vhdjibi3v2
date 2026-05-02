@@ -1,5 +1,21 @@
 # Changelog
 
+## [1.7.66] - Profil Évangéliste & Âmes évangélisées
+
+### Added
+- Nouveau **profil métier « Évangéliste »**, attribuable à un utilisateur depuis la modale d'édition (en plus de Berger, ADN, Resp. Famille, etc.). Un même utilisateur peut cumuler ce profil avec d'autres casquettes.
+- Nouvelle catégorie d'âme : **« Âme évangélisée »**, stockée dans une **collection séparée** (`evangelized_souls`) — distincte de la liste des âmes ADN (aucun mélange).
+- Nouvelle entrée de menu **« Âmes évangélisées »** (`/ames-evangelisees`), visible uniquement par les Évangélistes et les Administrateurs.
+- Page complète de gestion des âmes évangélisées : ajout, modification, suppression, recherche, filtres (date d'évangélisation, statut), export Excel.
+- Champs spécifiques : **date d'évangélisation**, **lieu d'évangélisation**, notes libres.
+- Nouvelle permission `MANAGE_EVANGELIZED_SOULS` (accordée automatiquement aux Admin/Super Admin).
+
+### Behavior
+- Un **Évangéliste** ne voit que **ses propres** âmes évangélisées (filtrage Firestore par `evangelistId`).
+- Un **Administrateur** voit toutes les âmes évangélisées de tous les évangélistes.
+- L'**ADN ne voit pas** les âmes évangélisées : les deux listes sont totalement cloisonnées.
+
+
 ## [1.7.65] - Visibilité unifiée des bergers multi-casquettes
 
 ### Fixed

@@ -22,9 +22,10 @@ export type Permission =
   | 'MANAGE_DEPARTMENT_SERVANTS'
   | 'VIEW_REPLAY_TEACHINGS'
   | 'MANAGE_BIRTHDAYS'
+  | 'MANAGE_EVANGELIZED_SOULS'
   | '*';
 
-export type BaseRole = 'super_admin' | 'admin' | 'shepherd' | 'adn' | 'pasteur' | 'department_leader' | 'family_leader';
+export type BaseRole = 'super_admin' | 'admin' | 'shepherd' | 'adn' | 'pasteur' | 'department_leader' | 'family_leader' | 'evangelist';
 
 export interface UserRoles {
   primary: BaseRole;

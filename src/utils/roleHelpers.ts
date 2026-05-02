@@ -67,6 +67,11 @@ export function isFamilyLeaderUser(user: UserLike | null | undefined): boolean {
   return hasAnyRole(user, ['family_leader']);
 }
 
+/** Évangéliste. */
+export function isEvangelistUser(user: UserLike | null | undefined): boolean {
+  return hasAnyRole(user, ['evangelist']);
+}
+
 /** Filtre côté client : retourne tous les bergers/stagiaires actifs. */
 export function filterShepherds<T extends UserLike>(users: T[]): T[] {
   return users.filter(u => isShepherdUser(u) && (u.status ?? 'active') === 'active');
