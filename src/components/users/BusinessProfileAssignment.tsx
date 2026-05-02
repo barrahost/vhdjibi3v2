@@ -8,7 +8,7 @@ interface BusinessProfileAssignmentProps {
 }
 
 export function BusinessProfileAssignment({ selectedProfiles, onChange, allowMultiple = true }: BusinessProfileAssignmentProps) {
-  const availableProfileTypes: BusinessProfileType[] = ['shepherd', 'department_leader', 'family_leader', 'adn', 'admin'];
+  const availableProfileTypes: BusinessProfileType[] = ['shepherd', 'department_leader', 'family_leader', 'adn', 'evangelist', 'admin'];
 
   const isProfileSelected = (profileType: BusinessProfileType): boolean => {
     return selectedProfiles.some(profile => profile.type === profileType);
