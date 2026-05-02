@@ -1,91 +1,87 @@
-## Problème identifié
+## Objectif
 
-L'application utilise **deux systèmes de rôles en parallèle** :
-1. **Legacy** : champ unique `role` (ex: `'shepherd'`, `'intern'`, `'adn'`...)
-2. **Nouveau** : tableau `businessProfiles[]` permettant **plusieurs casquettes**
+Ajouter un nouveau profil métier **Évangéliste** capable d'enregistrer une nouvelle catégorie d'âme — **« Âme évangélisée »** — stockée dans une **collection Firestore séparée** (`evangelized_souls`), avec sa propre liste, ses propres stats et son propre flux de travail (similaire à la gestion ADN, mais cloisonné).
 
-Beaucoup de filtres et requêtes n'interrogent que le champ legacy `role`, ce qui **exclut les utilisateurs multi-casquettes** (ex : un Resp. Département promu Berger, ou un Berger devenu ADN garde son `role` initial mais reçoit un nouveau `businessProfile`).
+## Modèle de données
 
-Sur la capture, tous les bergers visibles sont d'anciens bergers "purs". Les bergers récents (multi-casquettes) sont absents.
+Nouvelle collection Firestore : **`evangelized_souls`**
 
-## Fichiers à corriger
+Mêmes champs que `souls` (fullName, nickname, gender, phone, location, coordinates, firstVisitDate, photoURL, spiritualProfile, status, isUndecided, serviceFamilyId, shepherdId, createdAt/By, updatedAt) **plus** :
+- `evangelistId` : id de l'évangéliste créateur (obligatoire)
+- `evangelizationDate` : date d'évangélisation
+- `evangelizationLocation` : lieu d'évangélisation (optionnel, distinct de l'adresse)
 
-Détection unifiée à appliquer partout :
-```ts
-const isShepherd = 
-  user.role === 'shepherd' || 
-  user.role === 'intern' ||
-  user.businessProfiles?.some(p => 
-    ['shepherd','intern'].includes(p.type) && p.isActive !== false
-  );
+Pas de champ `originSource` (toutes les âmes ici sont par définition évangélisées).
+
+## Nouveau profil métier
+
+`src/types/businessProfile.types.ts` — ajouter `'evangelist'` :
+- Label : **« Évangéliste »**
+- Description : « Peut enregistrer et suivre les âmes évangélisées »
+- Permissions (mêmes que ADN, mais portant sur sa propre liste) :
+  - `MANAGE_EVANGELIZED_SOULS` (nouvelle permission)
+  - `MANAGE_INTERACTIONS`, `MANAGE_SMS`, `EXPORT_DATA`, `MANAGE_PROFILE`, `VIEW_REPLAY_TEACHINGS`
+
+`src/constants/roles.ts` — ajouter :
+- `ROLES.EVANGELIST = 'evangelist'`
+- `PERMISSIONS.MANAGE_EVANGELIZED_SOULS`
+- Bloc `ROLE_PERMISSIONS[EVANGELIST]`
+- Étendre les permissions Admin et Super Admin pour inclure `MANAGE_EVANGELIZED_SOULS`
+
+`src/utils/roleHelpers.ts` — ajouter `isEvangelistUser()`.
+
+`src/components/users/BusinessProfileAssignment.tsx` — ajouter `'evangelist'` dans `availableProfileTypes` (ainsi visible dans la modale d'édition utilisateur).
+
+## Pages & composants à créer
+
+**`src/pages/EvangelizedSoulManagement.tsx`** (clone allégé de `SoulManagement.tsx`)
+- Lit/écrit dans `evangelized_souls`
+- Filtre serveur : si l'utilisateur est **Évangéliste** (et pas Admin), `where('evangelistId', '==', currentUserId)` → ne voit QUE ses âmes
+- Si Admin/Super Admin : voit tout
+- Filtres locaux : recherche, dates, statut
+- Actions : ajouter, modifier, supprimer, exporter Excel
+
+**`src/components/evangelizedSouls/EvangelizedSoulForm.tsx`** (clone allégé de `SoulForm.tsx`)
+- Champs : identité, téléphone, lieu, date d'évangélisation, lieu d'évangélisation
+- Pas de sélection de berger ni de famille de service (peut être ajouté plus tard)
+- SMS de bienvenue optionnel (catégorie `Bienvenue`)
+- À la création : `evangelistId = currentUser.id`
+
+**`src/components/evangelizedSouls/EditEvangelizedSoulModal.tsx`** — édition simple inline.
+
+## Routage & navigation
+
+**`src/App.tsx`** — nouvelle route protégée :
+```tsx
+<Route path="ames-evangelisees" element={
+  <PrivateRoute requiredPermissions={[PERMISSIONS.MANAGE_EVANGELIZED_SOULS]}>
+    <EvangelizedSoulManagement />
+  </PrivateRoute>
+} />
 ```
 
-### 1. Filtres / sélecteurs de bergers (priorité haute)
+**Menu latéral** (`src/components/ui/Sidebar.tsx` ou équivalent) — ajouter l'entrée **« Âmes évangélisées »** (icône `HeartHandshake` ou `Megaphone`), visible si `hasPermission(MANAGE_EVANGELIZED_SOULS)`.
 
-| Fichier | Problème |
-|---|---|
-| `src/components/users/UserList.tsx` (l. 264) | Filtre "Berger(e)s" : `user.role === 'shepherd'` seul → manque multi-casquettes et stagiaires |
-| `src/pages/Reminders.tsx` (l. 27) | Charge bergers via `role == 'shepherd'` uniquement |
-| `src/pages/ShepherdReminders.tsx` (l. 42) | Page "Rappels par berger" : idem |
-| `src/components/map/SoulMap.tsx` (l. 101) | Carte des âmes : filtre berger incomplet |
-| `src/components/dashboard/stats/GeneralStats.tsx` (l. 36) | Statistiques générales |
-| `src/components/settings/UserMenuManagement.tsx` (l. 23) | Gestion menus utilisateurs |
-| `src/migrations/servantSchemaChanges.ts` (l. 29) | Migration (à aligner) |
+**Dashboard** — option : ajouter un widget « Mes âmes évangélisées » sur le dashboard si l'utilisateur a le profil Évangéliste (à confirmer plus tard si besoin).
 
-### 2. Identification de l'utilisateur courant comme berger
+## Sécurité / cloisonnement
 
-| Fichier | Problème |
-|---|---|
-| `src/pages/SMSManagement.tsx` (l. 36) | Berger connecté détecté via `role=='shepherd'` seul → un berger multi-casquettes voit "Test SMS" au lieu de ses âmes |
-| `src/pages/InteractionsManagement.tsx` (l. 127) | Idem pour les interactions |
-| `src/components/souls/EditSoulModal.tsx` (l. 56) | Récupération du `shepherdId` courant |
+- Filtrage côté requête Firestore par `evangelistId` pour les évangélistes purs.
+- L'écran `SoulManagement` (`/ames`) reste inchangé — les âmes évangélisées **ne s'y mélangent pas** (collection distincte).
+- L'ADN ne voit pas les âmes évangélisées (pas de permission `MANAGE_EVANGELIZED_SOULS` accordée).
+- Les filtres de bergers existants ne sont pas concernés (les âmes évangélisées n'ont pas de berger pour l'instant).
 
-### 3. Filtre par rôle dans la liste utilisateurs
+## Maintenance
 
-`src/components/users/UserList.tsx` (l. 260-267) — étendre :
-- `'shepherds'` → inclure stagiaires + multi-casquettes
-- `'admins'` → inclure `businessProfiles.type === 'admin'`
-- `'adn'` → inclure `businessProfiles.type === 'adn'`
-- Ajouter aussi : Resp. Département, Resp. Famille déjà filtrables ? Vérifier et étendre.
+- Bumper version à **1.7.66** (`src/pages/Login.tsx` + `package.json` si versionné)
+- Mettre à jour `src/CHANGELOG.md`
+- Mettre à jour la mémoire `mem://features/permissions` pour ajouter le profil Évangéliste
 
-### 4. Stratégie technique
+## Hors scope (à proposer après)
 
-Pour les requêtes Firestore qui filtrent sur `role`, il n'est pas possible de faire un `OR` natif sur deux champs. Solution adoptée (déjà en place dans `ShepherdSelect.tsx` et `BatchAssignmentModal.tsx` v1.7.63) :
-- **Charger tous les utilisateurs actifs** (`status == 'active'`)
-- **Filtrer côté client** avec la logique hybride
-
-### 5. Helpers à créer
-
-Créer `src/utils/roleHelpers.ts` exportant :
-```ts
-export const isShepherdUser(user): boolean
-export const isInternUser(user): boolean
-export const isADNUser(user): boolean
-export const isAdminUser(user): boolean
-export const isDepartmentLeaderUser(user): boolean
-export const isFamilyLeaderUser(user): boolean
-export const hasAnyRole(user, roles[]): boolean
-```
-
-→ Refactoriser tous les fichiers listés pour utiliser ces helpers (cohérence + maintenance).
-
-### 6. Maintenance
-
-- Bumper version → **1.7.65**
-- Mettre à jour `src/CHANGELOG.md` avec la liste des corrections
-- Mettre à jour `src/pages/Login.tsx` (numéro de version affiché)
-
-## Ce qui sera testable après
-
-1. **Page Utilisateurs** → filtre "Berger(e)s" affichera **tous** les bergers (purs + multi-casquettes + stagiaires).
-2. **Filtres berger** sur Âmes / Interactions / Carte / Rappels → liste complète.
-3. **SMS / Interactions** → un berger ayant aussi ADN/Resp. accède bien à ses âmes assignées.
-4. **Dashboard stats** → comptage correct des bergers actifs.
-
-## Hors scope
-
-- Ne touche pas à la logique de permissions (`usePermissions`) qui combine déjà les deux systèmes.
-- Ne migre pas les données : les champs `role` legacy restent intacts.
-- Ne modifie pas les Cloud Functions ni les règles Firestore.
+- Promotion d'une âme évangélisée → âme classique (workflow ADN)
+- Statistiques globales mixant âmes ADN + évangélisées
+- Carte / interactions / rappels dédiés aux âmes évangélisées (réutilisation possible plus tard)
+- Migration de données existantes
 
 Approuvez pour que j'implémente.
