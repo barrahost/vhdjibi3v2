@@ -2,14 +2,15 @@ import { useEffect, useState } from 'react';
 import { collection, query, where, orderBy, onSnapshot, deleteDoc, doc } from 'firebase/firestore';
 import * as XLSX from 'xlsx';
 import { db } from '../lib/firebase';
-import { Plus, FileSpreadsheet, Search, Pencil, Trash2, User as UserIcon, RotateCcw, Megaphone } from 'lucide-react';
+import { Plus, FileSpreadsheet, Search, Pencil, Trash2, User as UserIcon, RotateCcw, Megaphone, Info, CheckCircle2, Download } from 'lucide-react';
 import { CustomTable } from '../components/ui/CustomTable';
 import { CustomPagination } from '../components/ui/CustomPagination';
 import { formatDate, formatDateForExcel } from '../utils/dateUtils';
 import { useAuth } from '../contexts/AuthContext';
-import { isAdminUser } from '../utils/roleHelpers';
+import { isAdminUser, isADNUser, isEvangelistUser } from '../utils/roleHelpers';
 import EvangelizedSoulForm from '../components/evangelizedSouls/EvangelizedSoulForm';
 import EditEvangelizedSoulModal from '../components/evangelizedSouls/EditEvangelizedSoulModal';
+import ImportToSoulModal from '../components/evangelizedSouls/ImportToSoulModal';
 import { EvangelizedSoul } from '../types/evangelized.types';
 import { formatGender } from '../utils/formatting/genderFormat';
 import toast from 'react-hot-toast';
@@ -22,20 +23,30 @@ export default function EvangelizedSoulManagement() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<EvangelizedSoul | null>(null);
+  const [importing, setImporting] = useState<EvangelizedSoul | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('active');
+  const [importFilter, setImportFilter] = useState<'pending' | 'imported' | 'all'>('pending');
   const [dateRange, setDateRange] = useState({ startDate: '', endDate: '' });
   const [currentPage, setCurrentPage] = useState(1);
 
-  // Admin (or super_admin) sees all; otherwise only own list (filtered by evangelistId)
-  const isAdmin = isAdminUser({ role: (activeRole || userRole) as string });
+  const roleForCheck = { role: (activeRole || userRole) as string };
+  const isAdmin = isAdminUser(roleForCheck);
+  const isADN = isADNUser(roleForCheck);
+  const isEvangelist = isEvangelistUser({
+    role: (activeRole || userRole) as string,
+    businessProfiles: (user as any)?.businessProfiles,
+  });
+  const canImportToSouls = isAdmin || isADN;
+  const canCreateEvangelized = isAdmin || isEvangelist;
   const userId = user ? (user as any).id || (user as any).uid : null;
 
   useEffect(() => {
     if (!userId) return;
 
     const constraints: any[] = [];
-    if (!isAdmin) {
+    // Admin/ADN voient toute la liste; les autres (évangélistes) voient seulement les leurs.
+    if (!isAdmin && !isADN) {
       constraints.push(where('evangelistId', '==', userId));
     }
     if (statusFilter !== 'all') {
@@ -68,11 +79,16 @@ export default function EvangelizedSoulManagement() {
     );
 
     return () => unsub();
-  }, [userId, isAdmin, statusFilter]);
+  }, [userId, isAdmin, isADN, statusFilter]);
 
-  useEffect(() => setCurrentPage(1), [searchTerm, dateRange, statusFilter]);
+  useEffect(() => setCurrentPage(1), [searchTerm, dateRange, statusFilter, importFilter]);
 
   const filtered = souls.filter((s) => {
+    // Filtre import
+    const isImported = !!s.importedToSoulId || s.status === 'imported';
+    if (importFilter === 'pending' && isImported) return false;
+    if (importFilter === 'imported' && !isImported) return false;
+
     const term = searchTerm.toLowerCase();
     const matches =
       !term ||
@@ -95,12 +111,17 @@ export default function EvangelizedSoulManagement() {
   const paginated = filtered.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
   const hasActiveFilters =
-    searchTerm !== '' || dateRange.startDate !== '' || dateRange.endDate !== '' || statusFilter !== 'active';
+    searchTerm !== '' ||
+    dateRange.startDate !== '' ||
+    dateRange.endDate !== '' ||
+    statusFilter !== 'active' ||
+    importFilter !== 'pending';
 
   const resetFilters = () => {
     setSearchTerm('');
     setDateRange({ startDate: '', endDate: '' });
     setStatusFilter('active');
+    setImportFilter('pending');
   };
 
   const handleDelete = async (id: string) => {
@@ -123,8 +144,14 @@ export default function EvangelizedSoulManagement() {
       "Date d'évangélisation": s.evangelizationDate ? formatDateForExcel(s.evangelizationDate) : '',
       "Lieu d'évangélisation": s.evangelizationLocation || '',
       'Notes': s.notes || '',
-      'Statut': s.status === 'active' ? 'Actif' : 'Inactif',
+      'Statut': s.status === 'imported' ? 'Importée' : s.status === 'active' ? 'Actif' : 'Inactif',
+      'Importée le': s.importedAt ? formatDateForExcel(s.importedAt) : '',
     }));
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(rows);
+    XLSX.utils.book_append_sheet(wb, ws, 'Âmes évangélisées');
+    XLSX.writeFile(wb, `ames-evangelisees-${new Date().toISOString().slice(0, 10)}.xlsx`);
+  };
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.json_to_sheet(rows);
     XLSX.utils.book_append_sheet(wb, ws, 'Âmes évangélisées');
@@ -168,32 +195,75 @@ export default function EvangelizedSoulManagement() {
       render: (v: string) => <span className="text-gray-600">{v || '-'}</span>,
     },
     {
+      key: 'importStatus',
+      title: 'État',
+      render: (_: any, s: EvangelizedSoul) => {
+        const isImported = !!s.importedToSoulId || s.status === 'imported';
+        if (isImported) {
+          return (
+            <span
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800"
+              title={s.importedAt ? `Importée le ${formatDate(new Date(s.importedAt))}` : 'Importée'}
+            >
+              <CheckCircle2 className="w-3 h-3" />
+              Importée
+            </span>
+          );
+        }
+        return (
+          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
+            À importer
+          </span>
+        );
+      },
+    },
+    {
       key: 'actions',
       title: 'Actions',
-      render: (_: any, s: EvangelizedSoul) => (
-        <div className="flex justify-end space-x-2">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setEditing(s);
-            }}
-            className="p-1 text-blue-600 hover:bg-blue-50 rounded"
-            title="Modifier"
-          >
-            <Pencil className="w-4 h-4" />
-          </button>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              handleDelete(s.id);
-            }}
-            className="p-1 text-red-600 hover:bg-red-50 rounded"
-            title="Supprimer"
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
-        </div>
-      ),
+      render: (_: any, s: EvangelizedSoul) => {
+        const isImported = !!s.importedToSoulId || s.status === 'imported';
+        return (
+          <div className="flex justify-end items-center gap-2">
+            {canImportToSouls && !isImported && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setImporting(s);
+                }}
+                className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-white bg-[#F2B636] hover:bg-[#F2B636]/90 rounded-md"
+                title="Importer parmi les âmes de l'église"
+              >
+                <Download className="w-3.5 h-3.5" />
+                Importer
+              </button>
+            )}
+            {(isAdmin || isEvangelist) && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setEditing(s);
+                }}
+                className="p-1 text-blue-600 hover:bg-blue-50 rounded"
+                title="Modifier"
+              >
+                <Pencil className="w-4 h-4" />
+              </button>
+            )}
+            {isAdmin && !isImported && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDelete(s.id);
+                }}
+                className="p-1 text-red-600 hover:bg-red-50 rounded"
+                title="Supprimer"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+        );
+      },
     },
   ];
 
@@ -220,17 +290,35 @@ export default function EvangelizedSoulManagement() {
             <FileSpreadsheet className="w-4 h-4 mr-1.5" />
             Export Excel
           </button>
-          <button
-            onClick={() => setShowForm(!showForm)}
-            className="flex items-center px-4 py-2 text-sm font-medium text-white bg-[#00665C] hover:bg-[#00665C]/90 rounded-md"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            {showForm ? 'Masquer le formulaire' : 'Ajouter une âme évangélisée'}
-          </button>
+          {canCreateEvangelized && (
+            <button
+              onClick={() => setShowForm(!showForm)}
+              className="flex items-center px-4 py-2 text-sm font-medium text-white bg-[#00665C] hover:bg-[#00665C]/90 rounded-md"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              {showForm ? 'Masquer le formulaire' : 'Ajouter une âme évangélisée'}
+            </button>
+          )}
         </div>
       </div>
 
-      {showForm && (
+      <div className="bg-blue-50 border border-blue-200 rounded-md p-4 flex items-start gap-3">
+        <Info className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+        <div className="text-sm text-blue-900">
+          <p>
+            Les <strong>âmes évangélisées</strong> ne sont <strong>pas comptabilisées</strong> parmi
+            les âmes de l'église tant qu'elles n'ont pas effectué leur première visite au culte.
+          </p>
+          {canImportToSouls && (
+            <p className="mt-1">
+              Le jour où l'âme vient au culte, cliquez sur <strong>« Importer »</strong> pour
+              l'ajouter à la liste des âmes de l'église.
+            </p>
+          )}
+        </div>
+      </div>
+
+      {showForm && canCreateEvangelized && (
         <div className="bg-white p-6 rounded-lg shadow-sm border">
           <h2 className="text-xl font-semibold text-[#00665C] mb-4">Ajouter une âme évangélisée</h2>
           <EvangelizedSoulForm onCreated={() => setShowForm(false)} />
@@ -285,6 +373,21 @@ export default function EvangelizedSoulManagement() {
             />
           </div>
           <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">État import</label>
+            <select
+              value={importFilter}
+              onChange={(e) => setImportFilter(e.target.value as 'pending' | 'imported' | 'all')}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-[#00665C] focus:border-[#00665C]"
+            >
+              <option value="pending">À importer</option>
+              <option value="imported">Importées</option>
+              <option value="all">Toutes</option>
+            </select>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Statut</label>
             <select
               value={statusFilter}
@@ -325,6 +428,14 @@ export default function EvangelizedSoulManagement() {
           soul={editing}
           isOpen={!!editing}
           onClose={() => setEditing(null)}
+        />
+      )}
+
+      {importing && (
+        <ImportToSoulModal
+          soul={importing}
+          isOpen={!!importing}
+          onClose={() => setImporting(null)}
         />
       )}
     </div>

@@ -59,7 +59,8 @@ export const PROFILE_PERMISSIONS: Record<BusinessProfileType, string[]> = {
     'MANAGE_ATTENDANCES',
     'MANAGE_PROFILE',
     'VIEW_REPLAY_TEACHINGS',
-    'MANAGE_SMS_TEMPLATES'
+    'MANAGE_SMS_TEMPLATES',
+    'MANAGE_EVANGELIZED_SOULS'
   ],
   admin: ['*'],
   family_leader: [
