@@ -144,8 +144,14 @@ export default function EvangelizedSoulManagement() {
       "Date d'évangélisation": s.evangelizationDate ? formatDateForExcel(s.evangelizationDate) : '',
       "Lieu d'évangélisation": s.evangelizationLocation || '',
       'Notes': s.notes || '',
-      'Statut': s.status === 'active' ? 'Actif' : 'Inactif',
+      'Statut': s.status === 'imported' ? 'Importée' : s.status === 'active' ? 'Actif' : 'Inactif',
+      'Importée le': s.importedAt ? formatDateForExcel(s.importedAt) : '',
     }));
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(rows);
+    XLSX.utils.book_append_sheet(wb, ws, 'Âmes évangélisées');
+    XLSX.writeFile(wb, `ames-evangelisees-${new Date().toISOString().slice(0, 10)}.xlsx`);
+  };
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.json_to_sheet(rows);
     XLSX.utils.book_append_sheet(wb, ws, 'Âmes évangélisées');
@@ -189,32 +195,75 @@ export default function EvangelizedSoulManagement() {
       render: (v: string) => <span className="text-gray-600">{v || '-'}</span>,
     },
     {
+      key: 'importStatus',
+      title: 'État',
+      render: (_: any, s: EvangelizedSoul) => {
+        const isImported = !!s.importedToSoulId || s.status === 'imported';
+        if (isImported) {
+          return (
+            <span
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800"
+              title={s.importedAt ? `Importée le ${formatDate(new Date(s.importedAt))}` : 'Importée'}
+            >
+              <CheckCircle2 className="w-3 h-3" />
+              Importée
+            </span>
+          );
+        }
+        return (
+          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
+            À importer
+          </span>
+        );
+      },
+    },
+    {
       key: 'actions',
       title: 'Actions',
-      render: (_: any, s: EvangelizedSoul) => (
-        <div className="flex justify-end space-x-2">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setEditing(s);
-            }}
-            className="p-1 text-blue-600 hover:bg-blue-50 rounded"
-            title="Modifier"
-          >
-            <Pencil className="w-4 h-4" />
-          </button>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              handleDelete(s.id);
-            }}
-            className="p-1 text-red-600 hover:bg-red-50 rounded"
-            title="Supprimer"
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
-        </div>
-      ),
+      render: (_: any, s: EvangelizedSoul) => {
+        const isImported = !!s.importedToSoulId || s.status === 'imported';
+        return (
+          <div className="flex justify-end items-center gap-2">
+            {canImportToSouls && !isImported && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setImporting(s);
+                }}
+                className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-white bg-[#F2B636] hover:bg-[#F2B636]/90 rounded-md"
+                title="Importer parmi les âmes de l'église"
+              >
+                <Download className="w-3.5 h-3.5" />
+                Importer
+              </button>
+            )}
+            {(isAdmin || isEvangelist) && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setEditing(s);
+                }}
+                className="p-1 text-blue-600 hover:bg-blue-50 rounded"
+                title="Modifier"
+              >
+                <Pencil className="w-4 h-4" />
+              </button>
+            )}
+            {isAdmin && !isImported && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDelete(s.id);
+                }}
+                className="p-1 text-red-600 hover:bg-red-50 rounded"
+                title="Supprimer"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+        );
+      },
     },
   ];
 
