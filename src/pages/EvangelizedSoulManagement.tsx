@@ -45,7 +45,8 @@ export default function EvangelizedSoulManagement() {
     if (!userId) return;
 
     const constraints: any[] = [];
-    if (!isAdmin) {
+    // Admin/ADN voient toute la liste; les autres (évangélistes) voient seulement les leurs.
+    if (!isAdmin && !isADN) {
       constraints.push(where('evangelistId', '==', userId));
     }
     if (statusFilter !== 'all') {
