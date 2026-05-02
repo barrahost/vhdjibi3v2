@@ -79,9 +79,9 @@ export default function EvangelizedSoulManagement() {
     );
 
     return () => unsub();
-  }, [userId, isAdmin, statusFilter]);
+  }, [userId, isAdmin, isADN, statusFilter]);
 
-  useEffect(() => setCurrentPage(1), [searchTerm, dateRange, statusFilter]);
+  useEffect(() => setCurrentPage(1), [searchTerm, dateRange, statusFilter, importFilter]);
 
   const filtered = souls.filter((s) => {
     const term = searchTerm.toLowerCase();
