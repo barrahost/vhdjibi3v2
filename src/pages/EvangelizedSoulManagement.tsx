@@ -84,6 +84,11 @@ export default function EvangelizedSoulManagement() {
   useEffect(() => setCurrentPage(1), [searchTerm, dateRange, statusFilter, importFilter]);
 
   const filtered = souls.filter((s) => {
+    // Filtre import
+    const isImported = !!s.importedToSoulId || s.status === 'imported';
+    if (importFilter === 'pending' && isImported) return false;
+    if (importFilter === 'imported' && !isImported) return false;
+
     const term = searchTerm.toLowerCase();
     const matches =
       !term ||
@@ -106,12 +111,17 @@ export default function EvangelizedSoulManagement() {
   const paginated = filtered.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
   const hasActiveFilters =
-    searchTerm !== '' || dateRange.startDate !== '' || dateRange.endDate !== '' || statusFilter !== 'active';
+    searchTerm !== '' ||
+    dateRange.startDate !== '' ||
+    dateRange.endDate !== '' ||
+    statusFilter !== 'active' ||
+    importFilter !== 'pending';
 
   const resetFilters = () => {
     setSearchTerm('');
     setDateRange({ startDate: '', endDate: '' });
     setStatusFilter('active');
+    setImportFilter('pending');
   };
 
   const handleDelete = async (id: string) => {
