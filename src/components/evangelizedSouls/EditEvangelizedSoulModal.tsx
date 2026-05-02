@@ -23,7 +23,7 @@ export default function EditEvangelizedSoulModal({ soul, isOpen, onClose, onUpda
     evangelizationDate: '',
     evangelizationLocation: '',
     notes: '',
-    status: 'active' as 'active' | 'inactive',
+    status: 'active' as 'active' | 'inactive' | 'imported',
   });
   const [submitting, setSubmitting] = useState(false);
 
@@ -133,7 +133,7 @@ export default function EditEvangelizedSoulModal({ soul, isOpen, onClose, onUpda
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Statut</label>
           <select value={data.status}
-            onChange={(e) => setData({ ...data, status: e.target.value as 'active' | 'inactive' })}
+            onChange={(e) => setData({ ...data, status: e.target.value as 'active' | 'inactive' | 'imported' })}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-[#00665C] focus:border-[#00665C]">
             <option value="active">Actif</option>
             <option value="inactive">Inactif</option>
