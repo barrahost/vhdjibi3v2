@@ -42,9 +42,9 @@ export default function SelfPasswordResetModal({ isOpen, onClose, uid }: SelfPas
       
       toast.success('Mot de passe modifié avec succès');
       onClose();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error changing password:', error);
-      toast.error('Erreur lors du changement de mot de passe');
+      toast.error(error?.message || 'Erreur lors du changement de mot de passe');
     } finally {
       setIsSubmitting(false);
     }

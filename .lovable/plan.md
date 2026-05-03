@@ -1,61 +1,46 @@
-# Fix: Erreur lors de la réinitialisation du mot de passe
+## Plan de correction
 
-## Diagnostic
+Le message d’erreur indique que l’appel à la fonction `resetUserPassword` retourne encore `functions/internal`. En examinant le code, la cause probable est double :
 
-L'erreur survient lorsqu'un administrateur (notamment ceux configurés avec le nouveau système de **profils métier** — `businessProfiles[]`) tente de réinitialiser le mot de passe d'un autre utilisateur (ex. l'utilisateur "TKP" avec le profil Évangéliste).
+1. L’application utilise surtout une authentification personnalisée basée sur les documents `users`/`admins`, alors que la fonction tente uniquement de modifier le mot de passe dans Firebase Auth avec `admin.auth().updateUser(uid, ...)`.
+2. Certains utilisateurs ont un `uid` généré côté application (`user_...`) qui n’existe probablement pas dans Firebase Auth. Dans ce cas, `updateUser` échoue et la fonction renvoie une erreur interne.
 
-La Cloud Function `resetUserPassword` (dans `functions/src/index.ts`) utilise encore l'ancien système et ne vérifie que le champ `userData.role` :
+## Changements proposés
 
-```ts
-isAdmin = userData.role === 'admin' 
-       || userData.role === 'pasteur' 
-       || userData.role === 'super_admin';
-```
+### 1. Corriger la fonction backend `resetUserPassword`
+Mettre à jour `functions/src/index.ts` pour que la réinitialisation fonctionne avec le système réel de l’application :
 
-Or, l'application front-end est passée au système `businessProfiles[]` (cf. `src/utils/roleHelpers.ts` → `isAdminUser`). Un admin qui n'a pas le champ legacy `role: 'admin'` mais possède un `businessProfile` de type `admin` actif est rejeté avec `permission-denied`, d'où le toast d'erreur.
+- Chercher l’utilisateur cible dans `users` par `uid`.
+- S’il est trouvé, mettre aussi à jour son champ `password` dans Firestore avec le nouveau mot de passe.
+- Ne tenter `admin.auth().updateUser(uid, { password })` que si nécessaire, et ne pas faire échouer toute l’opération si l’utilisateur n’existe pas dans Firebase Auth.
+- Garder la vérification de permission admin existante, en incluant les profils métier `admin`/`super_admin`.
+- Pour la réinitialisation personnelle (`isSelfReset`), vérifier le mot de passe actuel contre le document utilisateur avant de changer le mot de passe.
+- Renvoyer des erreurs plus précises au frontend (`permission-denied`, `not-found`, `invalid-argument`) au lieu de transformer toutes les erreurs en `internal`.
 
-Ce bug n'est pas lié à la fonctionnalité Évangéliste — il est simplement révélé en testant la création/édition d'un utilisateur avec ce nouveau profil.
+### 2. Améliorer le message côté interface
+Mettre à jour `src/services/cloudFunctions.service.ts` et/ou `PasswordResetModal.tsx` pour afficher un message plus explicite si le backend renvoie une erreur précise, par exemple :
 
-## Correction proposée
+- permission insuffisante,
+- utilisateur introuvable,
+- mot de passe actuel incorrect,
+- erreur technique.
 
-### 1. `functions/src/index.ts` — élargir la détection admin
+Cela évitera le message générique “Erreur lors de la réinitialisation du mot de passe” sans explication.
 
-Ajouter la vérification du tableau `businessProfiles` en parallèle du champ legacy `role` :
+### 3. Harmoniser avec le système de connexion actuel
+Vérifier que `AuthContext.tsx` compare bien le mot de passe saisi avec le champ `password` personnalisé lorsqu’il existe, afin que le nouveau mot de passe défini par l’administrateur soit réellement utilisable à la prochaine connexion.
 
-```ts
-if (!userDoc.empty) {
-  const userData = userDoc.docs[0].data();
+Aujourd’hui, le login semble encore comparer uniquement aux mots de passe par défaut par profil (`@123456`). Si c’est confirmé, je modifierai la logique pour :
 
-  // Legacy role
-  isAdmin = userData.role === 'admin' 
-         || userData.role === 'pasteur' 
-         || userData.role === 'super_admin';
+- accepter d’abord le mot de passe personnalisé stocké sur le document utilisateur,
+- conserver les mots de passe par défaut comme compatibilité pour les anciens comptes sans mot de passe personnalisé.
 
-  // Nouveau système : businessProfiles[]
-  if (!isAdmin && Array.isArray(userData.businessProfiles)) {
-    isAdmin = userData.businessProfiles.some((p: any) =>
-      p && (p.type === 'admin' || p.type === 'super_admin')
-      && p.isActive !== false
-    );
-  }
-}
-```
+### 4. Maintenance version/changelog
+Comme demandé dans les consignes projet :
 
-La vérification dans la collection `admins` (super_admin) reste inchangée.
+- incrémenter la version affichée dans `src/pages/Login.tsx`,
+- ajouter une entrée dans `src/CHANGELOG.md` décrivant la correction de la réinitialisation des mots de passe.
 
-### 2. Versionnage
+## Résultat attendu
 
-- Bump de version : `1.7.67` → `1.7.68`
-- Mise à jour de `src/CHANGELOG.md` avec une entrée :
-  *Correctif : la réinitialisation du mot de passe fonctionne désormais pour les administrateurs configurés via le nouveau système de profils métier.*
-
-## Fichiers modifiés
-
-- `functions/src/index.ts` (logique de détection admin)
-- `src/CHANGELOG.md` (entrée changelog)
-- Composant header affichant la version (bump 1.7.68)
-
-## Hors périmètre
-
-- Pas de modification du flux UI de réinitialisation (les composants `PasswordResetModal` et `SelfPasswordResetModal` restent identiques).
-- Pas de migration de données : les deux systèmes (legacy `role` et `businessProfiles[]`) continuent de coexister.
+Après correction, depuis `/users`, un administrateur pourra réinitialiser le mot de passe d’un utilisateur comme `TKP`, et ce nouveau mot de passe sera utilisable pour la connexion, même si l’utilisateur n’existe pas dans Firebase Auth.

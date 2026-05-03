@@ -218,9 +218,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       // Verify password based on role - support both old role system and new business profiles
       let isPasswordValid = false;
-      
+
+      // Priority 1: custom password stored on the user document (set via password reset).
+      if (userData.password && password === userData.password) {
+        isPasswordValid = true;
+        console.log('Password validated against stored custom password');
+      }
+
       // Check business profiles first (new system)
-      if (userData.businessProfiles && userData.businessProfiles.length > 0) {
+      if (!isPasswordValid && userData.businessProfiles && userData.businessProfiles.length > 0) {
         // Check if any business profile matches the password
         for (const profile of userData.businessProfiles) {
           if (profile.type === 'shepherd' || profile.type === 'department_leader' || profile.type === 'family_leader') {
