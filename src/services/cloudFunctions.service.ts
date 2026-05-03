@@ -1,4 +1,4 @@
-import { collection, query, where, getDocs, doc, updateDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, getDoc, doc, updateDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 
 /**
@@ -8,15 +8,21 @@ import { db } from '../lib/firebase';
  * validates the typed password against the `password` field on each user
  * document. We therefore update that field directly from the client and
  * bypass the Firebase Cloud Function (which is not auto-deployed here).
+ *
+ * IMPORTANT: when possible, callers should pass the Firestore document id
+ * (`docId`) so that we update the EXACT same document that login reads.
+ * Searching by `uid` alone can miss the right document when the `uid`
+ * field is missing, was generated synthetically, or when duplicates exist.
  */
 export class CloudFunctionsService {
   static async resetUserPassword(
     uid: string,
     newPassword: string,
     isSelfReset = false,
-    currentPassword?: string
+    currentPassword?: string,
+    docId?: string
   ): Promise<{ success: true }> {
-    if (!uid || !newPassword) {
+    if ((!uid && !docId) || !newPassword) {
       throw new Error('Identifiant utilisateur et nouveau mot de passe requis');
     }
 
@@ -49,35 +55,53 @@ export class CloudFunctionsService {
           "Seuls les administrateurs peuvent réinitialiser le mot de passe d'un autre utilisateur"
         );
       }
-    } else if (callerUser.uid !== uid) {
+    } else if (uid && callerUser.uid !== uid) {
       throw new Error(
         "Vous ne pouvez pas réinitialiser le mot de passe d'un autre utilisateur"
       );
     }
 
-    // Find the target document in `users`, then fall back to `admins`
-    let docId: string | null = null;
+    let resolvedDocId: string | null = null;
     let collectionName: 'users' | 'admins' = 'users';
     let targetData: any = null;
 
-    const usersSnap = await getDocs(
-      query(collection(db, 'users'), where('uid', '==', uid))
-    );
-    if (!usersSnap.empty) {
-      docId = usersSnap.docs[0].id;
-      targetData = usersSnap.docs[0].data();
-    } else {
-      const adminsSnap = await getDocs(
-        query(collection(db, 'admins'), where('uid', '==', uid))
-      );
-      if (!adminsSnap.empty) {
-        docId = adminsSnap.docs[0].id;
-        collectionName = 'admins';
-        targetData = adminsSnap.docs[0].data();
+    // Strategy 1: direct lookup by docId (most reliable — matches login lookup)
+    if (docId) {
+      const usersDoc = await getDoc(doc(db, 'users', docId));
+      if (usersDoc.exists()) {
+        resolvedDocId = usersDoc.id;
+        targetData = usersDoc.data();
+      } else {
+        const adminsDoc = await getDoc(doc(db, 'admins', docId));
+        if (adminsDoc.exists()) {
+          resolvedDocId = adminsDoc.id;
+          collectionName = 'admins';
+          targetData = adminsDoc.data();
+        }
       }
     }
 
-    if (!docId || !targetData) {
+    // Strategy 2: fallback — lookup by uid field
+    if (!resolvedDocId && uid) {
+      const usersSnap = await getDocs(
+        query(collection(db, 'users'), where('uid', '==', uid))
+      );
+      if (!usersSnap.empty) {
+        resolvedDocId = usersSnap.docs[0].id;
+        targetData = usersSnap.docs[0].data();
+      } else {
+        const adminsSnap = await getDocs(
+          query(collection(db, 'admins'), where('uid', '==', uid))
+        );
+        if (!adminsSnap.empty) {
+          resolvedDocId = adminsSnap.docs[0].id;
+          collectionName = 'admins';
+          targetData = adminsSnap.docs[0].data();
+        }
+      }
+    }
+
+    if (!resolvedDocId || !targetData) {
       throw new Error('Utilisateur introuvable');
     }
 
@@ -85,7 +109,14 @@ export class CloudFunctionsService {
       throw new Error('Mot de passe actuel incorrect');
     }
 
-    await updateDoc(doc(db, collectionName, docId), {
+    console.log('[resetUserPassword] Updating password on:', {
+      collection: collectionName,
+      docId: resolvedDocId,
+      phone: targetData.phone,
+      hadPreviousPassword: !!targetData.password,
+    });
+
+    await updateDoc(doc(db, collectionName, resolvedDocId), {
       password: newPassword,
       updatedAt: new Date(),
     });
