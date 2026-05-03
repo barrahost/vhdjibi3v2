@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.7.67] - Correctif réinitialisation de mot de passe
+
+### Fixed
+- La réinitialisation du mot de passe d'un utilisateur fonctionne désormais pour les administrateurs configurés via le **nouveau système de profils métier** (`businessProfiles`), et plus seulement via l'ancien champ `role`. Corrige l'erreur « Erreur lors de la réinitialisation du mot de passe » rencontrée notamment lors de la gestion des utilisateurs Évangélistes.
+
 ## [1.7.66] - Profil Évangéliste & Âmes évangélisées
 
 ### Added

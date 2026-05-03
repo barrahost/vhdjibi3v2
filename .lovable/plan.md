@@ -1,46 +1,61 @@
-## Objectif
+# Fix: Erreur lors de la réinitialisation du mot de passe
 
-Permettre à un **ADN** d'**importer** une âme depuis la liste des **âmes évangélisées** vers la liste des **âmes de l'église** (collection `souls`) le jour où elle vient effectivement au culte. Tant qu'elle n'est pas importée, l'âme évangélisée n'est PAS comptabilisée dans les statistiques de l'église.
+## Diagnostic
 
-## Workflow
+L'erreur survient lorsqu'un administrateur (notamment ceux configurés avec le nouveau système de **profils métier** — `businessProfiles[]`) tente de réinitialiser le mot de passe d'un autre utilisateur (ex. l'utilisateur "TKP" avec le profil Évangéliste).
 
-1. L'évangéliste enregistre une âme dans `evangelized_souls` (déjà fait).
-2. Quand cette personne vient au culte pour la première fois, l'**ADN** ouvre la page **« Âmes évangélisées »** (qu'il peut maintenant voir en lecture).
-3. Pour chaque âme non encore importée, un bouton **« Importer comme âme »** ouvre une modale pré-remplie (nom, surnom, genre, téléphone, lieu, date de 1ʳᵉ visite = aujourd'hui par défaut) où l'ADN choisit la **provenance** (par défaut « Évangélisation »), la **famille de service** et le **berger**, puis envoie le SMS de bienvenue comme dans le formulaire `SoulForm` actuel.
-4. À la validation : création dans `souls` + marquage de l'âme évangélisée avec `importedToSoulId`, `importedAt`, `importedBy`, `status = 'imported'`.
-5. L'âme évangélisée importée reste visible dans la liste des évangélisées avec un **badge « Importée »** mais n'apparaît plus comme « à importer » et reste toujours absente des stats globales église (les stats lisent `souls`).
+La Cloud Function `resetUserPassword` (dans `functions/src/index.ts`) utilise encore l'ancien système et ne vérifie que le champ `userData.role` :
 
-## Modifications
+```ts
+isAdmin = userData.role === 'admin' 
+       || userData.role === 'pasteur' 
+       || userData.role === 'super_admin';
+```
 
-### Permissions
-- `src/types/businessProfile.types.ts` : ajouter `MANAGE_EVANGELIZED_SOULS` à la liste des permissions ADN (lecture/import seulement, pas de création).
-- `src/constants/roles.ts` : idem dans `ROLE_PERMISSIONS[ADN]`.
+Or, l'application front-end est passée au système `businessProfiles[]` (cf. `src/utils/roleHelpers.ts` → `isAdminUser`). Un admin qui n'a pas le champ legacy `role: 'admin'` mais possède un `businessProfile` de type `admin` actif est rejeté avec `permission-denied`, d'où le toast d'erreur.
 
-### Collection `evangelized_souls` — champs ajoutés
-- `importedToSoulId?: string` — id de l'âme créée dans `souls`
-- `importedAt?: Date`
-- `importedBy?: string` — uid ADN
-- `status: 'active' | 'inactive' | 'imported'`
+Ce bug n'est pas lié à la fonctionnalité Évangéliste — il est simplement révélé en testant la création/édition d'un utilisateur avec ce nouveau profil.
 
-### Composants nouveaux
-- `src/components/evangelizedSouls/ImportToSoulModal.tsx` — modale d'import (clone simplifié de `SoulForm`, avec sélection berger + famille + modèle SMS « Bienvenue »).
+## Correction proposée
 
-### Page `EvangelizedSoulManagement.tsx`
-- L'ADN voit la liste **complète** (toutes évangélistes confondus), en lecture seule (pas le bouton « Ajouter »).
-- Nouveau filtre : **« État »** = À importer / Importées / Toutes.
-- Nouvelle colonne **« État import »** : badge vert « Importée le … par … » ou bouton orange **« Importer »** (visible pour ADN/Admin uniquement).
-- L'évangéliste continue de voir uniquement ses âmes, avec le badge d'état import en consultation.
+### 1. `functions/src/index.ts` — élargir la détection admin
 
-### Distinction visuelle
-- En haut de la page « Âmes évangélisées » : message d'info clair — *« Ces âmes ne sont pas comptabilisées parmi les âmes de l'église tant qu'elles n'ont pas été importées par un ADN à leur première visite au culte. »*
+Ajouter la vérification du tableau `businessProfiles` en parallèle du champ legacy `role` :
 
-## Hors scope (déjà confirmé)
-- Pas de double comptage : les statistiques (`GeneralStats`, dashboards) lisent uniquement `souls`. Aucune modification nécessaire.
-- Pas de suppression automatique de l'âme évangélisée après import (traçabilité conservée).
+```ts
+if (!userDoc.empty) {
+  const userData = userDoc.docs[0].data();
 
-## Maintenance
-- Bumper version → **1.7.67**
-- Mettre à jour `src/CHANGELOG.md`
-- Mettre à jour la mémoire `mem://features/permissions`
+  // Legacy role
+  isAdmin = userData.role === 'admin' 
+         || userData.role === 'pasteur' 
+         || userData.role === 'super_admin';
 
-Approuvez pour que j'implémente.
+  // Nouveau système : businessProfiles[]
+  if (!isAdmin && Array.isArray(userData.businessProfiles)) {
+    isAdmin = userData.businessProfiles.some((p: any) =>
+      p && (p.type === 'admin' || p.type === 'super_admin')
+      && p.isActive !== false
+    );
+  }
+}
+```
+
+La vérification dans la collection `admins` (super_admin) reste inchangée.
+
+### 2. Versionnage
+
+- Bump de version : `1.7.67` → `1.7.68`
+- Mise à jour de `src/CHANGELOG.md` avec une entrée :
+  *Correctif : la réinitialisation du mot de passe fonctionne désormais pour les administrateurs configurés via le nouveau système de profils métier.*
+
+## Fichiers modifiés
+
+- `functions/src/index.ts` (logique de détection admin)
+- `src/CHANGELOG.md` (entrée changelog)
+- Composant header affichant la version (bump 1.7.68)
+
+## Hors périmètre
+
+- Pas de modification du flux UI de réinitialisation (les composants `PasswordResetModal` et `SelfPasswordResetModal` restent identiques).
+- Pas de migration de données : les deux systèmes (legacy `role` et `businessProfiles[]`) continuent de coexister.

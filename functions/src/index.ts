@@ -45,9 +45,17 @@ export const resetUserPassword = functions.https.onCall(async (data: ResetPasswo
     
     if (!userDoc.empty) {
       const userData = userDoc.docs[0].data();
-      isAdmin = userData.role === 'admin' || 
-                userData.role === 'pasteur' || 
+      // Legacy role field
+      isAdmin = userData.role === 'admin' ||
+                userData.role === 'pasteur' ||
                 userData.role === 'super_admin';
+
+      // New system: businessProfiles[] array
+      if (!isAdmin && Array.isArray(userData.businessProfiles)) {
+        isAdmin = userData.businessProfiles.some((p: any) =>
+          p && (p.type === 'admin' || p.type === 'super_admin') && p.isActive !== false
+        );
+      }
     }
 
     // Check admins collection if not admin in users
