@@ -20,7 +20,7 @@ export function Footer() {
             onClick={() => setIsChangelogOpen(true)}
             className="mt-1 text-xs text-gray-400 hover:text-[#00665C] transition-colors"
           >
-            Version 1.7.22
+            Version 1.7.72
           </button>
         </div>
         <div className="mt-2 flex items-center justify-center space-x-4 text-sm">
