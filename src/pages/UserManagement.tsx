@@ -11,7 +11,7 @@ export default function UserManagement() {
   const [showForm, setShowForm] = useState(false);
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
   const [showBulkModal, setShowBulkModal] = useState(false);
-  const [roleFilter, setRoleFilter] = useState<'all' | 'shepherds' | 'adn' | 'admins'>('all');
+  const [roleFilter, setRoleFilter] = useState<'all' | 'shepherds' | 'adn' | 'admins' | 'department_leader' | 'family_leader' | 'evangelist'>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('active');
   const [showPromoteModal, setShowPromoteModal] = useState(false);
   const [promotingUser, setPromotingUser] = useState<{ userId: string; userName: string } | null>(null);
@@ -84,13 +84,16 @@ export default function UserManagement() {
             </label>
             <select
               value={roleFilter}
-              onChange={(e) => setRoleFilter(e.target.value as 'all' | 'shepherds' | 'adn' | 'admins')}
+              onChange={(e) => setRoleFilter(e.target.value as any)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-[#00665C] focus:border-[#00665C]"
             >
               <option value="all">Tous les utilisateurs</option>
               <option value="admins">Administrateurs</option>
               <option value="shepherds">Berger(e)s</option>
               <option value="adn">ADN</option>
+              <option value="department_leader">Responsables de Département</option>
+              <option value="family_leader">Responsables de Famille</option>
+              <option value="evangelist">Évangélistes</option>
             </select>
           </div>
           

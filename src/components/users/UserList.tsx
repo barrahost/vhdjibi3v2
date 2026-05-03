@@ -16,10 +16,10 @@ import { Checkbox } from '../ui/checkbox';
 import toast from 'react-hot-toast';
 import { UserRoleMigration } from '../../utils/migration/userRoleMigration';
 import { useServantStatus } from '../../hooks/useServantStatus';
-import { isShepherdUser, isADNUser, isAdminUser } from '../../utils/roleHelpers';
+import { isShepherdUser, isADNUser, isAdminUser, isDepartmentLeaderUser, isFamilyLeaderUser, isEvangelistUser } from '../../utils/roleHelpers';
 
 interface UserListProps {
-  filter: 'all' | 'shepherds' | 'adn' | 'admins';
+  filter: 'all' | 'shepherds' | 'adn' | 'admins' | 'department_leader' | 'family_leader' | 'evangelist';
   statusFilter: 'all' | 'active' | 'inactive';
   selectedUserIds?: string[];
   onSelectionChange?: (userIds: string[]) => void;
@@ -260,14 +260,17 @@ export default function UserList({ filter, statusFilter, selectedUserIds = [], o
 
         if (filter !== 'all') {
           if (filter === 'admins') {
-            // Inclure les admins legacy ET ceux ayant un businessProfile admin
             filteredUsers = filteredUsers.filter(user => isAdminUser(user));
           } else if (filter === 'shepherds') {
-            // Inclure bergers + stagiaires (legacy ET businessProfiles)
             filteredUsers = filteredUsers.filter(user => isShepherdUser(user));
           } else if (filter === 'adn') {
-            // Inclure ADN legacy ET ceux ayant un businessProfile adn
             filteredUsers = filteredUsers.filter(user => isADNUser(user));
+          } else if (filter === 'department_leader') {
+            filteredUsers = filteredUsers.filter(user => isDepartmentLeaderUser(user));
+          } else if (filter === 'family_leader') {
+            filteredUsers = filteredUsers.filter(user => isFamilyLeaderUser(user));
+          } else if (filter === 'evangelist') {
+            filteredUsers = filteredUsers.filter(user => isEvangelistUser(user));
           }
         }
 

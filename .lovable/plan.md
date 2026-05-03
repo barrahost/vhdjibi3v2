@@ -1,46 +1,37 @@
-## Plan de correction
+## Deux corrections sur la page Utilisateurs
 
-Le message d’erreur indique que l’appel à la fonction `resetUserPassword` retourne encore `functions/internal`. En examinant le code, la cause probable est double :
+### 1. Erreur « internal » à la réinitialisation du mot de passe
 
-1. L’application utilise surtout une authentification personnalisée basée sur les documents `users`/`admins`, alors que la fonction tente uniquement de modifier le mot de passe dans Firebase Auth avec `admin.auth().updateUser(uid, ...)`.
-2. Certains utilisateurs ont un `uid` généré côté application (`user_...`) qui n’existe probablement pas dans Firebase Auth. Dans ce cas, `updateUser` échoue et la fonction renvoie une erreur interne.
+**Cause :** L'application appelle la Cloud Function Firebase `resetUserPassword`, mais les fonctions Firebase ne sont pas redéployées automatiquement dans cet environnement. La fonction tournant en production est encore l'ancienne version qui échoue avec `internal` parce que :
+- elle exige un `context.auth` (que l'app, en auth personnalisée Firestore, ne fournit jamais),
+- et elle appelle `admin.auth().updateUser(uid, ...)` sur des `uid` du type `user_xxx` qui n'existent pas dans Firebase Auth.
 
-## Changements proposés
+**Solution :** Contourner complètement la Cloud Function. Comme la connexion (`AuthContext.login`) valide désormais le champ `password` du document Firestore, on met à jour ce champ directement depuis le client.
 
-### 1. Corriger la fonction backend `resetUserPassword`
-Mettre à jour `functions/src/index.ts` pour que la réinitialisation fonctionne avec le système réel de l’application :
+Réécrire `src/services/cloudFunctions.service.ts` pour :
+- vérifier côté client que l'appelant est admin (lecture du `localStorage`),
+- pour une auto-réinitialisation, vérifier l'`uid` et le `currentPassword`,
+- localiser le document de l'utilisateur cible (`users` puis `admins` par `uid`),
+- mettre à jour `password` + `updatedAt` via `updateDoc`,
+- renvoyer des messages d'erreur explicites (utilisateur introuvable, mot de passe actuel incorrect, permission refusée, mot de passe trop court).
 
-- Chercher l’utilisateur cible dans `users` par `uid`.
-- S’il est trouvé, mettre aussi à jour son champ `password` dans Firestore avec le nouveau mot de passe.
-- Ne tenter `admin.auth().updateUser(uid, { password })` que si nécessaire, et ne pas faire échouer toute l’opération si l’utilisateur n’existe pas dans Firebase Auth.
-- Garder la vérification de permission admin existante, en incluant les profils métier `admin`/`super_admin`.
-- Pour la réinitialisation personnelle (`isSelfReset`), vérifier le mot de passe actuel contre le document utilisateur avant de changer le mot de passe.
-- Renvoyer des erreurs plus précises au frontend (`permission-denied`, `not-found`, `invalid-argument`) au lieu de transformer toutes les erreurs en `internal`.
+Aucune dépendance à Firebase Functions n'est conservée pour cette fonctionnalité.
 
-### 2. Améliorer le message côté interface
-Mettre à jour `src/services/cloudFunctions.service.ts` et/ou `PasswordResetModal.tsx` pour afficher un message plus explicite si le backend renvoie une erreur précise, par exemple :
+### 2. Filtre de rôles incomplet sur `/users`
 
-- permission insuffisante,
-- utilisateur introuvable,
-- mot de passe actuel incorrect,
-- erreur technique.
+**Cause :** Le `<select>` de filtre dans `src/pages/UserManagement.tsx` ne propose que 4 options (Tous, Administrateurs, Berger(e)s, ADN). Les profils métier `Responsable de Département`, `Responsable de Famille` et `Évangéliste` ne sont pas listés.
 
-Cela évitera le message générique “Erreur lors de la réinitialisation du mot de passe” sans explication.
+**Solution :**
+- Étendre le type `roleFilter` à : `'all' | 'admins' | 'shepherds' | 'adn' | 'department_leader' | 'family_leader' | 'evangelist'`.
+- Ajouter les trois options manquantes dans le `<select>`.
+- Étendre `UserList` (`src/components/users/UserList.tsx`) pour gérer ces nouveaux filtres en utilisant les helpers `isDepartmentLeaderUser`, `isFamilyLeaderUser`, `isEvangelistUser` (déjà présents dans `src/utils/roleHelpers.ts`), qui couvrent à la fois le legacy `role` et les `businessProfiles`.
 
-### 3. Harmoniser avec le système de connexion actuel
-Vérifier que `AuthContext.tsx` compare bien le mot de passe saisi avec le champ `password` personnalisé lorsqu’il existe, afin que le nouveau mot de passe défini par l’administrateur soit réellement utilisable à la prochaine connexion.
+### 3. Maintenance
 
-Aujourd’hui, le login semble encore comparer uniquement aux mots de passe par défaut par profil (`@123456`). Si c’est confirmé, je modifierai la logique pour :
-
-- accepter d’abord le mot de passe personnalisé stocké sur le document utilisateur,
-- conserver les mots de passe par défaut comme compatibilité pour les anciens comptes sans mot de passe personnalisé.
-
-### 4. Maintenance version/changelog
-Comme demandé dans les consignes projet :
-
-- incrémenter la version affichée dans `src/pages/Login.tsx`,
-- ajouter une entrée dans `src/CHANGELOG.md` décrivant la correction de la réinitialisation des mots de passe.
+- Bumper la version `1.7.68` → `1.7.69` dans `src/pages/Login.tsx`.
+- Ajouter une entrée dans `src/CHANGELOG.md` décrivant ces deux correctifs.
 
 ## Résultat attendu
 
-Après correction, depuis `/users`, un administrateur pourra réinitialiser le mot de passe d’un utilisateur comme `TKP`, et ce nouveau mot de passe sera utilisable pour la connexion, même si l’utilisateur n’existe pas dans Firebase Auth.
+- La réinitialisation du mot de passe fonctionne immédiatement (plus d'erreur « internal »), et le nouveau mot de passe est utilisable à la prochaine connexion.
+- Le filtre de la page Utilisateurs liste tous les profils métier de l'application : Administrateurs, Berger(e)s, ADN, Responsables de Département, Responsables de Famille, Évangélistes.
