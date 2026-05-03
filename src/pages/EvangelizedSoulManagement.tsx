@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { collection, query, where, orderBy, onSnapshot, deleteDoc, doc } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, deleteDoc, doc } from 'firebase/firestore';
 import * as XLSX from 'xlsx';
 import { db } from '../lib/firebase';
 import { Plus, FileSpreadsheet, Search, Pencil, Trash2, User as UserIcon, RotateCcw, Megaphone, Info, CheckCircle2, Download } from 'lucide-react';
@@ -52,8 +52,6 @@ export default function EvangelizedSoulManagement() {
     if (statusFilter !== 'all') {
       constraints.push(where('status', '==', statusFilter));
     }
-    constraints.push(orderBy('createdAt', 'desc'));
-
     const q = query(collection(db, 'evangelized_souls'), ...constraints);
     const unsub = onSnapshot(
       q,
@@ -68,7 +66,11 @@ export default function EvangelizedSoulManagement() {
             updatedAt: v.updatedAt?.toDate?.() ?? v.updatedAt,
           } as EvangelizedSoul;
         });
-        setSouls(data);
+        setSouls(data.sort((a, b) => {
+          const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          return bTime - aTime;
+        }));
         setLoading(false);
       },
       (err) => {
