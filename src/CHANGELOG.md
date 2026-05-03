@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.7.69] - Réinitialisation côté client + filtre de rôles complet
+
+### Fixed
+- La réinitialisation du mot de passe ne dépend plus de la Cloud Function Firebase (qui renvoyait `internal`). La mise à jour est faite directement sur le document Firestore de l'utilisateur, donc le nouveau mot de passe est utilisable immédiatement à la prochaine connexion.
+- Messages d'erreur explicites en cas d'échec (utilisateur introuvable, mot de passe actuel incorrect, permission refusée, mot de passe trop court).
+
+### Added
+- Le filtre **Rôle** de la page **Gestion des Utilisateurs** propose désormais tous les profils métier : Administrateurs, Berger(e)s, ADN, **Responsables de Département**, **Responsables de Famille**, **Évangélistes**. Chaque filtre reconnaît à la fois le champ legacy `role` et les nouveaux `businessProfiles`.
+
 ## [1.7.68] - Réinitialisation de mot de passe vraiment fonctionnelle
 
 ### Fixed
