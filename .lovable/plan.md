@@ -1,37 +1,48 @@
-## Deux corrections sur la page Utilisateurs
+## Problème
 
-### 1. Erreur « internal » à la réinitialisation du mot de passe
+L'utilisateur TKP saisit le bon mot de passe mais reçoit "Numéro de téléphone ou mot de passe incorrect". Les logs confirment que l'utilisateur est bien trouvé dans Firestore (sinon : "User not found"), mais la comparaison de mot de passe échoue à la ligne 268 de `AuthContext.tsx`.
 
-**Cause :** L'application appelle la Cloud Function Firebase `resetUserPassword`, mais les fonctions Firebase ne sont pas redéployées automatiquement dans cet environnement. La fonction tournant en production est encore l'ancienne version qui échoue avec `internal` parce que :
-- elle exige un `context.auth` (que l'app, en auth personnalisée Firestore, ne fournit jamais),
-- et elle appelle `admin.auth().updateUser(uid, ...)` sur des `uid` du type `user_xxx` qui n'existent pas dans Firebase Auth.
+## Cause racine
 
-**Solution :** Contourner complètement la Cloud Function. Comme la connexion (`AuthContext.login`) valide désormais le champ `password` du document Firestore, on met à jour ce champ directement depuis le client.
+Le service `resetUserPassword` (dans `src/services/cloudFunctions.service.ts`) cherche le document Firestore via :
+```ts
+where('uid', '==', uid)
+```
 
-Réécrire `src/services/cloudFunctions.service.ts` pour :
-- vérifier côté client que l'appelant est admin (lecture du `localStorage`),
-- pour une auto-réinitialisation, vérifier l'`uid` et le `currentPassword`,
-- localiser le document de l'utilisateur cible (`users` puis `admins` par `uid`),
-- mettre à jour `password` + `updatedAt` via `updateDoc`,
-- renvoyer des messages d'erreur explicites (utilisateur introuvable, mot de passe actuel incorrect, permission refusée, mot de passe trop court).
+Mais le login (`AuthContext.login`) cherche via :
+```ts
+where('phone', '==', formattedPhone) AND where('status', '==', 'active')
+```
 
-Aucune dépendance à Firebase Functions n'est conservée pour cette fonctionnalité.
+Quand un utilisateur a :
+- un champ `uid` Firestore manquant ou différent du doc id, OU
+- un doublon de document partageant le même `uid`,
 
-### 2. Filtre de rôles incomplet sur `/users`
+…le reset met à jour **un autre document** que celui utilisé pour le login. Le toast affiche "succès" mais le password réel utilisé pour la connexion n'est jamais modifié.
 
-**Cause :** Le `<select>` de filtre dans `src/pages/UserManagement.tsx` ne propose que 4 options (Tous, Administrateurs, Berger(e)s, ADN). Les profils métier `Responsable de Département`, `Responsable de Famille` et `Évangéliste` ne sont pas listés.
+De plus, la modal `PasswordResetModal` reçoit déjà `user.id` (le doc id Firestore exact). Il est donc inutile et risqué de re-chercher par `uid`.
 
-**Solution :**
-- Étendre le type `roleFilter` à : `'all' | 'admins' | 'shepherds' | 'adn' | 'department_leader' | 'family_leader' | 'evangelist'`.
-- Ajouter les trois options manquantes dans le `<select>`.
-- Étendre `UserList` (`src/components/users/UserList.tsx`) pour gérer ces nouveaux filtres en utilisant les helpers `isDepartmentLeaderUser`, `isFamilyLeaderUser`, `isEvangelistUser` (déjà présents dans `src/utils/roleHelpers.ts`), qui couvrent à la fois le legacy `role` et les `businessProfiles`.
+## Solution
 
-### 3. Maintenance
+### 1. `src/services/cloudFunctions.service.ts`
+- Changer la signature pour accepter aussi le doc id Firestore (paramètre `docId`) en plus du `uid`.
+- En priorité, utiliser `getDoc(doc(db, 'users', docId))` puis fallback `admins`. Cibler exactement le document qui sera utilisé au login.
+- Ne re-chercher par `uid` qu'en dernier recours pour les self-resets où le doc id n'est pas connu.
 
-- Bumper la version `1.7.68` → `1.7.69` dans `src/pages/Login.tsx`.
-- Ajouter une entrée dans `src/CHANGELOG.md` décrivant ces deux correctifs.
+### 2. `src/components/users/PasswordResetModal.tsx`
+- Passer `user.id` (doc id) au service en plus du `uid`.
 
-## Résultat attendu
+### 3. `src/components/profile/SelfPasswordResetModal.tsx`
+- Si on a accès au doc id de l'utilisateur courant via `localStorage.user.id`, le passer aussi.
 
-- La réinitialisation du mot de passe fonctionne immédiatement (plus d'erreur « internal »), et le nouveau mot de passe est utilisable à la prochaine connexion.
-- Le filtre de la page Utilisateurs liste tous les profils métier de l'application : Administrateurs, Berger(e)s, ADN, Responsables de Département, Responsables de Famille, Évangélistes.
+### 4. `src/contexts/AuthContext.tsx`
+- Renforcer la vérification de mot de passe : si `userData.password` existe et ne matche pas, **ne pas** retomber sur les mots de passe par défaut (sinon un mot de passe par défaut bypasserait un reset volontaire). Aujourd'hui le code passe déjà à `else if`, donc OK — mais ajouter un log clair indiquant la valeur stockée vs saisie (longueur uniquement, pas les valeurs en clair) pour diagnostiquer.
+- Logger aussi le doc id trouvé au login pour faciliter le diagnostic en cas de doublon.
+
+### 5. Maintenance
+- Bump version `1.7.69` → `1.7.70` dans `src/pages/Login.tsx`.
+- Mettre à jour `src/CHANGELOG.md`.
+
+## Vérification post-implémentation
+
+Les nouveaux logs au login afficheront le doc id, la présence du champ `password` stocké, et sa longueur — ce qui permettra de confirmer immédiatement si le reset a touché le bon document.
