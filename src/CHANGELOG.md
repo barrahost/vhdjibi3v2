@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.7.70] - Reset de mot de passe ciblé sur le bon document
+
+### Fixed
+- Le reset de mot de passe pouvait afficher "succès" tout en mettant à jour un autre document Firestore que celui utilisé pour la connexion (cas des utilisateurs sans champ `uid` ou avec un `uid` synthétique). Le service utilise désormais en priorité l'**identifiant exact du document** (`docId`), garantissant que le nouveau mot de passe est immédiatement valide à la connexion.
+- Logs de connexion enrichis (identifiant du document, présence et longueur du mot de passe stocké) pour diagnostiquer plus rapidement les cas similaires.
+
 ## [1.7.69] - Réinitialisation côté client + filtre de rôles complet
 
 ### Fixed

@@ -37,8 +37,19 @@ export default function SelfPasswordResetModal({ isOpen, onClose, uid }: SelfPas
       
       setIsSubmitting(true);
       
-      // Call the Cloud Function to reset the password
-      await CloudFunctionsService.resetUserPassword(uid, formData.newPassword, true, formData.currentPassword);
+      // Pass docId from the cached user so we update the exact document
+      // the login flow reads (avoids `uid` field mismatches).
+      const savedUserRaw = localStorage.getItem('user');
+      const savedUser = savedUserRaw ? JSON.parse(savedUserRaw) : null;
+      const docId = savedUser?.id;
+
+      await CloudFunctionsService.resetUserPassword(
+        uid,
+        formData.newPassword,
+        true,
+        formData.currentPassword,
+        docId
+      );
       
       toast.success('Mot de passe modifié avec succès');
       onClose();

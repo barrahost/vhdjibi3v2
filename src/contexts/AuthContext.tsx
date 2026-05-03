@@ -214,8 +214,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       const userData = userDoc.data();
-      console.log('User found:', userData.role);
-      
+      console.log('User found:', {
+        role: userData.role,
+        docId: userDoc.id,
+        collection: !usersSnapshot.empty ? 'users' : 'admins',
+        hasStoredPassword: !!userData.password,
+        storedPasswordLength: userData.password ? String(userData.password).length : 0,
+        typedPasswordLength: password.length,
+      });
+
       // Verify password based on role - support both old role system and new business profiles
       let isPasswordValid = false;
 

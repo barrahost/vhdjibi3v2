@@ -39,8 +39,15 @@ export default function PasswordResetModal({ isOpen, onClose, user }: PasswordRe
       
       setIsSubmitting(true);
       
-      // Call the Cloud Function to reset the password
-      await CloudFunctionsService.resetUserPassword(user.uid, formData.newPassword);
+      // Call the password reset service — pass docId so we update the
+      // exact document the login flow reads.
+      await CloudFunctionsService.resetUserPassword(
+        user.uid,
+        formData.newPassword,
+        false,
+        undefined,
+        user.id
+      );
       
       toast.success('Mot de passe modifié avec succès');
       onClose();
