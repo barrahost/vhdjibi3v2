@@ -251,7 +251,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               return { isValid: true, matchType: 'business_profile:admin' };
             }
           }
-        } else if (candidateData.role) {
+        }
+
+        if (candidateData.role) {
           if (['shepherd', 'adn', 'department_leader', 'family_leader', 'evangelist'].includes(candidateData.role)) {
             const defaultPassword = candidateData.role === 'adn'
               ? DEFAULT_PASSWORDS.ADN
