@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.7.68] - Réinitialisation de mot de passe vraiment fonctionnelle
+
+### Fixed
+- La réinitialisation du mot de passe met désormais à jour le mot de passe **réellement utilisé pour la connexion** (champ `password` du document utilisateur), et plus uniquement Firebase Auth. Le nouveau mot de passe défini par l'administrateur depuis la page Utilisateurs est immédiatement utilisable à la prochaine connexion.
+- La connexion accepte maintenant le mot de passe personnalisé de chaque utilisateur en plus des mots de passe par défaut historiques (`@123456`).
+- Les messages d'erreur de la fonction de réinitialisation sont remontés tels quels dans l'interface (mot de passe trop court, permission refusée, utilisateur introuvable…), au lieu du générique « Erreur lors de la réinitialisation du mot de passe ».
+
 ## [1.7.67] - Correctif réinitialisation de mot de passe
 
 ### Fixed
