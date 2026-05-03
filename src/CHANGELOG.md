@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.7.72] - Chargement des âmes évangélisées
+
+### Fixed
+- Correction de l'erreur **« Erreur lors du chargement »** sur la page **Âmes évangélisées** : la liste n'utilise plus de tri Firestore nécessitant un index composite, et le tri par création décroissante est maintenant fait côté application.
+
 ## [1.7.71] - Connexion robuste en cas de doublon téléphone
 
 ### Fixed
