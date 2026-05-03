@@ -175,6 +175,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       
       const formattedPhone = phoneValidation.formattedNumber;
+      const cleanPhone = phoneValidation.cleanNumber;
+      const phoneCandidates = Array.from(new Set([formattedPhone, cleanPhone].filter(Boolean)));
       console.log('Attempting login with:', { phone: formattedPhone, passwordLength: password.length });
 
       // Try Firebase Auth first (for backward compatibility)
@@ -187,27 +189,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.log('Firebase auth operation failed, continuing with custom auth');
       }
 
-      // Check users collection first (includes regular admins, shepherds, ADN)
-      const usersQuery = query(
-        collection(db, 'users'),
-        where('phone', '==', formattedPhone),
-        where('status', '==', 'active')
+      const usersSnapshots = await Promise.all(
+        phoneCandidates.map((phoneCandidate) =>
+          getDocs(query(
+            collection(db, 'users'),
+            where('phone', '==', phoneCandidate),
+            where('status', '==', 'active')
+          ))
+        )
       );
-      const usersSnapshot = await getDocs(usersQuery);
 
-      // Check admins collection only for super_admin
-      const adminsQuery = query(
-        collection(db, 'admins'),
-        where('phone', '==', formattedPhone),
-        where('role', '==', 'super_admin'),
-        where('status', '==', 'active')
+      const adminsSnapshots = await Promise.all(
+        phoneCandidates.map((phoneCandidate) =>
+          getDocs(query(
+            collection(db, 'admins'),
+            where('phone', '==', phoneCandidate),
+            where('role', '==', 'super_admin'),
+            where('status', '==', 'active')
+          ))
+        )
       );
-      const adminsSnapshot = await getDocs(adminsQuery);
 
-      const candidateDocs = [
-        ...usersSnapshot.docs.map((docSnapshot) => ({ docSnapshot, collectionName: 'users' as const })),
-        ...adminsSnapshot.docs.map((docSnapshot) => ({ docSnapshot, collectionName: 'admins' as const })),
-      ];
+      const candidateMap = new Map<string, { docSnapshot: any; collectionName: 'users' | 'admins' }>();
+      usersSnapshots.forEach((snapshot) => {
+        snapshot.docs.forEach((docSnapshot) => {
+          candidateMap.set(`users:${docSnapshot.id}`, { docSnapshot, collectionName: 'users' });
+        });
+      });
+      adminsSnapshots.forEach((snapshot) => {
+        snapshot.docs.forEach((docSnapshot) => {
+          candidateMap.set(`admins:${docSnapshot.id}`, { docSnapshot, collectionName: 'admins' });
+        });
+      });
+
+      const candidateDocs = Array.from(candidateMap.values());
 
       if (candidateDocs.length === 0) {
         console.error('User profile not found');
