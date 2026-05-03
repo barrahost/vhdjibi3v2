@@ -175,6 +175,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       
       const formattedPhone = phoneValidation.formattedNumber;
+      const cleanPhone = phoneValidation.cleanNumber;
+      const phoneCandidates = Array.from(new Set([formattedPhone, cleanPhone].filter(Boolean)));
       console.log('Attempting login with:', { phone: formattedPhone, passwordLength: password.length });
 
       // Try Firebase Auth first (for backward compatibility)
@@ -187,95 +189,125 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.log('Firebase auth operation failed, continuing with custom auth');
       }
 
-      // Check users collection first (includes regular admins, shepherds, ADN)
-      const usersQuery = query(
-        collection(db, 'users'),
-        where('phone', '==', formattedPhone),
-        where('status', '==', 'active')
+      const usersSnapshots = await Promise.all(
+        phoneCandidates.map((phoneCandidate) =>
+          getDocs(query(
+            collection(db, 'users'),
+            where('phone', '==', phoneCandidate),
+            where('status', '==', 'active')
+          ))
+        )
       );
-      const usersSnapshot = await getDocs(usersQuery);
 
-      // Check admins collection only for super_admin
-      const adminsQuery = query(
-        collection(db, 'admins'),
-        where('phone', '==', formattedPhone),
-        where('role', '==', 'super_admin'),
-        where('status', '==', 'active')
+      const adminsSnapshots = await Promise.all(
+        phoneCandidates.map((phoneCandidate) =>
+          getDocs(query(
+            collection(db, 'admins'),
+            where('phone', '==', phoneCandidate),
+            where('role', '==', 'super_admin'),
+            where('status', '==', 'active')
+          ))
+        )
       );
-      const adminsSnapshot = await getDocs(adminsQuery);
 
-      // Get user data from either collection
-      const userDoc = !usersSnapshot.empty ? usersSnapshot.docs[0] : 
-                     !adminsSnapshot.empty ? adminsSnapshot.docs[0] : null;
+      const candidateMap = new Map<string, { docSnapshot: any; collectionName: 'users' | 'admins' }>();
+      usersSnapshots.forEach((snapshot) => {
+        snapshot.docs.forEach((docSnapshot) => {
+          candidateMap.set(`users:${docSnapshot.id}`, { docSnapshot, collectionName: 'users' });
+        });
+      });
+      adminsSnapshots.forEach((snapshot) => {
+        snapshot.docs.forEach((docSnapshot) => {
+          candidateMap.set(`admins:${docSnapshot.id}`, { docSnapshot, collectionName: 'admins' });
+        });
+      });
 
-      if (!userDoc) {
+      const candidateDocs = Array.from(candidateMap.values());
+
+      if (candidateDocs.length === 0) {
         console.error('User profile not found');
         throw new Error('User not found');
       }
 
-      const userData = userDoc.data();
-      console.log('User found:', {
-        role: userData.role,
-        docId: userDoc.id,
-        collection: !usersSnapshot.empty ? 'users' : 'admins',
-        hasStoredPassword: !!userData.password,
-        storedPasswordLength: userData.password ? String(userData.password).length : 0,
-        typedPasswordLength: password.length,
+      const validateCandidatePassword = (candidateData: any) => {
+        if (candidateData.password && password === String(candidateData.password)) {
+          return { isValid: true, matchType: 'custom_password' };
+        }
+
+        if (candidateData.businessProfiles && candidateData.businessProfiles.length > 0) {
+          for (const profile of candidateData.businessProfiles) {
+            if (
+              profile.type === 'shepherd' ||
+              profile.type === 'department_leader' ||
+              profile.type === 'family_leader' ||
+              profile.type === 'evangelist'
+            ) {
+              if (password === DEFAULT_PASSWORDS.SHEPHERD) {
+                return { isValid: true, matchType: `business_profile:${profile.type}` };
+              }
+            } else if (profile.type === 'adn' && password === DEFAULT_PASSWORDS.ADN) {
+              return { isValid: true, matchType: 'business_profile:adn' };
+            } else if (profile.type === 'admin' && password === DEFAULT_PASSWORDS.ADMIN) {
+              return { isValid: true, matchType: 'business_profile:admin' };
+            }
+          }
+        }
+
+        if (candidateData.role) {
+          if (['shepherd', 'adn', 'department_leader', 'family_leader', 'evangelist'].includes(candidateData.role)) {
+            const defaultPassword = candidateData.role === 'adn'
+              ? DEFAULT_PASSWORDS.ADN
+              : DEFAULT_PASSWORDS.SHEPHERD;
+
+            if (password === defaultPassword) {
+              return { isValid: true, matchType: `legacy_role:${candidateData.role}` };
+            }
+          } else if (
+            (candidateData.role === 'admin' || candidateData.role === 'super_admin') &&
+            password === DEFAULT_PASSWORDS.ADMIN
+          ) {
+            return { isValid: true, matchType: `legacy_role:${candidateData.role}` };
+          }
+        }
+
+        return { isValid: false, matchType: null };
+      };
+
+      const customPasswordMatch = candidateDocs.find(({ docSnapshot }) => {
+        const candidateData = docSnapshot.data();
+        return candidateData.password && password === String(candidateData.password);
       });
+      const fallbackMatch = candidateDocs.find(({ docSnapshot }) => validateCandidatePassword(docSnapshot.data()).isValid);
+      const matchedCandidate = customPasswordMatch || fallbackMatch;
 
-      // Verify password based on role - support both old role system and new business profiles
-      let isPasswordValid = false;
+      console.log('Login candidates found:', candidateDocs.map(({ docSnapshot, collectionName }) => {
+        const candidateData = docSnapshot.data();
+        const validation = validateCandidatePassword(candidateData);
+        return {
+          role: candidateData.role,
+          docId: docSnapshot.id,
+          collection: collectionName,
+          hasStoredPassword: !!candidateData.password,
+          storedPasswordLength: candidateData.password ? String(candidateData.password).length : 0,
+          typedPasswordLength: password.length,
+          matchesPassword: validation.isValid,
+          matchType: validation.matchType,
+        };
+      }));
 
-      // Priority 1: custom password stored on the user document (set via password reset).
-      if (userData.password && password === userData.password) {
-        isPasswordValid = true;
-        console.log('Password validated against stored custom password');
-      }
-
-      // Check business profiles first (new system)
-      if (!isPasswordValid && userData.businessProfiles && userData.businessProfiles.length > 0) {
-        // Check if any business profile matches the password
-        for (const profile of userData.businessProfiles) {
-          if (profile.type === 'shepherd' || profile.type === 'department_leader' || profile.type === 'family_leader') {
-            isPasswordValid = password === DEFAULT_PASSWORDS.SHEPHERD;
-          } else if (profile.type === 'adn') {
-            isPasswordValid = password === DEFAULT_PASSWORDS.ADN;
-          } else if (profile.type === 'admin') {
-            isPasswordValid = password === DEFAULT_PASSWORDS.ADMIN;
-          }
-          
-          if (isPasswordValid) {
-            console.log('Password validated with business profile:', profile.type);
-            break;
-          }
-        }
-      }
-      // Fallback to old role system for backward compatibility
-      else if (userData.role) {
-        if (['shepherd', 'adn', 'department_leader', 'family_leader'].includes(userData.role)) {
-          const defaultPassword = userData.role === 'adn' 
-            ? DEFAULT_PASSWORDS.ADN 
-            : DEFAULT_PASSWORDS.SHEPHERD;
-            
-          isPasswordValid = password === defaultPassword;
-          console.log('Checking default password (legacy):', { role: userData.role, isValid: isPasswordValid });
-        } 
-        // For admins, use admin password
-        else if (userData.role === 'admin') {
-          isPasswordValid = password === DEFAULT_PASSWORDS.ADMIN;
-          console.log('Checking admin password (legacy):', { isValid: isPasswordValid });
-        }
-        // For super_admin, use admin password
-        else if (userData.role === 'super_admin') {
-          isPasswordValid = password === DEFAULT_PASSWORDS.ADMIN;
-          console.log('Checking super_admin password (legacy):', { isValid: isPasswordValid });
-        }
-      }
-      
-      if (!isPasswordValid) {
+      if (!matchedCandidate) {
         console.error('Invalid password');
         throw new Error('Invalid password');
       }
+
+      const userDoc = matchedCandidate.docSnapshot;
+      const userData = userDoc.data();
+      console.log('Password validated for selected login document:', {
+        role: userData.role,
+        docId: userDoc.id,
+        collection: matchedCandidate.collectionName,
+        matchType: validateCandidatePassword(userData).matchType,
+      });
 
       // Get permissions based on role or business profiles
       let permissions: Permission[] = [];
