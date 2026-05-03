@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.7.71] - Connexion robuste en cas de doublon téléphone
+
+### Fixed
+- La connexion vérifie désormais tous les profils actifs trouvés pour le même numéro de téléphone (`users` et `admins`) et sélectionne celui dont le mot de passe correspond, au lieu de refuser le login après avoir testé seulement le premier document trouvé. Corrige le cas où un bon mot de passe était saisi mais comparé au mauvais profil.
+
 ## [1.7.70] - Reset de mot de passe ciblé sur le bon document
 
 ### Fixed
