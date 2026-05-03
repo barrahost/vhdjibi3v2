@@ -44,9 +44,9 @@ export default function PasswordResetModal({ isOpen, onClose, user }: PasswordRe
       
       toast.success('Mot de passe modifié avec succès');
       onClose();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error resetting password:', error);
-      toast.error('Erreur lors de la réinitialisation du mot de passe');
+      toast.error(error?.message || 'Erreur lors de la réinitialisation du mot de passe');
     } finally {
       setIsSubmitting(false);
     }

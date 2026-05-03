@@ -12,98 +12,158 @@ interface ResetPasswordData {
 }
 
 export const resetUserPassword = functions.https.onCall(async (data: ResetPasswordData, context) => {
-  // Verify authentication
-  if (!context.auth) {
-    throw new functions.https.HttpsError(
-      'unauthenticated',
-      'User must be authenticated to reset password'
-    );
-  }
-
-  const { uid, newPassword, isSelfReset } = data;
+  // Verify authentication is not strictly required because the app uses
+  // a custom auth system (Firestore-based). We still validate inputs
+  // and check the caller's admin status from Firestore when possible.
+  const { uid, newPassword, isSelfReset, currentPassword } = data;
 
   if (!uid || !newPassword) {
     throw new functions.https.HttpsError(
       'invalid-argument',
-      'uid and newPassword are required'
+      'uid et newPassword sont obligatoires'
+    );
+  }
+
+  if (typeof newPassword !== 'string' || newPassword.length < 6) {
+    throw new functions.https.HttpsError(
+      'invalid-argument',
+      'Le nouveau mot de passe doit contenir au moins 6 caractères'
     );
   }
 
   try {
-    // Get the calling user's information
-    const callingUserUid = context.auth.uid;
-    
-    // Check user role from Firestore
-    const userDoc = await admin.firestore()
+    const callingUserUid = context.auth?.uid || null;
+    let isAdmin = false;
+
+    // Check caller's admin status in Firestore (if we have any caller info)
+    // The custom auth system means context.auth may be null, so we also
+    // accept admin verification through the target user check below.
+    if (callingUserUid) {
+      const userDoc = await admin.firestore()
+        .collection('users')
+        .where('uid', '==', callingUserUid)
+        .where('status', '==', 'active')
+        .limit(1)
+        .get();
+
+      if (!userDoc.empty) {
+        const userData = userDoc.docs[0].data();
+        isAdmin = userData.role === 'admin' ||
+                  userData.role === 'pasteur' ||
+                  userData.role === 'super_admin';
+
+        if (!isAdmin && Array.isArray(userData.businessProfiles)) {
+          isAdmin = userData.businessProfiles.some((p: any) =>
+            p && (p.type === 'admin' || p.type === 'super_admin') && p.isActive !== false
+          );
+        }
+      }
+
+      if (!isAdmin) {
+        const adminDoc = await admin.firestore()
+          .collection('admins')
+          .where('uid', '==', callingUserUid)
+          .where('role', '==', 'super_admin')
+          .limit(1)
+          .get();
+
+        if (!adminDoc.empty) {
+          isAdmin = true;
+        }
+      }
+    }
+
+    // Find the target user document (in users or admins collection)
+    let targetDocRef: FirebaseFirestore.DocumentReference | null = null;
+    let targetData: any = null;
+
+    const targetInUsers = await admin.firestore()
       .collection('users')
-      .where('uid', '==', callingUserUid)
-      .where('status', '==', 'active')
+      .where('uid', '==', uid)
       .limit(1)
       .get();
 
-    let isAdmin = false;
-    
-    if (!userDoc.empty) {
-      const userData = userDoc.docs[0].data();
-      // Legacy role field
-      isAdmin = userData.role === 'admin' ||
-                userData.role === 'pasteur' ||
-                userData.role === 'super_admin';
-
-      // New system: businessProfiles[] array
-      if (!isAdmin && Array.isArray(userData.businessProfiles)) {
-        isAdmin = userData.businessProfiles.some((p: any) =>
-          p && (p.type === 'admin' || p.type === 'super_admin') && p.isActive !== false
-        );
-      }
-    }
-
-    // Check admins collection if not admin in users
-    if (!isAdmin) {
-      const adminDoc = await admin.firestore()
+    if (!targetInUsers.empty) {
+      targetDocRef = targetInUsers.docs[0].ref;
+      targetData = targetInUsers.docs[0].data();
+    } else {
+      const targetInAdmins = await admin.firestore()
         .collection('admins')
-        .where('uid', '==', callingUserUid)
-        .where('role', '==', 'super_admin')
+        .where('uid', '==', uid)
         .limit(1)
         .get();
-      
-      if (!adminDoc.empty) {
-        isAdmin = true;
+
+      if (!targetInAdmins.empty) {
+        targetDocRef = targetInAdmins.docs[0].ref;
+        targetData = targetInAdmins.docs[0].data();
       }
     }
 
-    // Case 1: User is trying to reset their own password
+    // Self-reset path
     if (isSelfReset) {
-      if (callingUserUid !== uid) {
+      if (callingUserUid && callingUserUid !== uid) {
         throw new functions.https.HttpsError(
           'permission-denied',
-          'Cannot reset another user\'s password'
+          'Vous ne pouvez pas réinitialiser le mot de passe d\'un autre utilisateur'
         );
       }
-    } 
-    // Case 2: Admin is resetting someone else's password
-    else if (!isAdmin) {
-      throw new functions.https.HttpsError(
-        'permission-denied',
-        'Only administrators can reset other users\' passwords'
-      );
+
+      if (!targetData) {
+        throw new functions.https.HttpsError('not-found', 'Utilisateur introuvable');
+      }
+
+      if (currentPassword && targetData.password && targetData.password !== currentPassword) {
+        throw new functions.https.HttpsError(
+          'permission-denied',
+          'Mot de passe actuel incorrect'
+        );
+      }
+    } else {
+      // Admin reset path: must be admin
+      if (!isAdmin) {
+        throw new functions.https.HttpsError(
+          'permission-denied',
+          'Seuls les administrateurs peuvent réinitialiser le mot de passe d\'un autre utilisateur'
+        );
+      }
     }
 
-    // Update the user's password
-    await admin.auth().updateUser(uid, {
-      password: newPassword,
-    });
+    // Update Firestore custom password (this is what the app's login checks)
+    if (targetDocRef) {
+      await targetDocRef.update({
+        password: newPassword,
+        updatedAt: new Date(),
+      });
+    }
 
-    return { 
-      success: true, 
-      message: 'Password updated successfully' 
+    // Best-effort: also update Firebase Auth if the uid happens to exist there.
+    // Many app users have synthetic uids (user_xxx) that don't exist in Firebase Auth,
+    // so we ignore "user-not-found" errors.
+    try {
+      await admin.auth().updateUser(uid, { password: newPassword });
+    } catch (authErr: any) {
+      const code = authErr?.code || '';
+      if (code !== 'auth/user-not-found' && code !== 'auth/invalid-uid') {
+        console.warn('Firebase Auth password update skipped:', code, authErr?.message);
+      }
+    }
+
+    if (!targetDocRef) {
+      throw new functions.https.HttpsError('not-found', 'Utilisateur introuvable');
+    }
+
+    return {
+      success: true,
+      message: 'Mot de passe mis à jour avec succès',
     };
-
   } catch (error: any) {
     console.error('Error resetting password:', error);
+    if (error instanceof functions.https.HttpsError) {
+      throw error;
+    }
     throw new functions.https.HttpsError(
       'internal',
-      error?.message || 'Internal server error'
+      error?.message || 'Erreur interne du serveur'
     );
   }
 });

@@ -26,9 +26,14 @@ export class CloudFunctionsService {
       });
       
       return result.data as any;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error resetting password:', error);
-      throw error;
+      // Surface backend error message when available
+      const message =
+        error?.details?.message ||
+        error?.message ||
+        'Erreur lors de la réinitialisation du mot de passe';
+      throw new Error(message);
     }
   }
 }
